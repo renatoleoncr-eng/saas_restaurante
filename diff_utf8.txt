@@ -1,0 +1,560 @@
+﻿diff --git a/server/routes/sunatRoutes.js b/server/routes/sunatRoutes.js
+index 7b093bd..75ac26e 100644
+--- a/server/routes/sunatRoutes.js
++++ b/server/routes/sunatRoutes.js
+@@ -1,6 +1,8 @@
+ const express = require('express');
+ const router = express.Router();
+ const axios = require('axios');
++const { authenticateToken } = require('../middleware/auth');
++const odooSync = require('../services/odooSyncService');
+ 
+ // Convert number to Peruvian text (simple version)
+ function numToText(n) {
+@@ -176,7 +178,12 @@ router.post('/invoice', async (req, res) => {
+             return res.status(400).json({ message: 'API Token de Sunat no configurado. Vaya a Configuración > Facturación.' });
+         }
+ 
+-        console.log(`[SunatHub] Sending invoice request to Hub for reservation ${reservation_id}...`);
++        // Fetch exonerated setting (Ley Amazonía)
++        const exSetting = await Setting.findByPk('igv_exonerado');
++        const isExonerado = exSetting && exSetting.value === 'true';
++        const afeCode = isExonerado ? '20' : '10';
++
++        console.log(`[SunatHub] Sending invoice request to Hub for reservation ${reservation_id}. Exonerado: ${isExonerado}`);
+ 
+         const hubUrl = process.env.SUNAT_HUB_URL || 'http://localhost:8081';
+ 
+@@ -186,7 +193,7 @@ router.post('/invoice', async (req, res) => {
+         const igvRate = (parseFloat(req.body.igv_percentage) || 10.5) / 100;
+         const rawItems = req.body.items || [];
+         
+-        let total_gravada = 0;
++        let total_base = 0;
+         let total_igv = 0;
+ 
+         const customer = req.body.customer || req.body.client || {};
+@@ -202,14 +209,14 @@ router.post('/invoice', async (req, res) => {
+                 const unitTotal = lineTotal / qty;               // Per-unit amount (with IGV)
+ 
+                 // SUNAT Math per unit (HIGH PRECISION to avoid error 3462)
+-                const unitBase = parseFloat((unitTotal / (1 + igvRate)).toFixed(6));   // valor_unitario (sin IGV)
+-                const unitPrecio = parseFloat((unitBase * (1 + igvRate)).toFixed(6));  // precio_unitario (con IGV)
++                const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));   // valor_unitario (sin IGV)
++                const unitPrecio = isExonerado ? unitTotal : parseFloat((unitBase * (1 + igvRate)).toFixed(6));  // precio_unitario (con IGV)
+ 
+                 // SUNAT Math per LINE
+                 const lineBase = parseFloat((unitBase * qty).toFixed(6));              // valor_venta (total sin IGV)
+-                const lineIgv = parseFloat((lineBase * igvRate).toFixed(6));           // igv total de la línea
++                const lineIgv = isExonerado ? 0 : parseFloat((lineBase * igvRate).toFixed(6));           // igv total de la línea
+ 
+-                total_gravada += lineBase;
++                total_base += lineBase;
+                 total_igv += lineIgv;
+ 
+                 return {
+@@ -219,21 +226,24 @@ router.post('/invoice', async (req, res) => {
+                     valor_unitario: unitBase,        // Per-unit, WITHOUT IGV (HIGH PRECISION)
+                     precio_unitario: unitPrecio,     // Per-unit, WITH IGV  (HIGH PRECISION)
+                     valor_venta: lineBase,           // Total line, WITHOUT IGV (HIGH PRECISION)
+-                    porcentaje_igv: igvRate * 100,
+-                    igv: lineIgv,                    // Total IGV for this line (HIGH PRECISION)
+-                    tipo_afe_igv: '10'
++                    porcentaje_igv: isExonerado ? 0 : (igvRate * 100),
++                    igv: parseFloat(lineIgv.toFixed(2)),
++                    monto_base_igv: parseFloat(lineBase.toFixed(2)),
++                    tipo_afe_igv: afeCode,
++                    codigo_tipo_tributo: isExonerado ? '9997' : '1000',
++                    nombre_tributo: isExonerado ? 'EXO' : 'IGV',
++                    codigo_tipo_internacional_tributo: 'VAT'
+                 };
+             });
+ 
+-        // ==============================================
+         // TOTALS CALCULATION (STRICT 2 ROUNDING)
+         // ==============================================
+-        const finalTotalIgv = parseFloat(total_igv.toFixed(2));
++        const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
+         // We set total_pay based on the original raw items sum to ensure it stays exact (e.g. 7.00)
+         const rawTotalPay = rawItems.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+         const finalTotalPay = parseFloat(rawTotalPay.toFixed(2));
+-        // Gravada is the difference to ensure it sums up perfectly: Gravada + IGV = Total
+-        const finalTotalGravada = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
++        // Base is the difference to ensure it sums up perfectly: Base + IGV = Total
++        const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+ 
+         const hubPayload = {
+             tipo_doc: docType,
+@@ -243,8 +253,12 @@ router.post('/invoice', async (req, res) => {
+                 ruc: '',  // Hub usa el RUC del token registrado en su DB
+                 razon_social: ''
+             },
+-            total_gravada: finalTotalGravada,
++            total_gravada: isExonerado ? 0 : finalTotalBase,
++            total_exonerada: isExonerado ? finalTotalBase : 0,
++            total_inafecta: 0,
+             total_igv: finalTotalIgv,
++            total_impuestos: finalTotalIgv,
++            total_valor_venta: finalTotalBase, // CRITICAL FIX for 3278 revert
+             total_pay: finalTotalPay,
+             total_text: numToText(finalTotalPay),
+             client: {
+@@ -252,6 +266,9 @@ router.post('/invoice', async (req, res) => {
+                 name: customer.name || '',
+                 type: String(docType === '01' ? '6' : '1') // '6'=RUC, '1'=DNI
+             },
++            legends: isExonerado ? [
++                { code: '1000', value: 'OP. EXONERADA' }
++            ] : [],
+             items: hubItems
+         };
+ 
+@@ -339,6 +356,11 @@ router.post('/invoice', async (req, res) => {
+             folio_label: 'Folio Completo'
+         });
+ 
++        // Sync to Odoo (Background)
++        odooSync.syncInvoice(hubPayload, billingId, docType).catch(err => 
++            console.error(`[OdooSync] Sales Sync Deferred Error: ${err.message}`)
++        );
++
+         response.data.url_ticket = ticketUrl;
+         response.data.billing_id = billingId;
+         res.json(response.data);
+@@ -346,7 +368,7 @@ router.post('/invoice', async (req, res) => {
+     } catch (error) {
+         console.error('Error generating invoice via Hub:', error.response?.data || error.message);
+         const status = error.response?.status || 500;
+-        const message = error.response?.data?.error || error.response?.data?.message || error.message;
++        const message = error.response?.data?.message || error.response?.data?.error || error.message;
+ 
+         // Automatic Disable if Unauthorized
+         if (status === 401) {
+@@ -370,8 +392,136 @@ router.post('/invoice', async (req, res) => {
+     }
+ });
+ 
++// Proxy to Sunat Hub for Manual Invoice (Not restricted to a reservation)
++router.post('/invoice-manual', authenticateToken, async (req, res) => {
++    try {
++        const { Setting, BillingDocument } = require('../models');
++        const { customer, items: rawItems, document_type, series, igv_percentage } = req.body;
++
++        const tokenSetting = await Setting.findByPk('facturador_api_token');
++        const token = tokenSetting ? tokenSetting.value : null;
++
++        if (!token) {
++            return res.status(400).json({ message: 'API Token de Sunat no configurado.' });
++        }
++
++        const exoneratedSetting = await Setting.findByPk('igv_exonerado');
++        const isExonerado = exoneratedSetting && exoneratedSetting.value === 'true';
++        const afeCode = isExonerado ? '20' : '10';
++
++        const hubUrl = process.env.SUNAT_HUB_URL || 'http://localhost:8081';
++        const igvRate = (parseFloat(igv_percentage) || 10.5) / 100;
++
++        let total_base = 0;
++        let total_igv = 0;
++
++        const hubItems = rawItems
++            .filter(item => parseFloat(item.amount || 0) > 0)
++            .map((item, i) => {
++                const lineTotal = parseFloat(item.amount || 0);
++                const qty = parseInt(item.quantity || item.qty || 1);
++                const unitTotal = lineTotal / qty;
++
++                const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
++                const unitPrecio = isExonerado ? unitTotal : parseFloat((unitBase * (1 + igvRate)).toFixed(6));
++                const lineBase = parseFloat((unitBase * qty).toFixed(6));
++                const lineIgv = isExonerado ? 0 : parseFloat((lineBase * igvRate).toFixed(6));
++
++                total_base += lineBase;
++                total_igv += lineIgv;
++
++                return {
++                    code: `M${String(i + 1).padStart(3, '0')}`,
++                    description: item.description,
++                    qty: qty,
++                    valor_unitario: unitBase,
++                    precio_unitario: unitPrecio,
++                    valor_venta: lineBase,
++                    porcentaje_igv: isExonerado ? 0 : (igvRate * 100),
++                    igv: parseFloat(lineIgv.toFixed(2)),
++                    monto_base_igv: parseFloat(lineBase.toFixed(2)),
++                    tipo_afe_igv: afeCode,
++                    codigo_tipo_tributo: isExonerado ? '9997' : '1000',
++                    nombre_tributo: isExonerado ? 'EXO' : 'IGV',
++                    codigo_tipo_internacional_tributo: 'VAT'
++                };
++            });
++
++        const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
++        const rawTotalPay = rawItems.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
++        const finalTotalPay = parseFloat(rawTotalPay.toFixed(2));
++        const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
++
++        const hubPayload = {
++            tipo_doc: document_type || '03',
++            serie: series,
++            currency: 'PEN',
++            company: { ruc: '', razon_social: '' },
++            total_gravada: isExonerado ? 0 : finalTotalBase,
++            total_exonerada: isExonerado ? finalTotalBase : 0,
++            total_igv: finalTotalIgv,
++            total_pay: finalTotalPay,
++            total_text: numToText(finalTotalPay),
++            client: {
++                number: String(customer.document_number || ''),
++                name: customer.name || '',
++                type: String(document_type === '01' ? '6' : '1')
++            },
++            items: hubItems,
++            legends: isExonerado ? [{ code: '1000', value: 'OP. EXONERADA' }] : []
++        };
++
++        const response = await axios.post(`${hubUrl}/generate/invoice`, hubPayload, {
++            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
++            timeout: 30000
++        });
++
++        let ticketUrl = response.data.url_ticket || response.data.url || response.data.pdf_url;
++        if (ticketUrl && (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('maksuites') || ticketUrl.includes('bluzcx'))) {
++            ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
++        }
++
++        const rawFileName = response.data.fileName || response.data.file_name || null;
++        let billingId = rawFileName;
++        if (rawFileName) {
++            const parts = rawFileName.split('-');
++            if (parts.length >= 4) billingId = `${parts[2]}-${parts[3].padStart(8, '0')}`;
++        }
++
++        // Save to BillingDocument as MANUAL record (reservation_id = null)
++        await BillingDocument.create({
++            reservation_id: null,
++            document_type: document_type,
++            series: series,
++            billing_id: billingId,
++            billing_url: ticketUrl,
++            document_number: String(customer.document_number || ''),
++            customer_name: customer.name || '',
++            customer_address: customer.address || '-',
++            total_amount: finalTotalPay,
++            igv_amount: finalTotalIgv,
++            items_json: JSON.stringify(rawItems),
++            folio_label: 'Emisión Libre',
++            emitted_by: req.user.id
++        });
++
++        // Sync to Odoo (Background)
++        odooSync.syncInvoice(hubPayload, billingId, document_type).catch(err => 
++            console.error(`[OdooSync] Manual Sales Sync Deferred Error: ${err.message}`)
++        );
++
++        res.json({ ...response.data, url_ticket: ticketUrl, billing_id: billingId });
++
++    } catch (error) {
++        console.error('[SunatManual] Error:', error.response?.data || error.message);
++        res.status(error.response?.status || 500).json({ 
++            message: error.response?.data?.message || error.message 
++        });
++    }
++});
++
+ // Proxy to Sunat Hub for Folio Split / Partial Billing
+-router.post('/invoice-split', async (req, res) => {
++router.post('/invoice-split', authenticateToken, async (req, res) => {
+     try {
+         const { Setting, Reservation, BillingDocument } = require('../models');
+         const { reservation_id, items: rawItems, customer, document_type, series, folio_label } = req.body;
+@@ -386,10 +536,15 @@ router.post('/invoice-split', async (req, res) => {
+         const token = tokenSetting ? tokenSetting.value : null;
+         if (!token) return res.status(400).json({ message: 'API Token de Sunat no configurado.' });
+ 
++        // Fetch exonerated setting
++        const exSetting = await Setting.findByPk('igv_exonerado');
++        const isExonerado = exSetting && exSetting.value === 'true';
++        const afeCode = isExonerado ? '20' : '10';
++
+         const hubUrl = process.env.SUNAT_HUB_URL || 'http://localhost:8081';
+         const igvRate = (parseFloat(req.body.igv_percentage) || 10.5) / 100;
+         
+-        let total_gravada = 0;
++        let total_base = 0;
+         let total_igv = 0;
+ 
+         // Build items with HIGH PRECISION Math (Wave 3)
+@@ -401,14 +556,14 @@ router.post('/invoice-split', async (req, res) => {
+                 const unitTotal = lineTotal / qty;
+ 
+                 // SUNAT Math per unit
+-                const unitBase = parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
+-                const unitPrecio = parseFloat((unitBase * (1 + igvRate)).toFixed(6));
++                const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
++                const unitPrecio = isExonerado ? unitTotal : parseFloat((unitBase * (1 + igvRate)).toFixed(6));
+ 
+                 // SUNAT Math per LINE
+                 const lineBase = parseFloat((unitBase * qty).toFixed(6));
+-                const lineIgv = parseFloat((lineBase * igvRate).toFixed(6));
++                const lineIgv = isExonerado ? 0 : parseFloat((lineBase * igvRate).toFixed(6));
+ 
+-                total_gravada += lineBase;
++                total_base += lineBase;
+                 total_igv += lineIgv;
+ 
+                 return {
+@@ -418,23 +573,35 @@ router.post('/invoice-split', async (req, res) => {
+                     valor_unitario: unitBase,
+                     precio_unitario: unitPrecio,
+                     valor_venta: lineBase,
+-                    porcentaje_igv: igvRate * 100,
+-                    igv: lineIgv,
+-                    tipo_afe_igv: '10'
++                    porcentaje_igv: isExonerado ? 0 : (igvRate * 100),
++                    igv: parseFloat(lineIgv.toFixed(2)),
++                    monto_base_igv: parseFloat(lineBase.toFixed(2)),
++                    tipo_afe_igv: afeCode,
++                    codigo_tipo_tributo: isExonerado ? '9997' : '1000',
++                    nombre_tributo: isExonerado ? 'EXO' : 'IGV',
++                    codigo_tipo_internacional_tributo: 'VAT'
+                 };
+             });
+ 
+-        const finalTotalIgv = parseFloat(total_igv.toFixed(2));
++        const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
+         const rawTotalPay = rawItems.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+         const finalTotalPay = parseFloat(rawTotalPay.toFixed(2));
+-        const finalTotalGravada = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
++        const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+ 
+         const hubPayload = {
+             tipo_doc: document_type || '03',
+             serie: series,
+             currency: 'PEN',
+-            total_gravada: finalTotalGravada,
++            company: {
++                ruc: '',  // Hub uses RUC from token in its DB
++                razon_social: ''
++            },
++            total_gravada: isExonerado ? 0 : finalTotalBase,
++            total_exonerada: isExonerado ? finalTotalBase : 0,
++            total_inafecta: 0,
+             total_igv: finalTotalIgv,
++            total_impuestos: finalTotalIgv,
++            total_valor_venta: finalTotalBase, // CRITICAL FIX for 3278 revert
+             total_pay: finalTotalPay,
+             total_text: numToText(finalTotalPay),
+             observaciones: `Emision Folio Split - ${new Date().toISOString()}`, // Cache busting (Wave 5)
+@@ -443,6 +610,9 @@ router.post('/invoice-split', async (req, res) => {
+                 name: customer.name || '',
+                 type: String((document_type === '01' || customer.document_number?.length === 11) ? '6' : '1')
+             },
++            legends: isExonerado ? [
++                { code: '1000', value: 'OP. EXONERADA' }
++            ] : [],
+             items: hubItems
+         };
+ 
+@@ -479,9 +649,15 @@ router.post('/invoice-split', async (req, res) => {
+             total_amount: finalTotalPay,
+             igv_amount: finalTotalIgv,
+             items_json: JSON.stringify(rawItems),
+-            folio_label: folio_label || 'Folio'
++            folio_label: folio_label || 'Folio',
++            emitted_by: req.user.id
+         });
+ 
++        // Sync to Odoo (Background)
++        odooSync.syncInvoice(hubPayload, billingId, document_type).catch(err => 
++            console.error(`[OdooSync] Split Sales Sync Deferred Error: ${err.message}`)
++        );
++
+         // Always update primary record to show the LATEST document (Wave 5 Fix)
+         await reservation.update({
+             billing_id: billingId,
+@@ -496,7 +672,7 @@ router.post('/invoice-split', async (req, res) => {
+     } catch (error) {
+         console.error('[SunatSplit] Error:', error.response?.data || error.message);
+         res.status(error.response?.status || 500).json({ 
+-            message: error.response?.data?.error || error.message 
++            message: error.response?.data?.message || error.response?.data?.error || error.message 
+         });
+     }
+ });
+@@ -544,10 +720,7 @@ router.post('/note', async (req, res) => {
+         // Re-calculate totals using strict 2-decimal math
+         const igvRate = (parseFloat(req.body.igv_percentage) || 10.5) / 100;
+         const rawItems = req.body.items || [];
+-        
+-        let total_gravada = 0;
+-        let total_igv = 0;
+-
++ 
+         const customer = req.body.customer || {};
+         
+         // Determine original document type (priority to saved field)
+@@ -601,16 +774,12 @@ router.post('/note', async (req, res) => {
+             }
+         }
+ 
+-        // VALIDACIÓN FINAL: Si tras todos los intentos aún no tenemos referencia, fallar con mensaje claro.
+-        if (!refSerieCorrelativo || refSerieCorrelativo === 'N/A') {
+-            return res.status(400).json({
+-                message: 'No se puede emitir la Nota de Crédito: no fue posible identificar el número del comprobante original. Contacte soporte.',
+-                debug: {
+-                    billing_id: reservation.billing_id,
+-                    billing_url: reservation.billing_url
+-                }
+-            });
+-        }
++        const exoneradoSetting = await Setting.findByPk('igv_exonerado');
++        const isExonerado = exoneradoSetting ? exoneradoSetting.value === 'true' : false;
++
++        let total_gravada = 0;
++        let total_exonerada = 0;
++        let total_igv = 0;
+ 
+         // Build items with per-unit pricing for SUNAT (supports qty > 1)
+         const hubItems = rawItems
+@@ -620,13 +789,18 @@ router.post('/note', async (req, res) => {
+                 const qty = parseInt(item.quantity || item.qty || 1);
+                 const unitTotal = lineTotal / qty;
+ 
+-                const unitBase = parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
+-                const unitPrecio = parseFloat((unitBase * (1 + igvRate)).toFixed(6));
+-                const lineBase = parseFloat((unitBase * qty).toFixed(6));
+-                const lineIgv = parseFloat((lineBase * igvRate).toFixed(6));
+-
+-                total_gravada += lineBase;
+-                total_igv += lineIgv;
++                // Si es exonerado, el total unitario es la base (IGV 0)
++                const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
++                const unitPrecio = unitTotal; // El precio de venta siempre incluye todo
++                const lineBase = isExonerado ? lineTotal : parseFloat((unitBase * qty).toFixed(6));
++                const lineIgv = isExonerado ? 0 : parseFloat((lineBase * igvRate).toFixed(6));
++
++                if (isExonerado) {
++                    total_exonerada += lineBase;
++                } else {
++                    total_gravada += lineBase;
++                    total_igv += lineIgv;
++                }
+ 
+                 return {
+                     code: `P${String(i + 1).padStart(3, '0')}`,
+@@ -635,17 +809,17 @@ router.post('/note', async (req, res) => {
+                     valor_unitario: unitBase,
+                     precio_unitario: unitPrecio,
+                     valor_venta: lineBase,
+-                    porcentaje_igv: igvRate * 100,
++                    porcentaje_igv: isExonerado ? 0 : (igvRate * 100),
+                     igv: lineIgv,
+-                    tipo_afe_igv: '10'
++                    tipo_afe_igv: isExonerado ? '20' : '10',
++                    codigo_tipo_tributo: isExonerado ? '9997' : '1000',
++                    nombre_tributo: isExonerado ? 'EXO' : 'IGV'
+                 };
+             });
+ 
+         const finalTotalIgv = parseFloat(total_igv.toFixed(2));
+         const rawTotalPay = rawItems.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+         const finalTotalPay = parseFloat(rawTotalPay.toFixed(2));
+-        const finalTotalGravada = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+-
+ 
+         const hubPayload = {
+             tipo_doc: '07',
+@@ -659,7 +833,8 @@ router.post('/note', async (req, res) => {
+                 ruc: '',  // Hub usa el RUC del token registrado en su DB
+                 razon_social: ''
+             },
+-            total_gravada: finalTotalGravada,
++            total_gravada: isExonerado ? 0 : parseFloat(total_gravada.toFixed(2)),
++            total_exonerada: isExonerado ? parseFloat(total_exonerada.toFixed(2)) : 0,
+             total_igv: finalTotalIgv,
+             total_pay: finalTotalPay,
+             total_text: numToText(finalTotalPay),
+@@ -668,9 +843,13 @@ router.post('/note', async (req, res) => {
+                 name: reservation.billing_name || customer.name || '',
+                 type: String(refTipoDoc === '01' ? '6' : '1')
+             },
+-            items: hubItems
++            items: hubItems,
++            legends: isExonerado ? [
++                { code: '1000', value: 'OP. EXONERADA' }
++            ] : []
+         };
+ 
++
+         const response = await axios.post(`${hubUrl}/generate/note`, hubPayload, {
+             headers: {
+                 'Authorization': `Bearer ${token}`,
+@@ -726,12 +905,51 @@ router.post('/note', async (req, res) => {
+     } catch (error) {
+         console.error('Error generating note via Hub:', error.response?.data || error.message);
+         res.status(error.response?.status || 500).json({
+-            message: `Error al generar nota de crédito: ${error.response?.data?.error || error.message}`,
++            message: error.response?.data?.message || error.response?.data?.error || error.message,
+             details: error.response?.data
+         });
+     }
+ });
+ 
++// Get all billing documents (Global List with filters)
++router.get('/documents', authenticateToken, async (req, res) => {
++    try {
++        const { BillingDocument, Reservation } = require('../models');
++        const { Op } = require('sequelize');
++        const { doc, startDate, endDate } = req.query;
++
++        const where = {};
++        
++        if (doc) {
++            where.document_number = { [Op.like]: `%${doc}%` };
++        }
++        
++        if (startDate && endDate) {
++            where.emitted_at = {
++                [Op.between]: [new Date(startDate + 'T00:00:00'), new Date(endDate + 'T23:59:59')]
++            };
++        } else if (startDate) {
++            where.emitted_at = { [Op.gte]: new Date(startDate + 'T00:00:00') };
++        } else if (endDate) {
++            where.emitted_at = { [Op.lte]: new Date(endDate + 'T23:59:59') };
++        }
++
++        const docs = await BillingDocument.findAll({
++            where,
++            include: [{ 
++                model: Reservation,
++                attributes: ['id', 'room_id'] // To show which reservation it belongs to
++            }],
++            order: [['emitted_at', 'DESC']]
++        });
++        
++        res.json(docs);
++    } catch (error) {
++        console.error('[SunatAllDocs] Error:', error.message);
++        res.status(500).json({ message: error.message });
++    }
++});
++
+ // Get all billing documents for a reservation (History Carousel)
+ router.get('/documents/:reservation_id', async (req, res) => {
+     try {
+@@ -761,10 +979,11 @@ router.delete('/document/:id', async (req, res) => {
+ });
+ 
+ // Proxy to Sunat Hub for Credit Note (Anulación de Documento Individual)
+-router.post('/annul-document', async (req, res) => {
++router.post('/annul-document', authenticateToken, async (req, res) => {
+     try {
+         const { Setting, BillingDocument, Reservation } = require('../models');
+-        const { id, reason } = req.body;
++        const id = req.body.id || req.body.billing_document_id;
++        const reason = req.body.reason || req.body.motivoText;
+ 
+         if (!id) return res.status(400).json({ message: 'ID de documento es obligatorio' });
+ 
+

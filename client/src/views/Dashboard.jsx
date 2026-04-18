@@ -1,0 +1,394 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { useRestaurant } from '../contexts/RestaurantContext';
+import AdminDashboard from './AdminDashboard';
+import WaiterMap from '../components/WaiterMap';
+import StockDashboard from '../components/StockDashboard';
+import MenuView from './MenuView';
+import ReportesView from './ReportesView';
+import UserManagementModal from '../components/UserManagementModal';
+import PasswordChangeModal from '../components/PasswordChangeModal';
+import AccountManagementView from './AccountManagementView';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, Users, User, ChevronUp, Key, TrendingUp, FileText, Wine } from 'lucide-react';
+import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
+
+export default function Dashboard() {
+    const { user, logout, config } = useRestaurant();
+    const navigate = useNavigate();
+    const [currentView, setCurrentView] = useState(() => {
+        return localStorage.getItem('lastView') || 'main';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('lastView', currentView);
+    }, [currentView]);
+
+    // Role-based view protection
+    useEffect(() => {
+        const restrictedViews = {
+            waiter: ['drink_promos'],
+            cashier: ['stock', 'accounts', 'drink_promos'], // Cashier already has reports in current logic
+            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos']
+        };
+
+        if (user && restrictedViews[user.role]?.includes(currentView)) {
+            console.warn(`Role ${user.role} attempted to access restricted view: ${currentView}. Redirecting to main.`);
+            setCurrentView('main');
+        }
+    }, [currentView, user.role]);
+
+    const [isCollapsed, setIsCollapsed] = useState(true);
+
+    // User Menu State
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showUserManagement, setShowUserManagement] = useState(false);
+    const [showPasswordChange, setShowPasswordChange] = useState(false);
+    const menuRef = useRef(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowUserMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // --- SWIPE GESTURE LOGIC START ---
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
+
+    // Minimum distance (in px) to be considered a swipe
+    const minSwipeDistance = 50;
+    // Maximum X coordinate starting point for a "swipe right" to be valid 
+    // (Prevents accidental opening when swiping horizontally on tables)
+    const maxSwipeRightEdge = 40;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null); // Reset touch end
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (window.innerWidth < 768) {
+            if (isLeftSwipe && !isCollapsed) {
+                // Swipe Left: Close open menu anywhere
+                setIsCollapsed(true);
+            } else if (isRightSwipe && isCollapsed && touchStart <= maxSwipeRightEdge) {
+                // Swipe Right: Open menu only if started from the far-left edge
+                setIsCollapsed(false);
+            }
+        }
+    };
+    // --- SWIPE GESTURE LOGIC END ---
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const renderContent = () => {
+        if (currentView === 'stock') {
+            return <StockDashboard readOnly={user.role !== 'admin'} user={user} />;
+        }
+        if (currentView === 'menu') {
+            return <MenuView />;
+        }
+        if (currentView === 'reports') {
+            return <ReportesView />;
+        }
+        if (currentView === 'accounts') {
+            return <AccountManagementView />;
+        }
+        if (currentView === 'drink_promos') {
+            return <DrinkPromotionsConfig />;
+        }
+
+        switch (user.role) {
+            case 'admin':
+                return <AdminDashboard />;
+            case 'waiter':
+            case 'cashier':
+                return <WaiterMap />;
+            case 'kitchen':
+                return <div className="p-8 text-center text-gray-500">Vista de Cocina Deshabilitada</div>;
+            default:
+                return <div>Rol desconocido</div>;
+        }
+    };
+
+    // Close sidebar when clicking outside on mobile
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            const sidebar = document.getElementById('sidebar-nav');
+            const toggleButton = document.querySelector('button[title="Expandir"], button[title="Colapsar"]'); // Attempt to target toggle button more specifically if possible
+
+            if (window.innerWidth < 768 && !isCollapsed && sidebar && !sidebar.contains(event.target)) {
+                // Check if click is on the toggle button (or its children) to avoid immediate re-closing
+                // The toggle button is outside the sidebar now.
+                // We can use a ref for the button too, or just check class/id.
+                // Or simply: if target is not sidebar AND not toggle button.
+                // Let's assume the toggle button click handler handles the toggle, so we only care if it's NOT the toggle button.
+                // But finding the toggle button via DOM query might be fragile if there are multiple buttons.
+                // Better to check if the click target is the button itself (we can add an ID to the button).
+                const isToggle = event.target.closest('#sidebar-toggle');
+                if (!isToggle) {
+                    setIsCollapsed(true);
+                }
+            }
+        };
+
+        if (!isCollapsed && window.innerWidth < 768) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isCollapsed]);
+
+    return (
+        <div
+            className="flex h-screen bg-gray-100 overflow-hidden relative"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+        >
+            {/* Sidebar Backdrop for Mobile */}
+            {!isCollapsed && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/20 z-20"
+                    onClick={() => setIsCollapsed(true)}
+                />
+            )}
+
+            {/* Sidebar & Toggle Button Wrapper */}
+            <div
+                className={`relative z-30 transition-all duration-300 md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
+                onMouseEnter={() => { if (window.innerWidth >= 768) setIsCollapsed(false) }}
+                onMouseLeave={() => { if (window.innerWidth >= 768) setIsCollapsed(true) }}
+            >
+                {/* Toggle Button */}
+                <button
+                    id="sidebar-toggle"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={`absolute transition-all duration-300 z-50 focus:outline-none bg-white border-2 border-gray-200 shadow-md rounded-full text-blue-600 hover:text-blue-800 flex items-center justify-center
+                        top-1/2 -translate-y-1/2
+                        w-8 h-8 md:w-12 md:h-12 p-0
+                        left-full -translate-x-1/2
+                        ${isCollapsed ? 'ml-8 md:ml-4' : ''}
+                    `}
+                // left-full places it at the right edge of the wrapper (0 or 64).
+                // -translate-x-1/2 centers it on the line.
+                // If collapsed (w-0), left is 0. We want it pushed out a bit?
+                // Previous logic: left-0 ml-[-1rem] translate-x-8 -> net +1rem (16px) approx?
+                // Let's adjust offset to make it visible.
+                // width 0. left 0. translate -50% (of button width).
+                // if button w-6 (24px). center is at -12px.
+                // we want center at +some px.
+                // So we need positive margin or translate.
+                // ml-4 (16px). center at -12+16 = 4px? Too close?
+                // Previous: translate-x-8 (2rem=32px). left-0. ml--1rem (-16px). Net +16px relative to left 0?
+                // Let's try simple styling: left-full -translate-x-1/2.
+                // Collapsed offset: translate-x-4 (1rem).
+                >
+                    {isCollapsed ? <ChevronRight className="w-5 h-5 md:w-8 md:h-8" strokeWidth={3} /> : <ChevronLeft className="w-5 h-5 md:w-8 md:h-8" strokeWidth={3} />}
+                </button>
+
+                {/* Sidebar Content */}
+                <aside
+                    id="sidebar-nav"
+                    className="w-64 h-[100dvh] md:h-full bg-white shadow-md flex flex-col fixed md:absolute border-r overflow-hidden"
+                    // On mobile: fixed h-screen.
+                    // On desktop: absolute h-full (filling wrapper). wrapper is relative.
+                    // Wait, if wrapper is w-0, inside aside is w-64?
+                    // Yes, we want content to be w-64 but masked by wrapper?
+                    // No, previously aside itself was w-0 or w-64.
+                    // Users want "clean collapse".
+                    // If wrapper triggers w-0 to w-64, we need strict overflow hidden on Wrapper?
+                    // If wrapper has overflow-hidden, the button (outside) is clipped!
+                    // So wrapper CANNOT have overflow-hidden.
+                    // So ASIDE must handle the width visual?
+                    // But if wrapper handles events, ASIDE must match wrapper width?
+                    // If Wrapper is 64, Aside is 64.
+                    // If Wrapper is 0, Aside is 0?
+                    // Yes. Wrapper controls width. Aside matches parent width.
+                    // Aside: w-full.
+                    // Wrapper: w-0 / w-64. overflow-visible (for button).
+                    // BUT: if wrapper is w-0 and overflow-visible, the Aside content (w-full of 0 is 0) is hidden.
+                    // BUT: Sidebar has fixed width content usually?
+                    // If Aside becomes w-0, flex contents might squash?
+                    // Previous implementation: `w-0 border-none` ... `overflow-hidden`.
+                    // So Aside handled the hiding.
+                    // Now Wrapper handles width. Aside should utilize that.
+                    // Aside class: `w-full h-full overflow-hidden ...`
+                    // If wrapper is w-0, Aside is w-0. Overflow hidden hides content. Perfect.
+                    style={{ width: isCollapsed && window.innerWidth < 768 ? '0px' : (isCollapsed ? '0px' : '16rem') }}
+                // Wait, Wrapper handles width via class. Aside w-full inherits it.
+                // However, for mobile `fixed`, it doesn't care about wrapper parent if fixed?
+                // If Sidebar is `fixed` on mobile, it breaks out of Wrapper.
+                // Wrapper is `md:h-full`.
+                // Mobile: Sidebar needs to be independently controlled or Wrapper needs to be fixed?
+                // Let's make Wrapper fixed on mobile?
+                // `fixed md:relative`.
+                // Width classes apply to Wrapper.
+                // Aside -> w-full h-full.
+                // This unifies logic.
+                // Button position works relative to Wrapper.
+                >
+                    {/* Header */}
+                    <div className={`p-6 border-b flex flex-col items-center gap-2 ${isCollapsed ? 'hidden md:flex opacity-0' : 'opacity-100'}`}>
+                        {/* Opacity fade for smoother transition? Or just keep hidden logic */}
+                        <h1 className="font-bold text-blue-700 text-nowrap text-xl overflow-hidden">
+                            Makala
+                        </h1>
+                    </div>
+
+                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+                        <button
+                            onClick={() => { setCurrentView('main'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                            title="Panel Principal"
+                            className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'main' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                        >
+                            <LayoutGrid size={20} />
+                            {!isCollapsed && <span>Salon</span>}
+                        </button>
+
+                        {/* ... (rest of nav items remain same, just ensure they hide icon if collapsed on mobile? No, icons should start hidden if we want "Solo ver la flecha") 
+                        Wait, if sidebar width is 0, nav items are hidden by default overflow behavior? 
+                        Let's verify strict hiding. 
+                    */}
+
+                        {/* Menu Management - Admin & Waiter */}
+                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                            <button
+                                onClick={() => { setCurrentView('menu'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Menú"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'menu' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <Utensils size={20} />
+                                {!isCollapsed && <span>Menú</span>}
+                            </button>
+                        )}
+
+                        {/* Drink Promotions - Admin Only */}
+                        {user.role === 'admin' && (
+                            <button
+                                onClick={() => { setCurrentView('drink_promos'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="2x1 Tragos"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'drink_promos' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <Wine size={20} />
+                                {!isCollapsed && <span>2x1 Tragos</span>}
+                            </button>
+                        )}
+
+                        {/* Inventory - Admin Only */}
+                        {['admin', 'waiter'].includes(user.role) && (
+                            <button
+                                onClick={() => { setCurrentView('stock'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Inventario"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'stock' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <Package size={20} />
+                                {!isCollapsed && <span>Inventario</span>}
+                            </button>
+                        )}
+
+                        {/* Accounts - Admin Only */}
+                        {['admin', 'waiter'].includes(user.role) && (
+                            <button
+                                onClick={() => { setCurrentView('accounts'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Historial Cuentas"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'accounts' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <FileText size={20} />
+                                {!isCollapsed && <span>Historial Cuentas</span>}
+                            </button>
+                        )}
+
+                        {/* Reports - Admin & Cashier */}
+                        {['admin', 'cashier', 'waiter'].includes(user.role) && (
+                            <button
+                                onClick={() => { setCurrentView('reports'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Caja y Reportes"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <TrendingUp size={20} />
+                                {!isCollapsed && <span>Caja / Reportes</span>}
+                            </button>
+                        )}
+                    </nav>
+
+                    {/* User Menu - Hide on Mobile if Collapsed */}
+                    <div className={`p-4 border-t relative ${isCollapsed ? 'hidden md:block' : ''}`} ref={menuRef}>
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            className={`w-full flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition cursor-pointer ${isCollapsed ? 'justify-center' : ''}`}
+                        >
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                                {user.displayName.charAt(0)}
+                            </div>
+                            {!isCollapsed && (
+                                <div className="flex-1 text-left overflow-hidden">
+                                    <div className="text-sm font-bold text-gray-800 truncate">{user.displayName}</div>
+                                    <div className="text-xs text-gray-500 capitalize">{user.role}</div>
+                                </div>
+                            )}
+                            {!isCollapsed && <ChevronUp size={16} className={`text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />}
+                        </button>
+
+                        {/* USER MENU DROPDOWN (POPOVER) */}
+                        {showUserMenu && (
+                            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-lg shadow-xl border overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
+                                {user.role === 'admin' && (
+                                    <button
+                                        onClick={() => { setShowUserManagement(true); setShowUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <Users size={16} /> Gestionar Usuarios
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => { setShowPasswordChange(true); setShowUserMenu(false); }}
+                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                    <Key size={16} /> Cambiar Contraseña
+                                </button>
+                                <div className="border-t my-1"></div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                    <LogOut size={16} /> Cerrar Sesión
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </aside>
+            </div>
+
+            {/* Main Content - Added overflow-x-hidden */}
+            <main className="flex-1 overflow-auto relative bg-gray-50 overflow-x-hidden">
+                {renderContent()}
+            </main>
+
+            {/* MODALS */}
+            {showUserManagement && <UserManagementModal onClose={() => setShowUserManagement(false)} />}
+            {showPasswordChange && <PasswordChangeModal targetUser={user} onClose={() => setShowPasswordChange(false)} />}
+        </div >
+    );
+}

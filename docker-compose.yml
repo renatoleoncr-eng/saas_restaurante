@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: gestion-restaurante:latest
+    container_name: restaurante-prod
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./server/uploads:/app/server/uploads
+    environment:
+      - PORT=3004
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=restaurante_user
+      - DB_PASS=restaurante_password
+      - DB_NAME=gestion_restaurante
+      - JWT_SECRET=secret_restaurante_prod
+      - TZ=America/Lima
+    depends_on:
+      - db
+    networks:
+      - restaurante-network
+
+  db:
+    image: mysql:8.0
+    container_name: restaurante-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: gestion_restaurante
+      MYSQL_USER: restaurante_user
+      MYSQL_PASSWORD: restaurante_password
+      TZ: America/Lima
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - restaurante-network
+
+networks:
+  restaurante-network:
+    driver: bridge
+
+volumes:
+  db_data:

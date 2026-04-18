@@ -1,0 +1,28 @@
+{
+    "name": "gestion-restaurante-server",
+    "version": "1.0.0",
+    "description": "Backend for Restaurant Management System",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "helmet": "^7.0.0",
+        "jsonwebtoken": "^9.0.1",
+        "morgan": "^1.10.0",
+        "multer": "^1.4.5-lts.1",
+        "mysql2": "^3.6.0",
+        "playwright": "^1.58.2",
+        "sequelize": "^6.32.1",
+        "socket.io": "^4.7.2",
+        "sqlite3": "^5.1.7"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    }
+}
