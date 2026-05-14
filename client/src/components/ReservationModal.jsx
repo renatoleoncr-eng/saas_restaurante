@@ -13,6 +13,7 @@ export default function ReservationModal({ tableId, onClose }) {
     });
 
     const [history, setHistory] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const checkHistory = async () => {
         if (!form.customerName) return;
@@ -26,6 +27,9 @@ export default function ReservationModal({ tableId, onClose }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isLoading) return;
+        
+        setIsLoading(true);
         try {
             await axios.post('/api/reservations', {
                 ...form,
@@ -35,8 +39,10 @@ export default function ReservationModal({ tableId, onClose }) {
             refreshData();
             onClose();
         } catch (err) {
-            alert('Error al crear reserva');
+            alert(err.response?.data?.error || 'Error al crear reserva');
             console.error(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -111,9 +117,10 @@ export default function ReservationModal({ tableId, onClose }) {
 
                     <button
                         type="submit"
-                        className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700 transition-transform active:scale-95"
+                        disabled={isLoading}
+                        className={`w-full text-white font-bold py-3 rounded-xl shadow-md transition-transform active:scale-95 ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        Confirmar Reserva
+                        {isLoading ? 'Creando...' : 'Confirmar Reserva'}
                     </button>
                 </form>
             </div>

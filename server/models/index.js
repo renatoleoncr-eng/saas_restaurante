@@ -535,6 +535,48 @@ const DrinkPromotionItem = sequelize.define('DrinkPromotionItem', {
 DrinkPromotion.hasMany(DrinkPromotionItem, { onDelete: 'CASCADE' });
 DrinkPromotionItem.belongsTo(DrinkPromotion);
 
+// CASH SESSIONS (Shift Management)
+const CashSession = sequelize.define('CashSession', {
+    status: {
+        type: DataTypes.ENUM('open', 'closed'),
+        defaultValue: 'open'
+    },
+    openingCash: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    closingNotes: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    openedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW
+    },
+    closedAt: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    closingDetails: {
+        type: DataTypes.TEXT, // Store JSON string: { expected: {}, counted: {}, difference: {} }
+        allowNull: true
+    }
+});
+
+// Relationships for CashSession
+User.hasMany(CashSession, { as: 'OpenedSessions', foreignKey: 'openedBy' });
+CashSession.belongsTo(User, { as: 'Opener', foreignKey: 'openedBy' });
+User.hasMany(CashSession, { as: 'ClosedSessions', foreignKey: 'closedBy' });
+CashSession.belongsTo(User, { as: 'Closer', foreignKey: 'closedBy' });
+
+CashSession.hasMany(Payment);
+Payment.belongsTo(CashSession);
+
+CashSession.hasMany(Expense);
+Expense.belongsTo(CashSession);
+
+
 module.exports = {
     sequelize,
     RestaurantConfig,
@@ -556,5 +598,6 @@ module.exports = {
     ProductVariant,
     Payment,
     DrinkPromotion,
-    DrinkPromotionItem
+    DrinkPromotionItem,
+    CashSession
 };
