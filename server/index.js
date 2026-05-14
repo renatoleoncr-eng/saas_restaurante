@@ -23,6 +23,7 @@ const menuRoutes = require('./routes/menu.routes');
 const expenseRoutes = require('./routes/expense.routes');
 const accountRoutes = require('./routes/account.routes');
 const drinkPromotionRoutes = require('./routes/drink-promotions.routes');
+const sessionRoutes = require('./routes/session.routes');
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
 
@@ -59,6 +60,7 @@ app.use('/api', menuRoutes);
 app.use('/api', expenseRoutes);
 app.use('/api', accountRoutes);
 app.use('/api', drinkPromotionRoutes);
+app.use('/api', sessionRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante' }));
 
