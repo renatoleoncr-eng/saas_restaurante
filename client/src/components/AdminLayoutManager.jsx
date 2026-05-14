@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Plus, Trash, Edit, Calendar } from 'lucide-react';
+import { Plus, Trash, Edit, Calendar, Calculator } from 'lucide-react';
 import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import SessionManagerModal from './SessionManagerModal';
