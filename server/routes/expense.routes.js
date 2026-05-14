@@ -29,7 +29,10 @@ router.get('/expenses', async (req, res) => {
 router.post('/expenses', async (req, res) => {
     try {
         const { description, amount, category, paymentMethod, userId, date } = req.body;
-        const { Payment, Expense } = require('../models');
+        const { Payment, Expense, CashSession } = require('../models');
+
+        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const CashSessionId = activeSession ? activeSession.id : null;
 
         // Validation: Prevent negative cash
         if (paymentMethod === 'efectivo') {
@@ -60,7 +63,8 @@ router.post('/expenses', async (req, res) => {
             category,
             paymentMethod,
             UserId: userId,
-            date: date || new Date()
+            date: date || new Date(),
+            CashSessionId
         });
 
         res.json(expense);

@@ -207,9 +207,12 @@ const restoreOrderStock = async (order) => {
 // Close Account (Modified for Multipart/Upload of multiple files)
 router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res) => {
     try {
-        const { Account, Table, Payment } = getModels();
+        const { Account, Table, Payment, CashSession } = getModels();
         const { id } = req.params;
         const { paymentMethod } = req.body;
+
+        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const CashSessionId = activeSession ? activeSession.id : null;
 
         const account = await Account.findByPk(id);
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
@@ -237,7 +240,8 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
                 amount: remaining,
                 method: paymentMethod || 'efectivo',
                 evidence: account.paymentEvidence,
-                UserId: req.body.userId || null
+                UserId: req.body.userId || null,
+                CashSessionId
             });
         }
 
@@ -264,9 +268,12 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
 // Partial Payment (Abono a Cuenta)
 router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) => {
     try {
-        const { Account, Table, Payment } = getModels();
+        const { Account, Table, Payment, CashSession } = getModels();
         const { id } = req.params;
         const { amount, paymentMethod, userId } = req.body;
+
+        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const CashSessionId = activeSession ? activeSession.id : null;
 
         if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: 'Monto inválido' });
@@ -290,7 +297,8 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
             amount: parseFloat(amount),
             method: paymentMethod || 'efectivo',
             evidence: evidencePath,
-            UserId: userId || null
+            UserId: userId || null,
+            CashSessionId
         });
 
         // Re-calculate total paid
