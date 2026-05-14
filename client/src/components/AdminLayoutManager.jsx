@@ -4,6 +4,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { Plus, Trash, Edit, Calendar } from 'lucide-react';
 import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
+import SessionManagerModal from './SessionManagerModal';
 
 export default function AdminLayoutManager() {
     const { areas, refreshData, reservations } = useRestaurant();
@@ -11,6 +12,8 @@ export default function AdminLayoutManager() {
     const [selectedTable, setSelectedTable] = useState(null);
     const [reservationTable, setReservationTable] = useState(null);
     const [creatingTable, setCreatingTable] = useState({}); // { areaId: boolean }
+    const [showSessionModal, setShowSessionModal] = useState(false);
+    const [activeSession, setActiveSession] = useState(null);
 
     // Mobile Tabs State
     const [activeAreaId, setActiveAreaId] = useState(null);
@@ -20,7 +23,17 @@ export default function AdminLayoutManager() {
         if (areas.length > 0 && !activeAreaId) {
             setActiveAreaId(areas[0].id);
         }
+        checkActiveSession();
     }, [areas, activeAreaId]);
+
+    const checkActiveSession = async () => {
+        try {
+            const res = await axios.get('/api/sessions/current');
+            setActiveSession(res.data.session);
+        } catch (err) {
+            setActiveSession(null);
+        }
+    };
 
 
     const handleCreateArea = async () => {
@@ -111,7 +124,19 @@ export default function AdminLayoutManager() {
 
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Gestionar Salon</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Gestionar Salon</h2>
+                <button
+                    onClick={() => setShowSessionModal(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold shadow-sm transition-all transform active:scale-95 ${activeSession
+                        ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                        }`}
+                >
+                    <Calculator size={18} />
+                    {activeSession ? 'Turno Abierto' : 'Abrir Turno'}
+                </button>
+            </div>
 
             {/* Area Creation */}
             <div className="flex gap-2 mb-6">
@@ -314,6 +339,15 @@ export default function AdminLayoutManager() {
                     />
                 )
             }
+            {showSessionModal && (
+                <SessionManagerModal
+                    onClose={() => {
+                        setShowSessionModal(false);
+                        checkActiveSession();
+                        refreshData();
+                    }}
+                />
+            )}
         </div >
     );
 }

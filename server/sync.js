@@ -1,4 +1,4 @@
-const { sequelize, RestaurantConfig, DailyMenu, Payment, DrinkPromotion, DrinkPromotionItem, User, Product } = require('./models');
+const { sequelize, RestaurantConfig, DailyMenu, Payment, DrinkPromotion, DrinkPromotionItem, User, Product, CashSession } = require('./models');
 
 async function runAutomaticFix() {
     console.log("--- RUNNING AUTOMATIC SCHEMA FIX ---");
@@ -42,7 +42,11 @@ async function runAutomaticFix() {
         { table: 'Expenses', column: 'paymentMethod', type: "VARCHAR(255) DEFAULT 'efectivo'" },
         { table: 'Expenses', column: 'category', type: "VARCHAR(255) DEFAULT 'otros'" },
         { table: 'Expenses', column: 'UserId', type: 'INTEGER' },
-        { table: 'Expenses', column: 'date', type: 'DATETIME' }
+        { table: 'Expenses', column: 'date', type: 'DATETIME' },
+        { table: 'Expenses', column: 'CashSessionId', type: 'INTEGER' },
+
+        // SESSION LINKS FOR PAYMENTS
+        { table: 'Payments', column: 'CashSessionId', type: 'INTEGER' }
     ];
 
     for (const m of migrations) {
@@ -80,6 +84,7 @@ const syncDB = async () => {
         await Payment.sync();
         await DrinkPromotion.sync();
         await DrinkPromotionItem.sync();
+        await CashSession.sync();
         console.log("Specific models synced.");
 
         // Init Config if not exists
