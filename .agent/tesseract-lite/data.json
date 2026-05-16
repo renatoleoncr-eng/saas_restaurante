@@ -283,138 +283,6 @@
       "type": "js"
     },
     {
-      "id": "server/check_account_type.js",
-      "name": "check_account_type.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_associations.js",
-      "name": "check_associations.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_ceviche.js",
-      "name": "check_ceviche.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_data.js",
-      "name": "check_data.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_data_server.js",
-      "name": "check_data_server.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_db_debug.js",
-      "name": "check_db_debug.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_db_values.js",
-      "name": "check_db_values.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_menu_json.js",
-      "name": "check_menu_json.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_menu_orders.js",
-      "name": "check_menu_orders.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_menu_products.js",
-      "name": "check_menu_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_movements.js",
-      "name": "check_movements.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_orders.js",
-      "name": "check_orders.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_order_schema.js",
-      "name": "check_order_schema.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_platos.js",
-      "name": "check_platos.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_product_types.js",
-      "name": "check_product_types.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_schema.js",
-      "name": "check_schema.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_stock_debug.js",
-      "name": "check_stock_debug.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_tables.js",
-      "name": "check_tables.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_types_debug.js",
-      "name": "check_types_debug.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_users.js",
-      "name": "check_users.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_variants.js",
-      "name": "check_variants.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/check_variants_debug.js",
-      "name": "check_variants_debug.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
       "id": "server/cleanup_tables.js",
       "name": "cleanup_tables.js",
       "group": "server",
@@ -441,72 +309,6 @@
     {
       "id": "server/create_menu_products.js",
       "name": "create_menu_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_cash_register.js",
-      "name": "debug_cash_register.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_db.js",
-      "name": "debug_db.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_db_check.js",
-      "name": "debug_db_check.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_menu_data.js",
-      "name": "debug_menu_data.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_menu_libre.js",
-      "name": "debug_menu_libre.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_menu_sales.js",
-      "name": "debug_menu_sales.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_put.js",
-      "name": "debug_put.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_recipes.js",
-      "name": "debug_recipes.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_reports_query.js",
-      "name": "debug_reports_query.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_stock_movements.js",
-      "name": "debug_stock_movements.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/debug_timezone.js",
-      "name": "debug_timezone.js",
       "group": "server",
       "type": "js"
     },
@@ -585,30 +387,6 @@
     {
       "id": "server/list_products.js",
       "name": "list_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/migrate_happy_hour.js",
-      "name": "migrate_happy_hour.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/migrate_historical_movements.js",
-      "name": "migrate_historical_movements.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/migrate_menu_ids.js",
-      "name": "migrate_menu_ids.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/migrate_variants_hh.js",
-      "name": "migrate_variants_hh.js",
       "group": "server",
       "type": "js"
     },
@@ -753,84 +531,6 @@
     {
       "id": "server/sync_variants.js",
       "name": "sync_variants.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_api.js",
-      "name": "test_api.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_case.js",
-      "name": "test_case.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_daily_stock_logic.js",
-      "name": "test_daily_stock_logic.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_fixed_timezone.js",
-      "name": "test_fixed_timezone.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_libre.js",
-      "name": "test_libre.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_menu_api.js",
-      "name": "test_menu_api.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_menu_pricing.js",
-      "name": "test_menu_pricing.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_menu_product_creation.js",
-      "name": "test_menu_product_creation.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_order.js",
-      "name": "test_order.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_put_variant.js",
-      "name": "test_put_variant.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_refactor.js",
-      "name": "test_refactor.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_reports_endpoint.js",
-      "name": "test_reports_endpoint.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/test_sales_endpoint.js",
-      "name": "test_sales_endpoint.js",
       "group": "server",
       "type": "js"
     },
@@ -1145,86 +845,6 @@
       "target": "server/models/index.js"
     },
     {
-      "source": "server/check_associations.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_ceviche.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_data.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_data_server.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_db_debug.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_db_values.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_menu_json.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_menu_orders.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_menu_products.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_movements.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_order_schema.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/check_platos.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_product_types.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_schema.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_stock_debug.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_tables.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_types_debug.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_users.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_variants_debug.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/check_variants_debug.js",
-      "target": "server/config/db.js"
-    },
-    {
       "source": "server/cleanup_tables.js",
       "target": "server/models/index.js"
     },
@@ -1242,78 +862,6 @@
     },
     {
       "source": "server/create_menu_products.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_cash_register.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_db.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_db.js",
-      "target": "server/sync.js"
-    },
-    {
-      "source": "server/debug_db.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_db.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_db_check.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_db_check.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/debug_menu_data.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_menu_data.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/debug_menu_libre.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_menu_sales.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_put.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_put.js",
-      "target": "server/utils/audit.js"
-    },
-    {
-      "source": "server/debug_recipes.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_recipes.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/debug_reports_query.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_stock_movements.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/debug_timezone.js",
       "target": "server/models/index.js"
     },
     {
@@ -1430,22 +978,6 @@
     },
     {
       "source": "server/list_all_products.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/migrate_happy_hour.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/migrate_historical_movements.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/migrate_menu_ids.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/migrate_variants_hh.js",
       "target": "server/models/index.js"
     },
     {
@@ -1646,34 +1178,6 @@
     },
     {
       "source": "server/sync_tables.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_case.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_daily_stock_logic.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_daily_stock_logic.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/test_fixed_timezone.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_menu_product_creation.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_put_variant.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/test_sales_endpoint.js",
       "target": "server/models/index.js"
     },
     {

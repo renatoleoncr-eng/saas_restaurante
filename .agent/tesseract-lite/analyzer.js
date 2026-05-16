@@ -28,6 +28,20 @@ function scanDir(dirPath) {
             if (file === 'node_modules' || file === '.git' || file === '.agent') return;
             scanDir(path.join(dirPath, file));
         } else if (file.match(/\.(js|jsx|ts|tsx|vue|html|css|php)$/)) {
+            // Exclude helper, test, debug, and temporary scripts to keep architecture clean
+            const lowercaseFile = file.toLowerCase();
+            if (
+                lowercaseFile.startsWith('check_') || 
+                lowercaseFile.startsWith('test_') || 
+                lowercaseFile.startsWith('debug_') || 
+                lowercaseFile.startsWith('temp_') ||
+                lowercaseFile.startsWith('migrate_') ||
+                lowercaseFile.includes('.test.') ||
+                lowercaseFile.includes('.spec.')
+            ) {
+                return;
+            }
+
             const relPath = getRelativePath(filePath);
             const node = {
                 id: relPath,
