@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Tesseract - 3D Code Map</title>
+    <script src="https://unpkg.com/3d-force-graph"></script>
+    <script src="https://unpkg.com/three"></script>
+    <script src="https://unpkg.com/three/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <style>
+        body { margin: 0; background: #0b0e14; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #info { position: absolute; top: 20px; left: 20px; background: rgba(11, 14, 20, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #1f2937; backdrop-filter: blur(10px); z-index: 10; width: 250px; }
+        h1 { margin: 0 0 10px; font-size: 18px; color: #60a5fa; letter-spacing: 1px; text-transform: uppercase; }
+        .node-detail { font-size: 14px; margin-top: 10px; opacity: 0.9; }
+        .label { color: #94a3b8; font-size: 12px; }
+        .val { color: #f8fafc; font-weight: 500; }
+        .controls { margin-top: 15px; font-size: 12px; color: #64748b; }
+        #node-info { display: none; margin-top: 20px; border-top: 1px solid #1f2937; padding-top: 15px; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>Tesseract Lite</h1>
+        <div class="node-detail">
+            <span class="label">Project:</span> <span class="val">Gestion Restaurante</span>
+        </div>
+        <div class="controls">
+            • Scroll to Zoom<br>
+            • Drag to Rotate<br>
+            • Click Node to Select
+        </div>
+        <div id="node-info">
+            <div class="node-detail"><span class="label">File:</span> <span id="file-name" class="val">-</span></div>
+            <div class="node-detail"><span class="label">Path:</span> <span id="file-path" class="val">-</span></div>
+            <div class="node-detail"><span class="label">Type:</span> <span id="file-type" class="val">-</span></div>
+        </div>
+    </div>
+    <div id="3d-graph"></div>
+
+    <script>
+        const graphEl = document.getElementById('3d-graph');
+        const nodeInfo = document.getElementById('node-info');
+        const fileName = document.getElementById('file-name');
+        const filePath = document.getElementById('file-path');
+        const fileType = document.getElementById('file-type');
+
+        const colors = {
+            client: '#3b82f6',
+            server: '#ef4444',
+            shared: '#10b981',
+            default: '#6366f1'
+        };
+
+        const Graph = ForceGraph3D()(graphEl)
+            .jsonUrl('data.json')
+            .backgroundColor('#0b0e14')
+            .nodeLabel(node => `<div style="background: #1e293b; color: #fff; padding: 5px 10px; border-radius: 4px; border: 1px solid #334155;">${node.id}</div>`)
+            .nodeColor(node => colors[node.group] || colors.default)
+            .nodeRelSize(6)
+            .linkColor(() => '#334155')
+            .linkWidth(0.5)
+            .linkDirectionalParticles(2)
+            .linkDirectionalParticleSpeed(d => 0.005)
+            .onNodeClick(node => {
+                // Focus camera on node
+                const distance = 100;
+                const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                Graph.cameraPosition(
+                    { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                    node,
+                    2000
+                );
+
+                // Show details
+                nodeInfo.style.display = 'block';
+                fileName.innerText = node.name;
+                filePath.innerText = node.id;
+                fileType.innerText = node.type;
+            })
+            .onBackgroundClick(() => {
+                nodeInfo.style.display = 'none';
+            });
+
+        // Add Bloom Post-processing
+        const bloomPass = new UnrealBloomPass();
+        bloomPass.strength = 1.5;
+        bloomPass.radius = 0.4;
+        bloomPass.threshold = 0.1;
+        Graph.postProcessingComposer().addPass(bloomPass);
+
+    </script>
+</body>
+</html>
