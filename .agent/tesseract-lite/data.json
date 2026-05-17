@@ -1,1200 +1,1857 @@
 {
   "nodes": [
     {
-      "id": "client/dist/assets/index-58af8a68.js",
-      "name": "index-58af8a68.js",
-      "group": "client\\dist\\assets",
-      "type": "js"
+      "id": "database.sqlite",
+      "name": "database.sqlite (SQLite BBDD)",
+      "group": "database",
+      "type": "db",
+      "size": 25
     },
     {
-      "id": "client/dist/assets/index-cd4087da.css",
-      "name": "index-cd4087da.css",
-      "group": "client\\dist\\assets",
-      "type": "css"
+      "id": "model:RestaurantConfig",
+      "name": "RestaurantConfig (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/dist/index.html",
-      "name": "index.html",
-      "group": "client\\dist",
-      "type": "html"
+      "id": "model:Area",
+      "name": "Area (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/index.html",
-      "name": "index.html",
-      "group": "client",
-      "type": "html"
+      "id": "model:Table",
+      "name": "Table (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/postcss.config.js",
-      "name": "postcss.config.js",
-      "group": "client",
-      "type": "js"
+      "id": "model:Account",
+      "name": "Account (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/App.jsx",
-      "name": "App.jsx",
-      "group": "client\\src",
-      "type": "jsx"
+      "id": "model:Product",
+      "name": "Product (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/AccountDetailsModal.jsx",
-      "name": "AccountDetailsModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:User",
+      "name": "User (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/AdminLayoutManager.jsx",
-      "name": "AdminLayoutManager.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Order",
+      "name": "Order (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/AuditLogView.jsx",
-      "name": "AuditLogView.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Attendance",
+      "name": "Attendance (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/BillingConfigModal.jsx",
-      "name": "BillingConfigModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Reservation",
+      "name": "Reservation (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/DrinkPromotionsConfig.jsx",
-      "name": "DrinkPromotionsConfig.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Ingredient",
+      "name": "Ingredient (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/ErrorBoundary.jsx",
-      "name": "ErrorBoundary.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:IngredientMovement",
+      "name": "IngredientMovement (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/IngredientManager.jsx",
-      "name": "IngredientManager.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:ProductMovement",
+      "name": "ProductMovement (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/MenuConfig.jsx",
-      "name": "MenuConfig.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Recipe",
+      "name": "Recipe (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/MobileTabMenu.jsx",
-      "name": "MobileTabMenu.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:AuditLog",
+      "name": "AuditLog (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/PasswordChangeModal.jsx",
-      "name": "PasswordChangeModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:DailyMenu",
+      "name": "DailyMenu (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/RecipeModal.jsx",
-      "name": "RecipeModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Expense",
+      "name": "Expense (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/ReservationModal.jsx",
-      "name": "ReservationModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:Payment",
+      "name": "Payment (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/SessionManagerModal.jsx",
-      "name": "SessionManagerModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:ProductVariant",
+      "name": "ProductVariant (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/SessionsHistoryTab.jsx",
-      "name": "SessionsHistoryTab.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:DrinkPromotion",
+      "name": "DrinkPromotion (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/StockDashboard.jsx",
-      "name": "StockDashboard.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:DrinkPromotionItem",
+      "name": "DrinkPromotionItem (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/TableControl.jsx",
-      "name": "TableControl.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:CashSession",
+      "name": "CashSession (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/TableTransferModal.jsx",
-      "name": "TableTransferModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
+      "id": "model:BillingConfig",
+      "name": "BillingConfig (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
-      "id": "client/src/components/UserManagementModal.jsx",
-      "name": "UserManagementModal.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/components/WaiterMap.jsx",
-      "name": "WaiterMap.jsx",
-      "group": "client\\src\\components",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/contexts/RestaurantContext.jsx",
-      "name": "RestaurantContext.jsx",
-      "group": "client\\src\\contexts",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/index.css",
-      "name": "index.css",
-      "group": "client\\src",
-      "type": "css"
-    },
-    {
-      "id": "client/src/main.jsx",
-      "name": "main.jsx",
-      "group": "client\\src",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/utils/tableUtils.js",
-      "name": "tableUtils.js",
-      "group": "client\\src\\utils",
-      "type": "js"
-    },
-    {
-      "id": "client/src/views/AccountManagementView.jsx",
-      "name": "AccountManagementView.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/AdminDashboard.jsx",
-      "name": "AdminDashboard.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/AttendanceView.jsx",
-      "name": "AttendanceView.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/Dashboard.jsx",
-      "name": "Dashboard.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/Login.jsx",
-      "name": "Login.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/MenuView.jsx",
-      "name": "MenuView.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/src/views/ReportesView.jsx",
-      "name": "ReportesView.jsx",
-      "group": "client\\src\\views",
-      "type": "jsx"
-    },
-    {
-      "id": "client/tailwind.config.js",
-      "name": "tailwind.config.js",
-      "group": "client",
-      "type": "js"
-    },
-    {
-      "id": "client/vite.config.js",
-      "name": "vite.config.js",
-      "group": "client",
-      "type": "js"
-    },
-    {
-      "id": "server/add_account_type_column.js",
-      "name": "add_account_type_column.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_column.js",
-      "name": "add_column.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_column_requires_prep.js",
-      "name": "add_column_requires_prep.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_deleted_at.js",
-      "name": "add_deleted_at.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_linked_product_column.js",
-      "name": "add_linked_product_column.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_movement_account_id.js",
-      "name": "add_movement_account_id.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_userid_column.js",
-      "name": "add_userid_column.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/add_userid_to_orders.js",
-      "name": "add_userid_to_orders.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/adjust_cash.js",
-      "name": "adjust_cash.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/cleanup_tables.js",
-      "name": "cleanup_tables.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/clean_legacy_presentations.js",
-      "name": "clean_legacy_presentations.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/comprehensive_fix.js",
-      "name": "comprehensive_fix.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/config/db.js",
-      "name": "db.js",
-      "group": "server\\config",
-      "type": "js"
-    },
-    {
-      "id": "server/create_menu_products.js",
-      "name": "create_menu_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/ensure_menu_product.js",
-      "name": "ensure_menu_product.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/find_legacy_products.js",
-      "name": "find_legacy_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/find_sopa.js",
-      "name": "find_sopa.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/fix_agua_stock.js",
-      "name": "fix_agua_stock.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/fix_products.js",
-      "name": "fix_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/fix_tables_accounts.js",
-      "name": "fix_tables_accounts.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/fix_tables_area.js",
-      "name": "fix_tables_area.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/fix_variant_stock.js",
-      "name": "fix_variant_stock.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/force_alter.js",
-      "name": "force_alter.js",
-      "group": "server",
-      "type": "js"
+      "id": "model:Invoice",
+      "name": "Invoice (Sequelize Model)",
+      "group": "db_model",
+      "type": "model",
+      "size": 14
     },
     {
       "id": "server/index.js",
       "name": "index.js",
-      "group": "server",
-      "type": "js"
+      "group": "server_core",
+      "type": "js",
+      "size": 12
     },
     {
-      "id": "server/inspect_db.js",
-      "name": "inspect_db.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/list_all_products.js",
-      "name": "list_all_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/list_products.js",
-      "name": "list_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/models/index.js",
-      "name": "index.js",
-      "group": "server\\models",
-      "type": "js"
-    },
-    {
-      "id": "server/reset_db.js",
-      "name": "reset_db.js",
-      "group": "server",
-      "type": "js"
+      "id": "server/config/db.js",
+      "name": "db.js",
+      "group": "server_core",
+      "type": "js",
+      "size": 8
     },
     {
       "id": "server/routes/account.routes.js",
       "name": "account.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/attendance.routes.js",
       "name": "attendance.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/audit.routes.js",
       "name": "audit.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/auth.routes.js",
       "name": "auth.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/billing.routes.js",
       "name": "billing.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/config.routes.js",
       "name": "config.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/drink-promotions.routes.js",
       "name": "drink-promotions.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/expense.routes.js",
       "name": "expense.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/layout.routes.js",
       "name": "layout.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/menu.routes.js",
       "name": "menu.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/operation.routes.js",
       "name": "operation.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/product.routes.js",
       "name": "product.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/recipe.routes.js",
       "name": "recipe.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/reservation.routes.js",
       "name": "reservation.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/revenue.routes.js",
       "name": "revenue.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/session.routes.js",
       "name": "session.routes.js",
-      "group": "server\\routes",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/routes/user.routes.js",
       "name": "user.routes.js",
-      "group": "server\\routes",
-      "type": "js"
-    },
-    {
-      "id": "server/run_sync.js",
-      "name": "run_sync.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/sync.js",
-      "name": "sync.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/sync_menu_products.js",
-      "name": "sync_menu_products.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/sync_tables.js",
-      "name": "sync_tables.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/sync_variants.js",
-      "name": "sync_variants.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/trace_combo.js",
-      "name": "trace_combo.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/trace_order.js",
-      "name": "trace_order.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/trace_order_fetch.js",
-      "name": "trace_order_fetch.js",
-      "group": "server",
-      "type": "js"
-    },
-    {
-      "id": "server/update_db.js",
-      "name": "update_db.js",
-      "group": "server",
-      "type": "js"
+      "group": "api_route",
+      "type": "js",
+      "size": 9
     },
     {
       "id": "server/utils/audit.js",
       "name": "audit.js",
-      "group": "server\\utils",
-      "type": "js"
+      "group": "shared_util",
+      "type": "js",
+      "size": 6
     },
     {
       "id": "server/utils/dateUtils.js",
       "name": "dateUtils.js",
-      "group": "server\\utils",
-      "type": "js"
+      "group": "shared_util",
+      "type": "js",
+      "size": 6
     },
     {
-      "id": "server/verify_uniqueness_test.js",
-      "name": "verify_uniqueness_test.js",
-      "group": "server",
-      "type": "js"
+      "id": "client/src/App.jsx",
+      "name": "App.jsx",
+      "group": "fe_core",
+      "type": "jsx",
+      "size": 9
     },
     {
-      "id": "server/vps_diagnostic.js",
-      "name": "vps_diagnostic.js",
-      "group": "server",
-      "type": "js"
+      "id": "client/src/components/AccountDetailsModal.jsx",
+      "name": "AccountDetailsModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/AdminLayoutManager.jsx",
+      "name": "AdminLayoutManager.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/AuditLogView.jsx",
+      "name": "AuditLogView.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/BillingConfigModal.jsx",
+      "name": "BillingConfigModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/DrinkPromotionsConfig.jsx",
+      "name": "DrinkPromotionsConfig.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/ErrorBoundary.jsx",
+      "name": "ErrorBoundary.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/IngredientManager.jsx",
+      "name": "IngredientManager.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/MenuConfig.jsx",
+      "name": "MenuConfig.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/MobileTabMenu.jsx",
+      "name": "MobileTabMenu.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/PasswordChangeModal.jsx",
+      "name": "PasswordChangeModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/RecipeModal.jsx",
+      "name": "RecipeModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/ReservationModal.jsx",
+      "name": "ReservationModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/SessionManagerModal.jsx",
+      "name": "SessionManagerModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/SessionsHistoryTab.jsx",
+      "name": "SessionsHistoryTab.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/StockDashboard.jsx",
+      "name": "StockDashboard.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/TableControl.jsx",
+      "name": "TableControl.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/TableTransferModal.jsx",
+      "name": "TableTransferModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/UserManagementModal.jsx",
+      "name": "UserManagementModal.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/components/WaiterMap.jsx",
+      "name": "WaiterMap.jsx",
+      "group": "fe_component",
+      "type": "jsx",
+      "size": 7
+    },
+    {
+      "id": "client/src/contexts/RestaurantContext.jsx",
+      "name": "RestaurantContext.jsx",
+      "group": "fe_core",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/index.css",
+      "name": "index.css",
+      "group": "other",
+      "type": "css",
+      "size": 6
+    },
+    {
+      "id": "client/src/main.jsx",
+      "name": "main.jsx",
+      "group": "fe_core",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/utils/tableUtils.js",
+      "name": "tableUtils.js",
+      "group": "shared_util",
+      "type": "js",
+      "size": 6
+    },
+    {
+      "id": "client/src/views/AccountManagementView.jsx",
+      "name": "AccountManagementView.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/AdminDashboard.jsx",
+      "name": "AdminDashboard.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/AttendanceView.jsx",
+      "name": "AttendanceView.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/Dashboard.jsx",
+      "name": "Dashboard.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/Login.jsx",
+      "name": "Login.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/MenuView.jsx",
+      "name": "MenuView.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
+    },
+    {
+      "id": "client/src/views/ReportesView.jsx",
+      "name": "ReportesView.jsx",
+      "group": "fe_view",
+      "type": "jsx",
+      "size": 9
     }
   ],
   "links": [
     {
-      "source": "client/src/App.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:RestaurantConfig",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/App.jsx",
-      "target": "client/src/views/Dashboard.jsx"
+      "source": "model:Area",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/App.jsx",
-      "target": "client/src/views/Login.jsx"
+      "source": "model:Table",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/App.jsx",
-      "target": "client/src/components/ErrorBoundary.jsx"
+      "source": "model:Account",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/AccountDetailsModal.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:Product",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/AdminLayoutManager.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:User",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/AdminLayoutManager.jsx",
-      "target": "client/src/components/TableControl.jsx"
+      "source": "model:Order",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/AdminLayoutManager.jsx",
-      "target": "client/src/components/ReservationModal.jsx"
+      "source": "model:Attendance",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/AdminLayoutManager.jsx",
-      "target": "client/src/components/SessionManagerModal.jsx"
+      "source": "model:Reservation",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/DrinkPromotionsConfig.jsx",
-      "target": "client/src/components/RecipeModal.jsx"
+      "source": "model:Ingredient",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/IngredientManager.jsx",
-      "target": "client/src/components/AccountDetailsModal.jsx"
+      "source": "model:IngredientMovement",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/MenuConfig.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:ProductMovement",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/MenuConfig.jsx",
-      "target": "client/src/components/AccountDetailsModal.jsx"
+      "source": "model:Recipe",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/PasswordChangeModal.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:AuditLog",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/ReservationModal.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:DailyMenu",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/StockDashboard.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Expense",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/StockDashboard.jsx",
-      "target": "client/src/components/IngredientManager.jsx"
+      "source": "model:Payment",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/StockDashboard.jsx",
-      "target": "client/src/components/RecipeModal.jsx"
+      "source": "model:ProductVariant",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/StockDashboard.jsx",
-      "target": "client/src/components/MobileTabMenu.jsx"
+      "source": "model:DrinkPromotion",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/StockDashboard.jsx",
-      "target": "client/src/components/AccountDetailsModal.jsx"
+      "source": "model:DrinkPromotionItem",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/TableControl.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:CashSession",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/TableControl.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:BillingConfig",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/TableControl.jsx",
-      "target": "client/src/components/TableTransferModal.jsx"
+      "source": "model:Invoice",
+      "target": "database.sqlite",
+      "type": "db_connection"
     },
     {
-      "source": "client/src/components/TableTransferModal.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Area",
+      "target": "model:Table",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/components/TableTransferModal.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:Table",
+      "target": "model:Area",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/components/UserManagementModal.jsx",
-      "target": "client/src/components/PasswordChangeModal.jsx"
+      "source": "model:Table",
+      "target": "model:Account",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/components/WaiterMap.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Account",
+      "target": "model:Table",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/components/WaiterMap.jsx",
-      "target": "client/src/components/TableControl.jsx"
+      "source": "model:Account",
+      "target": "model:Order",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/components/WaiterMap.jsx",
-      "target": "client/src/components/ReservationModal.jsx"
+      "source": "model:Order",
+      "target": "model:Account",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/components/WaiterMap.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:Product",
+      "target": "model:Order",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/main.jsx",
-      "target": "client/src/App.jsx"
+      "source": "model:Order",
+      "target": "model:Product",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/main.jsx",
-      "target": "client/src/index.css"
+      "source": "model:User",
+      "target": "model:Order",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/AccountManagementView.jsx",
-      "target": "client/src/components/TableControl.jsx"
+      "source": "model:Order",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/AccountManagementView.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:User",
+      "target": "model:Attendance",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/AccountManagementView.jsx",
-      "target": "client/src/components/AccountDetailsModal.jsx"
+      "source": "model:Attendance",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/AccountManagementView.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:Table",
+      "target": "model:Reservation",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/AccountManagementView.jsx",
-      "target": "client/src/components/SessionsHistoryTab.jsx"
+      "source": "model:Reservation",
+      "target": "model:Table",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/AdminDashboard.jsx",
-      "target": "client/src/components/AdminLayoutManager.jsx"
+      "source": "model:Product",
+      "target": "model:Recipe",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/AttendanceView.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Recipe",
+      "target": "model:Product",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Ingredient",
+      "target": "model:Recipe",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/views/AdminDashboard.jsx"
+      "source": "model:Recipe",
+      "target": "model:Ingredient",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/WaiterMap.jsx"
+      "source": "model:User",
+      "target": "model:AuditLog",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/StockDashboard.jsx"
+      "source": "model:AuditLog",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/views/MenuView.jsx"
+      "source": "model:User",
+      "target": "model:Expense",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/views/ReportesView.jsx"
+      "source": "model:Expense",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/UserManagementModal.jsx"
+      "source": "model:Ingredient",
+      "target": "model:IngredientMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/PasswordChangeModal.jsx"
+      "source": "model:IngredientMovement",
+      "target": "model:Ingredient",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/views/AccountManagementView.jsx"
+      "source": "model:User",
+      "target": "model:IngredientMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/DrinkPromotionsConfig.jsx"
+      "source": "model:IngredientMovement",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/Dashboard.jsx",
-      "target": "client/src/components/BillingConfigModal.jsx"
+      "source": "model:Product",
+      "target": "model:ProductMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/Login.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:ProductMovement",
+      "target": "model:Product",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/MenuView.jsx",
-      "target": "client/src/components/MenuConfig.jsx"
+      "source": "model:User",
+      "target": "model:ProductMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/MenuView.jsx",
-      "target": "client/src/components/StockDashboard.jsx"
+      "source": "model:ProductMovement",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/MenuView.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Account",
+      "target": "model:ProductMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/MenuView.jsx",
-      "target": "client/src/components/MobileTabMenu.jsx"
+      "source": "model:ProductMovement",
+      "target": "model:Account",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/ReportesView.jsx",
-      "target": "client/src/contexts/RestaurantContext.jsx"
+      "source": "model:Account",
+      "target": "model:IngredientMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "client/src/views/ReportesView.jsx",
-      "target": "client/src/components/AccountDetailsModal.jsx"
+      "source": "model:IngredientMovement",
+      "target": "model:Account",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "client/src/views/ReportesView.jsx",
-      "target": "client/src/utils/tableUtils.js"
+      "source": "model:Account",
+      "target": "model:Payment",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/add_account_type_column.js",
-      "target": "server/config/db.js"
+      "source": "model:Payment",
+      "target": "model:Account",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/add_column.js",
-      "target": "server/models/index.js"
+      "source": "model:User",
+      "target": "model:Payment",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/add_deleted_at.js",
-      "target": "server/models/index.js"
+      "source": "model:Payment",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/add_linked_product_column.js",
-      "target": "server/models/index.js"
+      "source": "model:Product",
+      "target": "model:ProductVariant",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/add_userid_column.js",
-      "target": "server/config/db.js"
+      "source": "model:ProductVariant",
+      "target": "model:Product",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/add_userid_to_orders.js",
-      "target": "server/config/db.js"
+      "source": "model:ProductMovement",
+      "target": "model:ProductVariant",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/adjust_cash.js",
-      "target": "server/models/index.js"
+      "source": "model:ProductVariant",
+      "target": "model:ProductMovement",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/cleanup_tables.js",
-      "target": "server/models/index.js"
+      "source": "model:DrinkPromotion",
+      "target": "model:DrinkPromotionItem",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/clean_legacy_presentations.js",
-      "target": "server/models/index.js"
+      "source": "model:DrinkPromotionItem",
+      "target": "model:DrinkPromotion",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/comprehensive_fix.js",
-      "target": "server/models/index.js"
+      "source": "model:User",
+      "target": "model:CashSession",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/comprehensive_fix.js",
-      "target": "server/models/index.js"
+      "source": "model:CashSession",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/create_menu_products.js",
-      "target": "server/models/index.js"
+      "source": "model:User",
+      "target": "model:CashSession",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/ensure_menu_product.js",
-      "target": "server/models/index.js"
+      "source": "model:CashSession",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/find_legacy_products.js",
-      "target": "server/models/index.js"
+      "source": "model:CashSession",
+      "target": "model:Payment",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/find_sopa.js",
-      "target": "server/models/index.js"
+      "source": "model:Payment",
+      "target": "model:CashSession",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/fix_agua_stock.js",
-      "target": "server/models/index.js"
+      "source": "model:CashSession",
+      "target": "model:Expense",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/fix_tables_accounts.js",
-      "target": "server/models/index.js"
+      "source": "model:Expense",
+      "target": "model:CashSession",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
-      "source": "server/fix_tables_area.js",
-      "target": "server/models/index.js"
+      "source": "model:User",
+      "target": "model:Invoice",
+      "type": "association",
+      "label": "hasMany"
     },
     {
-      "source": "server/fix_variant_stock.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/force_alter.js",
-      "target": "server/models/index.js"
+      "source": "model:Invoice",
+      "target": "model:User",
+      "type": "association",
+      "label": "belongsTo"
     },
     {
       "source": "server/index.js",
-      "target": "server/sync.js"
+      "target": "server/routes/layout.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/layout.routes.js"
+      "target": "server/routes/config.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/config.routes.js"
+      "target": "server/routes/auth.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/auth.routes.js"
+      "target": "server/routes/operation.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/operation.routes.js"
+      "target": "server/routes/product.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/product.routes.js"
+      "target": "server/routes/attendance.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/attendance.routes.js"
+      "target": "server/routes/user.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/user.routes.js"
+      "target": "server/routes/reservation.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/reservation.routes.js"
+      "target": "server/routes/recipe.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/recipe.routes.js"
+      "target": "server/routes/audit.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/audit.routes.js"
+      "target": "server/routes/menu.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/menu.routes.js"
+      "target": "server/routes/expense.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/expense.routes.js"
+      "target": "server/routes/account.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/account.routes.js"
+      "target": "server/routes/drink-promotions.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/drink-promotions.routes.js"
+      "target": "server/routes/session.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/session.routes.js"
+      "target": "server/routes/revenue.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/index.js",
-      "target": "server/routes/revenue.routes.js"
-    },
-    {
-      "source": "server/index.js",
-      "target": "server/routes/billing.routes.js"
-    },
-    {
-      "source": "server/index.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/inspect_db.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/list_all_products.js",
-      "target": "server/models/index.js"
-    },
-    {
-      "source": "server/models/index.js",
-      "target": "server/config/db.js"
-    },
-    {
-      "source": "server/reset_db.js",
-      "target": "server/models/index.js"
+      "target": "server/routes/billing.routes.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/account.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Area",
+      "type": "db_query"
     },
     {
       "source": "server/routes/account.routes.js",
-      "target": "server/utils/dateUtils.js"
+      "target": "model:Table",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/account.routes.js",
+      "target": "model:Account",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/account.routes.js",
+      "target": "model:Product",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/account.routes.js",
+      "target": "model:Order",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/account.routes.js",
+      "target": "model:Payment",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/account.routes.js",
+      "target": "server/utils/dateUtils.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/attendance.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/attendance.routes.js",
+      "target": "model:Attendance",
+      "type": "db_query"
     },
     {
       "source": "server/routes/audit.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/audit.routes.js",
+      "target": "model:AuditLog",
+      "type": "db_query"
     },
     {
       "source": "server/routes/auth.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/auth.routes.js",
-      "target": "server/utils/audit.js"
+      "target": "server/utils/audit.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/billing.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/billing.routes.js",
+      "target": "model:BillingConfig",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/billing.routes.js",
+      "target": "model:Invoice",
+      "type": "db_query"
     },
     {
       "source": "server/routes/config.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:RestaurantConfig",
+      "type": "db_query"
     },
     {
       "source": "server/routes/drink-promotions.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:DrinkPromotion",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/drink-promotions.routes.js",
+      "target": "model:DrinkPromotionItem",
+      "type": "db_query"
     },
     {
       "source": "server/routes/expense.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/expense.routes.js",
-      "target": "server/utils/dateUtils.js"
+      "target": "model:Expense",
+      "type": "db_query"
     },
     {
       "source": "server/routes/expense.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Payment",
+      "type": "db_query"
     },
     {
       "source": "server/routes/expense.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:CashSession",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/expense.routes.js",
+      "target": "server/utils/dateUtils.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/layout.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Area",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/layout.routes.js",
+      "target": "model:Table",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/layout.routes.js",
+      "target": "model:Account",
+      "type": "db_query"
     },
     {
       "source": "server/routes/menu.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Product",
+      "type": "db_query"
     },
     {
       "source": "server/routes/menu.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/menu.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Order",
+      "type": "db_query"
     },
     {
       "source": "server/routes/menu.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Ingredient",
+      "type": "db_query"
     },
     {
       "source": "server/routes/menu.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Recipe",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/menu.routes.js",
+      "target": "model:DailyMenu",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/menu.routes.js",
+      "target": "model:ProductVariant",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Area",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/utils/dateUtils.js"
+      "target": "model:Table",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Account",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Product",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Order",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Ingredient",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:IngredientMovement",
+      "type": "db_query"
     },
     {
       "source": "server/routes/operation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:ProductMovement",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:Recipe",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:DailyMenu",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:Expense",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:Payment",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:ProductVariant",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "model:CashSession",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/operation.routes.js",
+      "target": "server/utils/dateUtils.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/product.routes.js",
-      "target": "server/utils/audit.js"
+      "target": "model:Account",
+      "type": "db_query"
     },
     {
       "source": "server/routes/product.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Product",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:User",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:Order",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:Ingredient",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:ProductMovement",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:Recipe",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "model:ProductVariant",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/product.routes.js",
+      "target": "server/utils/audit.js",
+      "type": "dependency"
     },
     {
       "source": "server/routes/recipe.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Account",
+      "type": "db_query"
     },
     {
       "source": "server/routes/recipe.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Product",
+      "type": "db_query"
     },
     {
       "source": "server/routes/recipe.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/recipe.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Ingredient",
+      "type": "db_query"
     },
     {
       "source": "server/routes/recipe.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:IngredientMovement",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/recipe.routes.js",
+      "target": "model:Recipe",
+      "type": "db_query"
     },
     {
       "source": "server/routes/reservation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Area",
+      "type": "db_query"
     },
     {
       "source": "server/routes/reservation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Table",
+      "type": "db_query"
     },
     {
       "source": "server/routes/reservation.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Account",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/reservation.routes.js",
+      "target": "model:Reservation",
+      "type": "db_query"
     },
     {
       "source": "server/routes/revenue.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:Account",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/revenue.routes.js",
+      "target": "model:Payment",
+      "type": "db_query"
     },
     {
       "source": "server/routes/session.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/session.routes.js",
+      "target": "model:Expense",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/session.routes.js",
+      "target": "model:Payment",
+      "type": "db_query"
+    },
+    {
+      "source": "server/routes/session.routes.js",
+      "target": "model:CashSession",
+      "type": "db_query"
     },
     {
       "source": "server/routes/user.routes.js",
-      "target": "server/models/index.js"
+      "target": "model:User",
+      "type": "db_query"
     },
     {
       "source": "server/routes/user.routes.js",
-      "target": "server/utils/audit.js"
+      "target": "server/utils/audit.js",
+      "type": "dependency"
     },
     {
-      "source": "server/run_sync.js",
-      "target": "server/sync.js"
+      "source": "client/src/App.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/sync.js",
-      "target": "server/models/index.js"
+      "source": "client/src/App.jsx",
+      "target": "client/src/views/Dashboard.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/sync.js",
-      "target": "server/models/index.js"
+      "source": "client/src/App.jsx",
+      "target": "client/src/views/Login.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/sync.js",
-      "target": "server/models/index.js"
+      "source": "client/src/App.jsx",
+      "target": "client/src/components/ErrorBoundary.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/sync_menu_products.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AccountDetailsModal.jsx",
+      "target": "server/routes/account.routes.js",
+      "type": "api_call"
     },
     {
-      "source": "server/sync_tables.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AccountDetailsModal.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
     },
     {
-      "source": "server/update_db.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AdminLayoutManager.jsx",
+      "target": "server/routes/session.routes.js",
+      "type": "api_call"
     },
     {
-      "source": "server/utils/audit.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AdminLayoutManager.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/verify_uniqueness_test.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AdminLayoutManager.jsx",
+      "target": "client/src/components/TableControl.jsx",
+      "type": "dependency"
     },
     {
-      "source": "server/vps_diagnostic.js",
-      "target": "server/models/index.js"
+      "source": "client/src/components/AdminLayoutManager.jsx",
+      "target": "client/src/components/ReservationModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/AdminLayoutManager.jsx",
+      "target": "client/src/components/SessionManagerModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/BillingConfigModal.jsx",
+      "target": "server/routes/billing.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/DrinkPromotionsConfig.jsx",
+      "target": "server/routes/drink-promotions.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/DrinkPromotionsConfig.jsx",
+      "target": "server/routes/product.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/DrinkPromotionsConfig.jsx",
+      "target": "client/src/components/RecipeModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/IngredientManager.jsx",
+      "target": "client/src/components/AccountDetailsModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/MenuConfig.jsx",
+      "target": "server/routes/menu.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/MenuConfig.jsx",
+      "target": "server/routes/product.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/MenuConfig.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/MenuConfig.jsx",
+      "target": "client/src/components/AccountDetailsModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/PasswordChangeModal.jsx",
+      "target": "server/routes/user.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/PasswordChangeModal.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/ReservationModal.jsx",
+      "target": "server/routes/reservation.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/ReservationModal.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/SessionManagerModal.jsx",
+      "target": "server/routes/session.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/SessionsHistoryTab.jsx",
+      "target": "server/routes/session.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "server/routes/product.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "client/src/components/IngredientManager.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "client/src/components/RecipeModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "client/src/components/MobileTabMenu.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/StockDashboard.jsx",
+      "target": "client/src/components/AccountDetailsModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "server/routes/menu.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "server/routes/drink-promotions.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "server/routes/product.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "server/routes/account.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/TableControl.jsx",
+      "target": "client/src/components/TableTransferModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/TableTransferModal.jsx",
+      "target": "server/routes/account.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/TableTransferModal.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/TableTransferModal.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/UserManagementModal.jsx",
+      "target": "server/routes/user.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/UserManagementModal.jsx",
+      "target": "client/src/components/PasswordChangeModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/WaiterMap.jsx",
+      "target": "server/routes/session.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/components/WaiterMap.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/WaiterMap.jsx",
+      "target": "client/src/components/TableControl.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/WaiterMap.jsx",
+      "target": "client/src/components/ReservationModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/components/WaiterMap.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/contexts/RestaurantContext.jsx",
+      "target": "server/routes/config.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/contexts/RestaurantContext.jsx",
+      "target": "server/routes/reservation.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/main.jsx",
+      "target": "client/src/App.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/main.jsx",
+      "target": "client/src/index.css",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "server/routes/account.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "client/src/components/TableControl.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "client/src/components/AccountDetailsModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AccountManagementView.jsx",
+      "target": "client/src/components/SessionsHistoryTab.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AdminDashboard.jsx",
+      "target": "client/src/components/AdminLayoutManager.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/AttendanceView.jsx",
+      "target": "server/routes/attendance.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/views/AttendanceView.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/views/AdminDashboard.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/WaiterMap.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/StockDashboard.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/views/MenuView.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/views/ReportesView.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/UserManagementModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/PasswordChangeModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/views/AccountManagementView.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/DrinkPromotionsConfig.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Dashboard.jsx",
+      "target": "client/src/components/BillingConfigModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/Login.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/MenuView.jsx",
+      "target": "client/src/components/MenuConfig.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/MenuView.jsx",
+      "target": "client/src/components/StockDashboard.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/MenuView.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/MenuView.jsx",
+      "target": "client/src/components/MobileTabMenu.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/ReportesView.jsx",
+      "target": "server/routes/expense.routes.js",
+      "type": "api_call"
+    },
+    {
+      "source": "client/src/views/ReportesView.jsx",
+      "target": "client/src/contexts/RestaurantContext.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/ReportesView.jsx",
+      "target": "client/src/components/AccountDetailsModal.jsx",
+      "type": "dependency"
+    },
+    {
+      "source": "client/src/views/ReportesView.jsx",
+      "target": "client/src/utils/tableUtils.js",
+      "type": "dependency"
     }
   ]
 }

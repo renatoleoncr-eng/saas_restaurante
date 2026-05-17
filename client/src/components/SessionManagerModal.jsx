@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle } from 'lucide-react';
+import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 
 export default function SessionManagerModal({ onClose }) {
     const [loading, setLoading] = useState(true);
     const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals }
     const [openingCash, setOpeningCash] = useState('');
     const [closingNotes, setClosingNotes] = useState('');
+    const [isClosingMode, setIsClosingMode] = useState(false);
     const [countedValues, setCountedValues] = useState({
         efectivo: '',
         tarjeta: '',
@@ -140,9 +141,59 @@ export default function SessionManagerModal({ onClose }) {
                                 <CheckCircle size={20} /> Abrir Turno de Salón
                             </button>
                         </div>
+                    ) : !isClosingMode ? (
+                        /* SHIFT SUMMARY VIEW */
+                        <div className="space-y-6">
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg flex gap-3">
+                                <CheckCircle className="text-blue-600 shrink-0" size={20} />
+                                <p className="text-blue-800 text-sm font-semibold">
+                                    El turno está actualmente abierto y operando.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Apertura</span>
+                                    <span className="text-xl font-bold text-gray-800">S/ {parseFloat(sessionData.session.openingCash).toFixed(2)}</span>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Iniciado por</span>
+                                    <span className="text-sm font-bold text-gray-800">{sessionData.session.Opener?.displayName || sessionData.session.Opener?.username || 'Sistema'}</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-900 rounded-xl p-5 text-white flex justify-between items-center shadow-xl">
+                                <div>
+                                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-widest">Total Esperado en Caja</span>
+                                    <span className="text-2xl font-bold">
+                                        S/ {Object.values(sessionData.expected).reduce((a, b) => a + b, 0).toFixed(2)}
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-widest">Gastos Caja</span>
+                                    <span className="text-lg font-bold text-red-400">
+                                        - S/ {(sessionData.expenseTotals.efectivo || 0).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setIsClosingMode(true)}
+                                className="w-full bg-red-100 hover:bg-red-200 text-red-700 font-bold py-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                            >
+                                <Lock size={20} /> Iniciar Cierre de Turno
+                            </button>
+                        </div>
                     ) : (
                         /* CLOSE SESSION VIEW */
                         <div className="space-y-6">
+                            <div 
+                                className="flex items-center gap-2 text-gray-500 mb-2 cursor-pointer hover:text-gray-800 transition-colors w-max font-semibold text-sm bg-gray-100 px-3 py-1.5 rounded-lg" 
+                                onClick={() => setIsClosingMode(false)}
+                            >
+                                <ArrowLeft size={16} /> Volver al resumen
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Apertura</span>
@@ -225,7 +276,7 @@ export default function SessionManagerModal({ onClose }) {
                                 onClick={handleCloseSession}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 transform active:scale-95"
                             >
-                                <Lock size={20} /> Cerrar Turno y Caja
+                                <Lock size={20} /> Confirmar Cierre de Turno y Caja
                             </button>
                         </div>
                     )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 
@@ -21,11 +21,44 @@ export default function TableControl({ tableId, accountId, onClose }) {
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
     const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
-
+    const [issueInvoice, setIssueInvoice] = useState(false);
+    const [invoiceType, setInvoiceType] = useState('boleta');
 
     // Client Editing State
     const [isEditingClient, setIsEditingClient] = useState(false);
     const [clientForm, setClientForm] = useState({ name: '', dni: '', accountType: 'standard' });
+    const [isSearchingClient, setIsSearchingClient] = useState(false);
+    const [successInvoice, setSuccessInvoice] = useState(null);
+
+    const searchClientData = async () => {
+        const doc = clientForm.dni.trim();
+        if (doc.length !== 8 && doc.length !== 11) {
+            alert('El documento debe tener 8 (DNI) u 11 (RUC) dígitos.');
+            return;
+        }
+        setIsSearchingClient(true);
+        try {
+            const res = await axios.get(`/api/billing/consulta?doc=${doc}`);
+            if (res.data) {
+                let fullName = '';
+                if (doc.length === 11) {
+                    fullName = res.data.razon_social || res.data.razonSocial || '';
+                } else {
+                    fullName = `${res.data.nombres || ''} ${res.data.apellidoPaterno || ''} ${res.data.apellidoMaterno || ''}`.trim();
+                    if (!fullName) fullName = res.data.nombre || res.data.nombreCompleto || '';
+                }
+                if (fullName) {
+                    setClientForm(prev => ({ ...prev, name: fullName }));
+                } else {
+                    alert('No se encontró el nombre para este documento.');
+                }
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+        } finally {
+            setIsSearchingClient(false);
+        }
+    };
 
     // Menu Daily State
     const [viewMode, setViewMode] = useState('products'); // 'products' | 'menu_builder'
@@ -617,6 +650,15 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         setShowPaymentModal(true);
         setIsConfirmingPayment(false); // Reset confirmation state
+        
+        // Auto-detect invoice type based on client form
+        if (clientForm.dni) {
+            setIssueInvoice(true);
+            setInvoiceType(clientForm.dni.length === 11 ? 'factura' : 'boleta');
+        } else {
+            setIssueInvoice(false);
+            setInvoiceType('boleta');
+        }
     };
 
     const confirmPayment = async () => {
@@ -626,7 +668,65 @@ export default function TableControl({ tableId, accountId, onClose }) {
             return;
         }
 
+        if (issueInvoice) {
+            if (invoiceType === 'factura') {
+                if (!clientForm.dni || clientForm.dni.length !== 11) {
+                    alert('Para emitir una Factura es obligatorio ingresar un RUC válido de 11 dígitos. Por favor, ingréselo en el formulario.');
+                    setIsConfirmingPayment(false);
+                    return;
+                }
+            } else if (invoiceType === 'boleta') {
+                if (!clientForm.dni) {
+                    const proceed = window.confirm('No ha ingresado un documento. La boleta se emitirá a "CLIENTES VARIOS". ¿Desea continuar o prefiere cancelar para ingresar los datos del cliente?');
+                    if (!proceed) {
+                        setIsConfirmingPayment(false);
+                        return;
+                    }
+                }
+            }
+        }
+
         try {
+            // Save inline client edits if any
+            if (account && (clientForm.dni !== account.clientDni || clientForm.name !== account.customerName)) {
+                await axios.put(`/api/accounts/${account.id}`, {
+                    customerName: clientForm.name,
+                    clientDni: clientForm.dni,
+                    accountType: clientForm.accountType
+                });
+            }
+
+            // Pre-create invoice if requested
+            let resInvoiceData = null;
+            if (issueInvoice) {
+                const itemsToBill = groupedOrders.map(o => {
+                    let pName = "Producto";
+                    let displayNotes = o.notes;
+                    if (!o.ProductId && o.notes) {
+                        pName = `2x1: ${o.notes}`;
+                        displayNotes = null;
+                    } else if (o.Product && o.Product.name) {
+                        pName = o.Product.name;
+                    }
+                    const fullDesc = `${pName} ${o.presentation ? `(${o.presentation})` : ''} ${displayNotes ? `- ${displayNotes}` : ''}`.trim();
+                    
+                    return {
+                        description: fullDesc,
+                        qty: o.quantity,
+                        amount: o.quantity * parseFloat(o.priceAtOrder)
+                    };
+                });
+                
+                const resInvoice = await axios.post('/api/billing/invoices', {
+                    tipo: invoiceType,
+                    clienteDocumento: clientForm.dni || '00000000',
+                    clienteNombre: clientForm.name || 'CLIENTES VARIOS',
+                    items: itemsToBill,
+                    userId: user.id
+                });
+                resInvoiceData = resInvoice.data;
+            }
+
             const formData = new FormData();
             formData.append('paymentMethod', paymentMethod);
             if (evidenceFiles && evidenceFiles.length > 0) {
@@ -639,10 +739,19 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            setIsConfirmingPayment(false);
-            setShowPaymentModal(false);
-            setEvidenceFiles([]); // Reset file
-            onClose();
+            if (issueInvoice && resInvoiceData && resInvoiceData.success) {
+                setSuccessInvoice({
+                    invoice: resInvoiceData.invoice,
+                    sunatResponse: resInvoiceData.sunatResponse
+                });
+                setIsConfirmingPayment(false);
+                setEvidenceFiles([]);
+            } else {
+                setIsConfirmingPayment(false);
+                setShowPaymentModal(false);
+                setEvidenceFiles([]); // Reset file
+                onClose();
+            }
         } catch (err) {
             alert('Error cerrando cuenta: ' + (err.response?.data?.error || err.message));
             setIsConfirmingPayment(false); // Reset on error
@@ -1703,8 +1812,29 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         />
                                         <label htmlFor="staff_toggle_edit" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
                                     </div>
-                                    <input className="w-full border p-2 rounded text-sm" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} placeholder="Nombre" />
-                                    <input className="w-full border p-2 rounded text-sm" value={clientForm.dni} onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} placeholder="DNI" />
+                                    <div className="flex gap-2">
+                                        <input 
+                                            className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                            value={clientForm.dni} 
+                                            onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
+                                            placeholder="DNI / RUC" 
+                                            onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
+                                        />
+                                        <button 
+                                            onClick={searchClientData} 
+                                            disabled={isSearchingClient} 
+                                            className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
+                                            title="Buscar datos"
+                                        >
+                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
+                                        </button>
+                                    </div>
+                                    <input 
+                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                        value={clientForm.name} 
+                                        onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
+                                        placeholder="Nombre / Razón Social" 
+                                    />
                                     <div className="flex gap-2">
                                         <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm">Cancelar</button>
                                         <button onClick={updateClientInfo} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm">Guardar</button>
@@ -1929,7 +2059,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        setClientForm({ ...clientForm, accountType: 'staff' });
+                                        setClientForm({ ...clientForm, accountType: 'staff', name: '', dni: '' });
                                         setShowStaffConfirm(false);
                                     }}
                                     className="flex-1 px-4 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/30"
@@ -1946,92 +2076,306 @@ export default function TableControl({ tableId, accountId, onClose }) {
             {
                 showPaymentModal && (
                     <div className="absolute inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-                        <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
-                            <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Confirmar Pago</h2>
+                        {successInvoice ? (
+                            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200">
+                                {/* Premium Green/Mint Gradient Header */}
+                                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-center text-white relative">
+                                    <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-3 shadow-inner">
+                                        <CheckCircle size={36} className="text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-extrabold tracking-tight">¡Comprobante Emitido!</h2>
+                                    <p className="text-emerald-100 text-xs mt-1">El comprobante se generó y registró correctamente</p>
+                                </div>
 
-                            <div className="bg-blue-50 p-4 rounded-lg mb-6 text-center border border-blue-100">
-                                <div className="text-sm text-gray-500">Total a Pagar</div>
-                                <div className="text-3xl font-bold text-blue-600">S/ {Number((cartTotal + (accountTotal || 0)).toFixed(1))}</div>
-                            </div>
+                                {/* Voucher Body */}
+                                <div className="p-6 space-y-4">
+                                    {/* Monospace Serial code */}
+                                    <div className="text-center bg-gray-50 rounded-xl p-3 border border-gray-100">
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                            {successInvoice.invoice.tipo === 'factura' ? 'Factura Electrónica' : 'Boleta Electrónica'}
+                                        </div>
+                                        <div className="text-2xl font-mono font-bold text-slate-800 tracking-normal mt-1">
+                                            {successInvoice.invoice.serie}-{String(successInvoice.invoice.correlativo).padStart(6, '0')}
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-3 mb-6">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago:</label>
-                                {['efectivo', 'yape', 'tarjeta', 'transferencia'].map(method => (
+                                    {/* SUNAT Status pill badge */}
+                                    {(() => {
+                                        const { pdf } = (() => {
+                                            const sunatResp = successInvoice.sunatResponse;
+                                            if (!sunatResp) return { pdf: null, xml: null };
+                                            let parsed = sunatResp;
+                                            if (typeof sunatResp === 'string') {
+                                                try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
+                                            }
+                                            if (!parsed) return { pdf: null, xml: null };
+                                            return {
+                                                pdf: parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || null,
+                                                xml: parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null
+                                            };
+                                        })();
+
+                                        return (
+                                            <div className="flex justify-center">
+                                                {pdf ? (
+                                                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-3 py-1 rounded-full border border-emerald-200 font-bold uppercase shadow-sm">
+                                                        <Check size={12} className="stroke-[3]" /> Aceptado por SUNAT
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs px-3 py-1 rounded-full border border-amber-200 font-bold uppercase shadow-sm">
+                                                        <AlertCircle size={12} /> Guardado Localmente
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Details Grid */}
+                                    <div className="border-t border-dashed border-gray-200 pt-4 space-y-2 text-sm text-gray-600">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400 font-medium">Cliente:</span>
+                                            <span className="font-semibold text-gray-800 truncate max-w-[200px]" title={successInvoice.invoice.clienteNombre}>
+                                                {successInvoice.invoice.clienteNombre}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400 font-medium">Documento:</span>
+                                            <span className="font-semibold text-gray-800 font-mono">
+                                                {successInvoice.invoice.clienteDocumento || '00000000'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400 font-medium">Método de Pago:</span>
+                                            <span className="font-semibold text-gray-800 capitalize bg-slate-100 px-2 py-0.5 rounded text-xs">
+                                                {paymentMethod}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-baseline border-t border-gray-100 pt-3 mt-1">
+                                            <span className="text-gray-500 font-bold">Total Pagado:</span>
+                                            <span className="text-xl font-black text-slate-800 font-mono">
+                                                S/ {parseFloat(successInvoice.invoice.total).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons: PDF & XML */}
+                                    {(() => {
+                                        const { pdf, xml } = (() => {
+                                            const sunatResp = successInvoice.sunatResponse;
+                                            if (!sunatResp) return { pdf: null, xml: null };
+                                            let parsed = sunatResp;
+                                            if (typeof sunatResp === 'string') {
+                                                try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
+                                            }
+                                            if (!parsed) return { pdf: null, xml: null };
+                                            return {
+                                                pdf: parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || null,
+                                                xml: parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null
+                                            };
+                                        })();
+
+                                        return (
+                                            <div className="flex gap-2 pt-2">
+                                                <button
+                                                    onClick={() => pdf && window.open(pdf, '_blank')}
+                                                    disabled={!pdf}
+                                                    className={`flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm
+                                                    ${pdf ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                                                >
+                                                    <Printer size={16} />
+                                                    Ver PDF
+                                                </button>
+                                                <button
+                                                    onClick={() => xml && window.open(xml, '_blank')}
+                                                    disabled={!xml}
+                                                    className={`flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm
+                                                    ${xml ? 'bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                                                >
+                                                    <Download size={16} />
+                                                    XML
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Finalize Button */}
                                     <button
-                                        key={method}
-                                        disabled={isConfirmingPayment}
-                                        onClick={() => setPaymentMethod(method)}
-                                        className={`w-full p-3 rounded-lg border text-left flex justify-between items-center transition-all
-                                    ${paymentMethod === method ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-offset-1' : 'border-gray-200 hover:bg-gray-50'}
-                                    ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => {
+                                            setSuccessInvoice(null);
+                                            setShowPaymentModal(false);
+                                            onClose();
+                                        }}
+                                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm mt-2"
                                     >
-                                        <span className="capitalize font-medium text-gray-700">{method}</span>
-                                        {paymentMethod === method && <CheckCircle size={18} className="text-blue-500" />}
+                                        <Check size={18} className="stroke-[3]" />
+                                        Finalizar y Liberar Mesa
                                     </button>
-                                ))}
+                                </div>
                             </div>
+                        ) : (
+                            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Confirmar Pago</h2>
 
-                            {/* EVIDENCE UPLOAD */}
-                            {paymentMethod !== 'efectivo' && (
-                                <div className="mb-6 animate-in slide-in-from-top-2">
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        Subir Comprobante (Opcional):
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        disabled={isConfirmingPayment}
-                                        onChange={(e) => setEvidenceFiles(Array.from(e.target.files))}
-                                        className={`w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-blue-50 file:text-blue-700
-                                hover:file:bg-blue-100 ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    />
-                                    {evidenceFiles.length > 0 && (
-                                        <div className="text-xs text-green-600 mt-2 flex flex-col gap-1">
-                                            <span className="font-bold text-gray-700 mb-1">{evidenceFiles.length} archivo(s) seleccionado(s):</span>
-                                            {evidenceFiles.map((file, idx) => (
-                                                <div key={idx} className="flex items-center gap-1">
-                                                    <CheckCircle size={12} /> {file.name}
+                                <div className="bg-blue-50 p-4 rounded-lg mb-6 text-center border border-blue-100">
+                                    <div className="text-sm text-gray-500">Total a Pagar</div>
+                                    <div className="text-3xl font-bold text-blue-600">S/ {Number((cartTotal + (accountTotal || 0)).toFixed(1))}</div>
+                                </div>
+
+                                <div className="space-y-3 mb-6">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago:</label>
+                                    {['efectivo', 'yape', 'tarjeta', 'transferencia'].map(method => (
+                                        <button
+                                            key={method}
+                                            disabled={isConfirmingPayment}
+                                            onClick={() => setPaymentMethod(method)}
+                                            className={`w-full p-3 rounded-lg border text-left flex justify-between items-center transition-all
+                                        ${paymentMethod === method ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-offset-1' : 'border-gray-200 hover:bg-gray-50'}
+                                        ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <span className="capitalize font-medium text-gray-700">{method}</span>
+                                            {paymentMethod === method && <CheckCircle size={18} className="text-blue-500" />}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* EVIDENCE UPLOAD */}
+                                {paymentMethod !== 'efectivo' && (
+                                    <div className="mb-6 animate-in slide-in-from-top-2">
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                                            Subir Comprobante (Opcional):
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            disabled={isConfirmingPayment}
+                                            onChange={(e) => setEvidenceFiles(Array.from(e.target.files))}
+                                            className={`w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    hover:file:bg-blue-100 ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        />
+                                        {evidenceFiles.length > 0 && (
+                                            <div className="text-xs text-green-600 mt-2 flex flex-col gap-1">
+                                                <span className="font-bold text-gray-700 mb-1">{evidenceFiles.length} archivo(s) seleccionado(s):</span>
+                                                {evidenceFiles.map((file, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1">
+                                                        <CheckCircle size={12} /> {file.name}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* INVOICE OPTIONS */}
+                                <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <input 
+                                            type="checkbox" 
+                                            id="issue_invoice"
+                                            checked={issueInvoice}
+                                            onChange={(e) => setIssueInvoice(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                            disabled={isConfirmingPayment}
+                                        />
+                                        <label htmlFor="issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
+                                            Emitir Comprobante Electrónico
+                                        </label>
+                                    </div>
+                                    
+                                    {issueInvoice && (
+                                        <div className="animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex gap-2 mb-3">
+                                                <button
+                                                    onClick={() => setInvoiceType('boleta')}
+                                                    disabled={isConfirmingPayment}
+                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    Boleta
+                                                </button>
+                                                <button
+                                                    onClick={() => setInvoiceType('factura')}
+                                                    disabled={isConfirmingPayment}
+                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    Factura
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                    <div className="flex gap-2">
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
+                                                            value={clientForm.dni}
+                                                            onChange={e => {
+                                                                setClientForm({...clientForm, dni: e.target.value});
+                                                                if (e.target.value.length === 11) setInvoiceType('factura');
+                                                                else if (e.target.value.length === 8) setInvoiceType('boleta');
+                                                            }}
+                                                            disabled={isConfirmingPayment}
+                                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                            onKeyDown={e => e.key === 'Enter' && searchClientData()}
+                                                        />
+                                                        <button 
+                                                            onClick={searchClientData} 
+                                                            disabled={isSearchingClient || isConfirmingPayment || !clientForm.dni}
+                                                            className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                                        >
+                                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            ))}
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
+                                                        value={clientForm.name}
+                                                        onChange={e => setClientForm({...clientForm, name: e.target.value})}
+                                                        disabled={isConfirmingPayment}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            )}
 
-                            <div className="flex gap-3 mt-4">
-                                <button
-                                    onClick={() => {
-                                        if (isConfirmingPayment) {
-                                            setIsConfirmingPayment(false);
-                                        } else {
-                                            setShowPaymentModal(false);
-                                        }
-                                    }}
-                                    className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors"
-                                >
-                                    {isConfirmingPayment ? 'Mudar Método' : 'Cancelar'}
-                                </button>
-                                <button
-                                    onClick={confirmPayment}
-                                    className={`flex-1 py-3 text-white rounded-lg font-black shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center leading-tight
-                                    ${isConfirmingPayment ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
-                                >
-                                    {isConfirmingPayment ? (
-                                        <>
-                                            <span className="text-xs opacity-90 uppercase">Confirmar</span>
-                                            <span>SI, COBRAR</span>
-                                        </>
-                                    ) : (
-                                        'Cobrar'
-                                    )}
-                                </button>
+                                <div className="flex gap-3 mt-4">
+                                    <button
+                                        onClick={() => {
+                                            if (isConfirmingPayment) {
+                                                setIsConfirmingPayment(false);
+                                            } else {
+                                                setShowPaymentModal(false);
+                                            }
+                                        }}
+                                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+                                    >
+                                        {isConfirmingPayment ? 'Mudar Método' : 'Cancelar'}
+                                    </button>
+                                    <button
+                                        onClick={confirmPayment}
+                                        className={`flex-1 py-3 text-white rounded-lg font-black shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center leading-tight
+                                        ${isConfirmingPayment ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
+                                    >
+                                        {isConfirmingPayment ? (
+                                            <>
+                                                <span className="text-xs opacity-90 uppercase">Confirmar</span>
+                                                <span>SI, COBRAR</span>
+                                            </>
+                                        ) : (
+                                            'Cobrar'
+                                        )}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )
             }

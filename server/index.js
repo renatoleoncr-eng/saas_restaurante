@@ -24,6 +24,9 @@ const expenseRoutes = require('./routes/expense.routes');
 const accountRoutes = require('./routes/account.routes');
 const drinkPromotionRoutes = require('./routes/drink-promotions.routes');
 const sessionRoutes = require('./routes/session.routes');
+const revenueRoutes = require('./routes/revenue.routes');
+const billingRoutes = require('./routes/billing.routes');
+
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
 
@@ -49,6 +52,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', authRoutes);
 app.use('/api', layoutRoutes);
 app.use('/api', configRoutes);
+app.use('/api', billingRoutes);
 app.use('/api', operationRoutes);
 app.use('/api', productRoutes);
 app.use('/api', attendanceRoutes);
@@ -61,6 +65,8 @@ app.use('/api', expenseRoutes);
 app.use('/api', accountRoutes);
 app.use('/api', drinkPromotionRoutes);
 app.use('/api', sessionRoutes);
+app.use('/api', revenueRoutes);
+
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante' }));
 

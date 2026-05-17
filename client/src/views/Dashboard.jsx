@@ -9,8 +9,12 @@ import UserManagementModal from '../components/UserManagementModal';
 import PasswordChangeModal from '../components/PasswordChangeModal';
 import AccountManagementView from './AccountManagementView';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, Users, User, ChevronUp, Key, TrendingUp, FileText, Wine } from 'lucide-react';
 import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
+import BillingConfigModal from '../components/BillingConfigModal';
+import { 
+    LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
+    Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard 
+} from 'lucide-react';
 
 export default function Dashboard() {
     const { user, logout, config } = useRestaurant();
@@ -43,6 +47,7 @@ export default function Dashboard() {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showUserManagement, setShowUserManagement] = useState(false);
     const [showPasswordChange, setShowPasswordChange] = useState(false);
+    const [showBillingConfig, setShowBillingConfig] = useState(false);
     const menuRef = useRef(null);
 
     // Close menu when clicking outside
@@ -362,6 +367,14 @@ export default function Dashboard() {
                                         <Users size={16} /> Gestionar Usuarios
                                     </button>
                                 )}
+                                {user.role === 'admin' && (
+                                    <button
+                                        onClick={() => { setShowBillingConfig(true); setShowUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <CreditCard size={16} /> Config. Facturación
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => { setShowPasswordChange(true); setShowUserMenu(false); }}
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -389,6 +402,7 @@ export default function Dashboard() {
             {/* MODALS */}
             {showUserManagement && <UserManagementModal onClose={() => setShowUserManagement(false)} />}
             {showPasswordChange && <PasswordChangeModal targetUser={user} onClose={() => setShowPasswordChange(false)} />}
+            {showBillingConfig && <BillingConfigModal onClose={() => setShowBillingConfig(false)} />}
         </div >
     );
 }

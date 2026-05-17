@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Plus, Trash, Edit, Calendar, Calculator } from 'lucide-react';
+import { Plus, Trash, Edit, Calendar, Calculator, Lock } from 'lucide-react';
 import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import SessionManagerModal from './SessionManagerModal';
@@ -138,8 +138,25 @@ export default function AdminLayoutManager() {
                 </button>
             </div>
 
-            {/* Area Creation */}
-            <div className="flex gap-2 mb-6">
+            {/* Main Content Area */}
+            {!activeSession ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-6 mx-4">
+                    <Lock size={48} className="text-gray-400 mb-4" />
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">Turno Cerrado</h3>
+                    <p className="text-gray-500 mb-6 text-center max-w-md">
+                        Debe abrir el turno de salón para poder visualizar las mesas, tomar pedidos o editar la configuración.
+                    </p>
+                    <button
+                        onClick={() => setShowSessionModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all transform active:scale-95"
+                    >
+                        Abrir Turno Ahora
+                    </button>
+                </div>
+            ) : (
+                <>
+                    {/* Area Creation */}
+                    <div className="flex gap-2 mb-6">
                 <input
                     type="text"
                     value={newAreaName}
@@ -322,6 +339,8 @@ export default function AdminLayoutManager() {
                     );
                 })}
             </div>
+            </>
+            )}
             {/* OPERATIONAL MODALS */}
             {
                 selectedTable && (

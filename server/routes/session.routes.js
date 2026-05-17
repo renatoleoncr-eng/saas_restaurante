@@ -103,6 +103,27 @@ router.post('/sessions/open', async (req, res) => {
     }
 });
 
+// GET /api/sessions/history - Get history of closed sessions
+router.get('/sessions/history', async (req, res) => {
+    try {
+        const { limit = 50, offset = 0 } = req.query;
+        const sessions = await CashSession.findAll({
+            where: { status: 'closed' },
+            order: [['closedAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            include: [
+                { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] },
+                { model: User, as: 'Closer', attributes: ['id', 'username', 'displayName'] }
+            ]
+        });
+        res.json(sessions);
+    } catch (error) {
+        console.error("Error fetching sessions history:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // POST /api/sessions/close - Close session with counted details
 router.post('/sessions/close', async (req, res) => {
     try {

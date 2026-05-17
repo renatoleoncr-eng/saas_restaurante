@@ -6,7 +6,7 @@ import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import { formatTableName } from '../utils/tableUtils';
 import axios from 'axios';
-import { Calendar } from 'lucide-react';
+import { Calendar, Lock } from 'lucide-react';
 
 export default function WaiterMap() {
     const { areas, refreshData, reservations, refreshTrigger } = useRestaurant();
@@ -15,7 +15,25 @@ export default function WaiterMap() {
     const [readyOrders, setReadyOrders] = useState([]); // Kept as empty to avoid undefined errors if referenced elsewhere (though logic removed) or just remove entirely if safe.
     // Actually, I should just restore the needed parts.
     const [activeAreaId, setActiveAreaId] = useState(null);
+    const [activeSession, setActiveSession] = useState(null);
+    const [loadingSession, setLoadingSession] = useState(true);
     const navigate = useNavigate();
+
+    const checkActiveSession = async () => {
+        try {
+            setLoadingSession(true);
+            const res = await axios.get('/api/sessions/current');
+            setActiveSession(res.data.session);
+        } catch (err) {
+            setActiveSession(null);
+        } finally {
+            setLoadingSession(false);
+        }
+    };
+
+    React.useEffect(() => {
+        checkActiveSession();
+    }, [refreshTrigger]);
 
     // Init active area
     React.useEffect(() => {
@@ -39,6 +57,19 @@ export default function WaiterMap() {
             {/* Ready Orders Logic Removed as per user request */}
 
             <h2 className="text-xl font-bold mb-4 text-center">Seleccione una Mesa</h2>
+            
+            {loadingSession ? (
+                <div className="text-center py-10 text-gray-500 animate-pulse">Cargando estado del turno...</div>
+            ) : !activeSession ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-6 mx-4">
+                    <Lock size={48} className="text-gray-400 mb-4" />
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">Turno Cerrado</h3>
+                    <p className="text-gray-500 text-center max-w-md">
+                        Debe pedir al administrador o cajero que abra el turno de salón para poder tomar pedidos.
+                    </p>
+                </div>
+            ) : (
+                <>
             {/* MOBILE TABS */}
             {/* MOBILE TABS (BUBBLES) */}
             <div className="flex md:hidden overflow-x-auto gap-2 mb-4 pb-2 no-scrollbar">
@@ -116,6 +147,8 @@ export default function WaiterMap() {
                     </div>
                 ))}
             </div>
+            </>
+            )}
 
             {selectedTable && (
                 <TableControl

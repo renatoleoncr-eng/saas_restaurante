@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Calendar, FileText, ChevronRight, Edit2, Trash2, CreditCard, CheckCircle, X } from 'lucide-react';
+import { Search, Calendar, FileText, ChevronRight, Edit2, Trash2, CreditCard, CheckCircle, X, Loader2 } from 'lucide-react';
 import TableControl from '../components/TableControl';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
+import SessionsHistoryTab from '../components/SessionsHistoryTab';
 
 export default function AccountManagementView() {
     const { user } = useRestaurant();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('cuentas'); // 'cuentas' | 'turnos'
 
     // Local timezone aware date string (YYYY-MM-DD)
     const todayLocal = new Date();
@@ -30,6 +32,38 @@ export default function AccountManagementView() {
     // Edit Name Modal
     const [editingAccount, setEditingAccount] = useState(null);
     const [editName, setEditName] = useState('');
+    const [editDni, setEditDni] = useState('');
+    const [isSearchingClient, setIsSearchingClient] = useState(false);
+
+    const searchClientData = async () => {
+        const doc = editDni.trim();
+        if (doc.length !== 8 && doc.length !== 11) {
+            alert('El documento debe tener 8 (DNI) u 11 (RUC) dígitos.');
+            return;
+        }
+        setIsSearchingClient(true);
+        try {
+            const res = await axios.get(`/api/billing/consulta?doc=${doc}`);
+            if (res.data) {
+                let fullName = '';
+                if (doc.length === 11) {
+                    fullName = res.data.razon_social || res.data.razonSocial || '';
+                } else {
+                    fullName = `${res.data.nombres || ''} ${res.data.apellidoPaterno || ''} ${res.data.apellidoMaterno || ''}`.trim();
+                    if (!fullName) fullName = res.data.nombre || res.data.nombreCompleto || '';
+                }
+                if (fullName) {
+                    setEditName(fullName);
+                } else {
+                    alert('No se encontró el nombre para este documento.');
+                }
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+        } finally {
+            setIsSearchingClient(false);
+        }
+    };
 
     // Partial Payment Modal
     const [payAccount, setPayAccount] = useState(null);
@@ -142,7 +176,8 @@ export default function AccountManagementView() {
         if (!editingAccount) return;
         try {
             await axios.put(`/api/accounts/${editingAccount.id}`, {
-                customerName: editName
+                customerName: editName,
+                clientDni: editDni
             });
             setEditingAccount(null);
             loadAccounts();
@@ -155,6 +190,7 @@ export default function AccountManagementView() {
     const openEditModal = (acc) => {
         setEditingAccount(acc);
         setEditName(acc.customerName || '');
+        setEditDni(acc.clientDni || '');
     };
 
     if (user.role !== 'admin' && user.role !== 'waiter') {
@@ -206,9 +242,34 @@ export default function AccountManagementView() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-                <div className="flex-1">
+            {/* TABS */}
+            <div className="flex gap-6 border-b mb-6 px-2">
+                <button 
+                    onClick={() => setActiveTab('cuentas')}
+                    className={`pb-3 font-bold transition-colors relative ${activeTab === 'cuentas' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
+                >
+                    Cuentas de Mesa
+                    {activeTab === 'cuentas' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
+                </button>
+                <button 
+                    onClick={() => setActiveTab('turnos')}
+                    className={`pb-3 font-bold transition-colors relative flex items-center gap-2 ${activeTab === 'turnos' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
+                >
+                    <FileText size={16} />
+                    Cierres de Turno
+                    {activeTab === 'turnos' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
+                </button>
+            </div>
+
+            {/* CONTENT */}
+            {activeTab === 'turnos' ? (
+                <div className="flex-1 min-h-[400px]">
+                    <SessionsHistoryTab />
+                </div>
+            ) : (
+                /* Table (Cuentas) */
+                <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
+                    <div className="flex-1">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 border-b sticky top-0 z-10">
                             <tr>
@@ -317,6 +378,7 @@ export default function AccountManagementView() {
                     </table>
                 </div>
             </div>
+            )}
 
             {/* Modals */}
             {selectedTableId && (
@@ -334,16 +396,39 @@ export default function AccountManagementView() {
                         <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
                             <h3 className="font-bold text-gray-800">Editar Cliente</h3>
                         </div>
-                        <div className="p-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Cliente</label>
-                            <input
-                                type="text"
-                                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                placeholder="Ej. Juan Pérez"
-                                autoFocus
-                            />
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">DNI / RUC</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="flex-1 border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editDni}
+                                        onChange={(e) => setEditDni(e.target.value)}
+                                        placeholder="Ingrese DNI o RUC"
+                                        onKeyDown={(e) => { if (e.key === 'Enter') searchClientData() }}
+                                        autoFocus
+                                    />
+                                    <button 
+                                        onClick={searchClientData} 
+                                        disabled={isSearchingClient} 
+                                        className="bg-gray-100 p-3 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[48px]"
+                                        title="Buscar datos"
+                                    >
+                                        {isSearchingClient ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <Search size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Cliente / Razón Social</label>
+                                <input
+                                    type="text"
+                                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    placeholder="Ej. Juan Pérez"
+                                />
+                            </div>
                         </div>
                         <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
                             <button onClick={() => setEditingAccount(null)} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded-lg">Cancelar</button>

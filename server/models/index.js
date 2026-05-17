@@ -449,6 +449,10 @@ const Payment = sequelize.define('Payment', {
     evidence: {
         type: DataTypes.TEXT, // JSON array of paths to uploaded images
         allowNull: true
+    },
+    qr_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 });
 
@@ -577,6 +581,215 @@ CashSession.hasMany(Expense);
 Expense.belongsTo(CashSession);
 
 
+// BILLING CONFIG (Configuración única de facturación)
+const BillingConfig = sequelize.define('BillingConfig', {
+    ruc: { type: DataTypes.STRING(11), allowNull: true },
+    razonSocial: { type: DataTypes.STRING, allowNull: true },
+    facturacionElectronica: { type: DataTypes.BOOLEAN, defaultValue: false },
+    igvTasa: { type: DataTypes.DECIMAL(5, 2), defaultValue: 10.50 }, // Valor por defecto restaurante
+    operacionesExoneradas: { type: DataTypes.BOOLEAN, defaultValue: false },
+    serieFactura: { type: DataTypes.STRING(10), defaultValue: 'F001' },
+    serieBoleta: { type: DataTypes.STRING(10), defaultValue: 'B001' },
+    apiToken: { type: DataTypes.STRING, allowNull: true },
+}, { timestamps: false });
+
+// INVOICE (Comprobante emitido)
+const Invoice = sequelize.define('Invoice', {
+    tipo: { type: DataTypes.ENUM('boleta', 'factura'), allowNull: false },
+    serie: { type: DataTypes.STRING(10), allowNull: false },
+    correlativo: { type: DataTypes.INTEGER, allowNull: false },
+    clienteDocumento: { type: DataTypes.STRING(11), allowNull: true },
+    clienteNombre: { type: DataTypes.STRING, allowNull: true },
+    clienteDireccion: { type: DataTypes.STRING, allowNull: true },
+    subtotal: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    igv: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    items: { type: DataTypes.TEXT, defaultValue: '[]' }, // JSON string
+    status: { type: DataTypes.ENUM('emitido', 'anulado'), defaultValue: 'emitido' },
+    sunatResponse: { type: DataTypes.TEXT, allowNull: true }, // JSON response del Hub
+    emitidoAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+});
+
+User.hasMany(Invoice);
+Invoice.belongsTo(User);
+
+// --- NEW CLIENT SCREEN MODELS ---
+
+const QrAccount = sequelize.define('QrAccount', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    limitAmount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    isUnlimited: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    imageUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    orderIndex: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+    },
+    phoneNumber: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    accumulated_month_sum: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    accumulated_month_key: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
+}, {
+    timestamps: true
+});
+
+const PromotionGroup = sequelize.define('PromotionGroup', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    orderIndex: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    }
+}, {
+    timestamps: true
+});
+
+const Promotion = sequelize.define('Promotion', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    imageUrl: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    orderIndex: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    groupId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    }
+}, {
+    timestamps: true
+});
+
+const Setting = sequelize.define('Setting', {
+    key: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        allowNull: false
+    },
+    value: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    description: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
+}, {
+    timestamps: true
+});
+
+// --- ASSOCIATIONS FOR NEW MODELS ---
+
+QrAccount.hasMany(Payment, { foreignKey: 'qr_id', as: 'Payments' });
+Payment.belongsTo(QrAccount, { foreignKey: 'qr_id', as: 'QrAccount' });
+
+PromotionGroup.hasMany(Promotion, { foreignKey: 'groupId', as: 'Images', onDelete: 'CASCADE' });
+Promotion.belongsTo(PromotionGroup, { foreignKey: 'groupId', as: 'Group' });
+
+// --- HOOKS FOR PAYMENT MODEL ---
+
+Payment.beforeCreate(async (payment, options) => {
+    if (payment.method === 'qr_adjustment') return;
+
+    const methodLower = (payment.method || '').toLowerCase();
+    const isQrPayment = methodLower.includes('yape') || methodLower.includes('plin');
+
+    if (isQrPayment) {
+        if (!payment.qr_id) {
+            try {
+                const { consumeQrLimit } = require('../routes/qr.routes');
+                const qrId = await consumeQrLimit(payment.amount, options.transaction);
+                payment.qr_id = qrId;
+            } catch (err) {
+                console.error("[Payment Hook] Error consuming QR limit:", err);
+            }
+        }
+    }
+});
+
+Payment.afterCreate(async (payment, options) => {
+    if (payment.qr_id) {
+        try {
+            const { syncQrSum } = require('../routes/qr.routes');
+            await syncQrSum(payment.qr_id, options.transaction);
+        } catch (err) {
+            console.error("[Payment Hook] Error in afterCreate:", err);
+        }
+    }
+});
+
+Payment.afterUpdate(async (payment, options) => {
+    try {
+        const { syncQrSum } = require('../routes/qr.routes');
+        if (payment.changed('qr_id')) {
+            const oldQrId = payment.previous('qr_id');
+            if (oldQrId) await syncQrSum(oldQrId, options.transaction);
+            if (payment.qr_id) await syncQrSum(payment.qr_id, options.transaction);
+        } else if (payment.qr_id && (
+            payment.changed('amount') ||
+            payment.changed('method')
+        )) {
+            await syncQrSum(payment.qr_id, options.transaction);
+        }
+    } catch (err) {
+        console.error("[Payment Hook] Error in afterUpdate:", err);
+    }
+});
+
+Payment.afterDestroy(async (payment, options) => {
+    if (payment.qr_id) {
+        try {
+            const { syncQrSum } = require('../routes/qr.routes');
+            await syncQrSum(payment.qr_id, options.transaction);
+        } catch (err) {
+            console.error("[Payment Hook] Error in afterDestroy:", err);
+        }
+    }
+});
+
 module.exports = {
     sequelize,
     RestaurantConfig,
@@ -599,5 +812,11 @@ module.exports = {
     Payment,
     DrinkPromotion,
     DrinkPromotionItem,
-    CashSession
+    CashSession,
+    BillingConfig,
+    Invoice,
+    QrAccount,
+    PromotionGroup,
+    Promotion,
+    Setting
 };

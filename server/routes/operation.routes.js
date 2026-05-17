@@ -64,7 +64,13 @@ router.put('/accounts/:id', async (req, res) => {
         }
 
         await account.save();
-        res.json(account);
+        
+        const { Order, Product } = getModels();
+        const updatedAccount = await Account.findByPk(account.id, {
+            include: [{ model: Order, include: [Product] }]
+        });
+        
+        res.json(updatedAccount);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
