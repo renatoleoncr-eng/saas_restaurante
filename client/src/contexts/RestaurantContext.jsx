@@ -25,9 +25,8 @@ export const RestaurantProvider = ({ children }) => {
 
     // Initial Socket Connection
     useEffect(() => {
-        // Direct connection to backend port (3003)
-        // In development, connect directly to avoid Vite proxy issues with WebSocket
-        const socketUrl = `http://localhost:3003`;
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const socketUrl = isLocalhost ? 'http://localhost:3003' : window.location.origin;
         console.log("Connecting socket to:", socketUrl);
 
         const newSocket = io(socketUrl, {
