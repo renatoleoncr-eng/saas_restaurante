@@ -26,6 +26,9 @@ const drinkPromotionRoutes = require('./routes/drink-promotions.routes');
 const sessionRoutes = require('./routes/session.routes');
 const revenueRoutes = require('./routes/revenue.routes');
 const billingRoutes = require('./routes/billing.routes');
+const qrRoutes = require('./routes/qr.routes');
+const promotionRoutes = require('./routes/promotion.routes');
+const rouletteRoutes = require('./routes/roulette.routes');
 
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
@@ -45,6 +48,58 @@ app.use(express.json());
 
 // Share io instance
 app.set('io', io);
+
+// Live State for Client Screen (to sync reconnected clients)
+let currentClientScreenMode = 'ads';
+
+// Log when a client connects
+io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+    
+    // Sync current screen mode to the newly connected client immediately
+    socket.emit('update_client_screen_mode', { mode: currentClientScreenMode });
+
+    socket.on('trigger_qr_display', () => {
+        io.emit('show_qr_display');
+    });
+    socket.on('set_client_screen_mode', (data) => {
+        console.log('Setting client screen mode:', data.mode);
+        currentClientScreenMode = data.mode; // Persist state
+        io.emit('update_client_screen_mode', { mode: data.mode });
+    });
+    socket.on('notify_promotions_updated', () => {
+        console.log('Promotions updated, broadcasting...');
+        io.emit('promotions_updated');
+    });
+    socket.on('start_projection', (data) => {
+        console.log('Starting projection:', data.promoId);
+        io.emit('client_start_projection', data);
+    });
+    socket.on('stop_projection', () => {
+        console.log('Stopping projection');
+        io.emit('client_stop_projection');
+    });
+    socket.on('report_roulette_winner', (data) => {
+        console.log('Roulette winner reported:', data.winnerName);
+        io.emit('roulette_finished_with_winner', data);
+    });
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// Wire Global Internal Emitter
+const appEmitter = require('./utils/emitter');
+appEmitter.on('qr_config_changed', () => {
+    io.emit('qr_config_changed');
+    io.emit('check_active_qr');
+});
+appEmitter.on('promotions_config_changed', () => {
+    io.emit('promotions_updated');
+});
+appEmitter.on('check_active_qr', () => {
+    io.emit('check_active_qr');
+});
 
 // Serve uploads folder publicly
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -66,6 +121,9 @@ app.use('/api', accountRoutes);
 app.use('/api', drinkPromotionRoutes);
 app.use('/api', sessionRoutes);
 app.use('/api', revenueRoutes);
+app.use('/api/qrs', qrRoutes);
+app.use('/api/promotions', promotionRoutes);
+app.use('/api/roulette', rouletteRoutes);
 
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante' }));

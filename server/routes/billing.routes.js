@@ -21,6 +21,7 @@ router.get('/billing/config', async (req, res) => {
             config = {
                 ruc: '',
                 razonSocial: '',
+                direccion: '',
                 facturacionElectronica: false,
                 igvTasa: 10.5,
                 operacionesExoneradas: false,
@@ -38,7 +39,7 @@ router.get('/billing/config', async (req, res) => {
 // PUT /billing/config
 router.put('/billing/config', async (req, res) => {
     try {
-        const fields = ['ruc', 'razonSocial', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken'];
+        const fields = ['ruc', 'razonSocial', 'direccion', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken'];
         const data = {};
         fields.forEach(f => {
             if (req.body[f] !== undefined) data[f] = req.body[f];
@@ -172,7 +173,7 @@ router.post('/billing/invoices', async (req, res) => {
             tipo_doc: tipo === 'factura' ? '01' : '03',
             serie: serie,
             currency: 'PEN',
-            company: { ruc: config.ruc, razon_social: config.razonSocial },
+            company: { ruc: config.ruc, razon_social: config.razonSocial, address: config.direccion || '' },
             total_gravada: isExonerado ? 0 : finalTotalBase,
             total_exonerada: isExonerado ? finalTotalBase : 0,
             total_igv: finalTotalIgv,
@@ -181,7 +182,8 @@ router.post('/billing/invoices', async (req, res) => {
             client: {
                 number: String(clienteDocumento || ''),
                 name: clienteNombre || '',
-                type: String(tipo === 'factura' ? '6' : '1')
+                type: String(tipo === 'factura' ? '6' : '1'),
+                address: clienteDireccion || ''
             },
             items: hubItems,
             legends: isExonerado ? [{ code: '1000', value: 'OP. EXONERADA' }] : []

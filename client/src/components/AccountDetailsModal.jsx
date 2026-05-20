@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, Loader2 } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 const AccountDetailsModal = ({
     account: initialAccount,
@@ -13,10 +14,22 @@ const AccountDetailsModal = ({
     totalToDisplay = null,
     amountToDisplay = null
 }) => {
+    const { socket } = useRestaurant();
     const [account, setAccount] = useState(initialAccount);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
+
+    useEffect(() => {
+        if (socket) {
+            socket.emit('set_client_screen_mode', { mode: 'qr_fixed' });
+        }
+        return () => {
+            if (socket) {
+                socket.emit('set_client_screen_mode', { mode: 'ads' });
+            }
+        };
+    }, [socket]);
 
     useEffect(() => {
         if (!initialAccount && accountId) {

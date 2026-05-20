@@ -26,9 +26,379 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
     // Client Editing State
     const [isEditingClient, setIsEditingClient] = useState(false);
-    const [clientForm, setClientForm] = useState({ name: '', dni: '', accountType: 'standard' });
+    const [clientForm, setClientForm] = useState({ name: '', dni: '', direccion: '', accountType: 'standard' });
     const [isSearchingClient, setIsSearchingClient] = useState(false);
     const [successInvoice, setSuccessInvoice] = useState(null);
+    const [billingConfig, setBillingConfig] = useState(null);
+    const [whatsappPhone, setwhatsappPhone] = useState('');
+    const [showWhatsappInput, setShowWhatsappInput] = useState(false);
+
+    const fetchBillingConfig = async () => {
+        try {
+            const res = await axios.get('/api/billing/config');
+            setBillingConfig(res.data);
+        } catch (err) {
+            console.error("Error fetching billing config:", err);
+        }
+    };
+
+    const handlePrintLocalInvoice = (invoice) => {
+        if (!invoice) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Por favor habilita las ventanas emergentes (pop-ups) para ver e imprimir el ticket.");
+            return;
+        }
+
+        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+        const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
+        const docName = invoice.tipo === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
+        
+        const rucEmpresa = billingConfig?.ruc || '20614409593';
+        const nameEmpresa = billingConfig?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
+        const addressEmpresa = billingConfig?.direccion || 'Av. Larco 123, Miraflores, Lima';
+
+        // Check for Amazonas exoneration (exoneradas or igv === 0)
+        const isExonerated = billingConfig?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
+        const totalAmount = parseFloat(invoice.total || 0);
+        const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
+        const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
+        const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
+        const igvLabel = isExonerated ? 'I.G.V. (0%):' : 'I.G.V. (18%):';
+
+        // Generate SUNAT QR Code pipe-delimited string
+        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
+        let tipoDocAdq = '0';
+        if (invoice.clienteDocumento) {
+            if (invoice.clienteDocumento.length === 11) tipoDocAdq = '6'; // RUC
+            else if (invoice.clienteDocumento.length === 8) tipoDocAdq = '1'; // DNI
+        }
+        const nroDocAdq = invoice.clienteDocumento || '00000000';
+        
+        const rawDate = invoice.emitidoAt || invoice.createdAt || new Date();
+        const dateObj = new Date(rawDate);
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+        const qrString = `${rucEmpresa}|${tipoComp}|${invoice.serie}|${invoice.correlativo}|${igvAmount.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdq}|${nroDocAdq}|`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
+
+        // Verify if it is electronic (remote API token or direct SUNAT response is active)
+        const isElectronico = !!(invoice.sunatResponse || successInvoice?.sunatResponse || billingConfig?.apiToken);
+
+        const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
+                <style>
+                    @page {
+                        size: 80mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        font-family: 'Courier New', Courier, monospace, sans-serif;
+                        width: 72mm;
+                        margin: 0 auto;
+                        padding: 5mm 2mm;
+                        font-size: 11px;
+                        color: #000;
+                        line-height: 1.3;
+                    }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .bold { font-weight: bold; }
+                    .header { margin-bottom: 5mm; }
+                    .company-name { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+                    .document-title { font-size: 12px; font-weight: bold; border: 1px solid #000; padding: 4px; margin: 4mm 0; text-transform: uppercase; }
+                    .divider { border-top: 1px dashed #000; margin: 3mm 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+                    th { border-bottom: 1px dashed #000; padding: 2px 0; font-size: 10px; text-transform: uppercase; }
+                    td { padding: 3px 0; vertical-align: top; }
+                    .totals { margin-top: 4mm; }
+                    .totals-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+                    .footer { margin-top: 8mm; font-size: 9px; }
+                    .sunat-badge {
+                        background-color: #e6f4ea;
+                        color: #137333;
+                        font-weight: bold;
+                        border: 1px solid #a8dab5;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        display: inline-block;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        margin-bottom: 3mm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="text-center header">
+                    <div class="company-name">${nameEmpresa}</div>
+                    <div>RUC: ${rucEmpresa}</div>
+                    <div>${addressEmpresa.toUpperCase()}</div>
+                    <div class="document-title">
+                        ${docName}<br>
+                        ${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}
+                    </div>
+                </div>
+                
+                <div>
+                    <div><b>FECHA EMISIÓN:</b> ${dateStr}</div>
+                    <div><b>SEÑOR(ES):</b> ${(invoice.clienteNombre || 'CLIENTES VARIOS').toUpperCase()}</div>
+                    <div><b>${invoice.tipo === 'factura' ? 'RUC' : 'DNI'}:</b> ${nroDocAdq}</div>
+                    ${clienteDireccionHtml}
+                    <div><b>MÉTODO PAGO:</b> ${(paymentMethod ? paymentMethod : 'EFECTIVO').toUpperCase()}</div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 10%;">CANT</th>
+                            <th style="width: 45%;">DESCRIPCIÓN</th>
+                            <th class="text-right" style="width: 20%;">P.UNIT</th>
+                            <th class="text-right" style="width: 25%;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => {
+                            const qty = item.qty || item.quantity || 1;
+                            const total = parseFloat(item.amount || item.subtotal || 0);
+                            const pUnit = total / qty;
+                            return `
+                                <tr>
+                                    <td class="text-center">${qty}</td>
+                                    <td style="text-transform: uppercase;">${item.description}</td>
+                                    <td class="text-right">S/ ${pUnit.toFixed(2)}</td>
+                                    <td class="text-right">S/ ${total.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="divider"></div>
+                
+                <div class="totals">
+                    <div class="totals-row">
+                        <span>${opLabel}</span>
+                        <span>S/ ${opAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>OP. INAFECTA:</span>
+                        <span>S/ 0.00</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>${igvLabel}</span>
+                        <span>S/ ${igvAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row bold" style="font-size: 13px;">
+                        <span>TOTAL A PAGAR:</span>
+                        <span>S/ ${totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                ${isElectronico ? `
+                <div class="text-center" style="margin-top: 3mm; margin-bottom: 3mm;">
+                    <div class="sunat-badge">
+                        [✓] ACEPTADA POR SUNAT
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="text-center" style="margin-top: 4mm; margin-bottom: 4mm;">
+                    <img src="${qrCodeUrl}" style="width: 120px; height: 120px;" alt="Código QR SUNAT" />
+                </div>
+
+                <div class="text-center footer">
+                    <b>REPRESENTACIÓN IMPRESA DE COMPROBANTE DE PAGO</b><br>
+                    <span>Autorizado mediante Resolución de SUNAT</span><br><br>
+                    <b>¡Gracias por su preferencia!</b>
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    const handleDownloadLocalXml = (invoice) => {
+        if (!invoice) return;
+        const rucEmpresa = billingConfig?.ruc || '20614409593';
+        const nameEmpresa = billingConfig?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
+        const clientDoc = invoice.clienteDocumento || '00000000';
+        const clientName = invoice.clienteNombre || 'CLIENTES VARIOS';
+        const dateStr = invoice.createdAt ? invoice.createdAt.split('T')[0] : new Date().toISOString().split('T')[0];
+        const docType = invoice.tipo === 'factura' ? '01' : '03'; 
+        const clientDocType = invoice.tipo === 'factura' ? '6' : '1'; 
+        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+
+        const isExonerated = billingConfig?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
+        const totalVal = parseFloat(invoice.total || 0);
+        const subtotalVal = isExonerated ? totalVal : parseFloat(invoice.subtotal || 0);
+        const igvVal = isExonerated ? 0 : parseFloat(invoice.igv || 0);
+
+        let itemsXml = '';
+        items.forEach((item, idx) => {
+            const lineTotal = parseFloat(item.amount || item.subtotal || 0);
+            const qty = parseInt(item.qty || item.quantity || 1);
+            const unitVal = lineTotal / qty;
+
+            const itemTaxAmount = isExonerated ? 0 : (lineTotal * 0.18 / 1.18);
+            const itemTaxableAmount = isExonerated ? lineTotal : (lineTotal / 1.18);
+            const itemPriceAmount = isExonerated ? unitVal : (unitVal / 1.18);
+            const itemPercent = isExonerated ? "0.00" : "18.00";
+            const itemExemptionCode = isExonerated ? "20" : "10";
+            const taxSchemeId = isExonerated ? "9997" : "1000";
+            const taxSchemeName = isExonerated ? "EXO" : "IGV";
+
+            itemsXml += `
+        <cac:InvoiceLine>
+            <cbc:ID>${idx + 1}</cbc:ID>
+            <cbc:InvoicedQuantity unitCode="NIU">${qty}</cbc:InvoicedQuantity>
+            <cbc:LineExtensionAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:LineExtensionAmount>
+            <cac:PricingReference>
+                <cac:AlternativeConditionPrice>
+                    <cbc:PriceAmount currencyID="PEN">${unitVal.toFixed(2)}</cbc:PriceAmount>
+                    <cbc:PriceTypeCode>01</cbc:PriceTypeCode>
+                </cac:AlternativeConditionPrice>
+            </cac:PricingReference>
+            <cac:TaxTotal>
+                <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
+                <cac:TaxSubtotal>
+                    <cbc:TaxableAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:TaxableAmount>
+                    <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
+                    <cac:TaxCategory>
+                        <cbc:Percent>${itemPercent}</cbc:Percent>
+                        <cbc:TaxExemptionReasonCode>${itemExemptionCode}</cbc:TaxExemptionReasonCode>
+                        <cac:TaxScheme>
+                            <cbc:ID>${taxSchemeId}</cbc:ID>
+                            <cbc:Name>${taxSchemeName}</cbc:Name>
+                            <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
+                        </cac:TaxScheme>
+                    </cac:TaxCategory>
+                </cac:TaxSubtotal>
+            </cac:TaxTotal>
+            <cac:Item>
+                <cbc:Description><![CDATA[${item.description}]]></cbc:Description>
+            </cac:Item>
+            <cac:Price>
+                <cbc:PriceAmount currencyID="PEN">${itemPriceAmount.toFixed(2)}</cbc:PriceAmount>
+            </cac:Price>
+        </cac:InvoiceLine>`;
+        });
+
+        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
+    <ext:UBLExtensions>
+        <ext:UBLExtension>
+            <ext:ExtensionContent>
+                <!-- Firma Digital Mock -->
+            </ext:ExtensionContent>
+        </ext:UBLExtension>
+    </ext:UBLExtensions>
+    <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+    <cbc:CustomizationID>2.0</cbc:CustomizationID>
+    <cbc:ID>${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</cbc:ID>
+    <cbc:IssueDate>${dateStr}</cbc:IssueDate>
+    <cbc:InvoiceTypeCode listID="0101">${docType}</cbc:InvoiceTypeCode>
+    <cbc:DocumentCurrencyCode>PEN</cbc:DocumentCurrencyCode>
+    <cac:AccountingSupplierParty>
+        <cac:Party>
+            <cac:PartyIdentification>
+                <cbc:ID schemeID="6">${rucEmpresa}</cbc:ID>
+            </cac:PartyIdentification>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName><![CDATA[${nameEmpresa}]]></cbc:RegistrationName>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+    <cac:AccountingCustomerParty>
+        <cac:Party>
+            <cac:PartyIdentification>
+                <cbc:ID schemeID="${clientDocType}">${clientDoc}</cbc:ID>
+            </cac:PartyIdentification>
+            ${invoice.clienteDireccion ? `
+            <cac:PostalAddress>
+                <cbc:StreetName><![CDATA[${invoice.clienteDireccion}]]></cbc:StreetName>
+            </cac:PostalAddress>
+            ` : ''}
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName><![CDATA[${clientName}]]></cbc:RegistrationName>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
+        <cac:TaxSubtotal>
+            <cbc:TaxableAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:TaxableAmount>
+            <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
+            <cac:TaxCategory>
+                <cac:TaxScheme>
+                    <cbc:ID>${isExonerated ? '9997' : '1000'}</cbc:ID>
+                    <cbc:Name>${isExonerated ? 'EXO' : 'IGV'}</cbc:Name>
+                    <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
+                </cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+    </cac:TaxTotal>
+    <cac:LegalMonetaryTotal>
+        <cbc:LineExtensionAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:LineExtensionAmount>
+        <cbc:TaxInclusiveAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:PayableAmount>
+    </cac:LegalMonetaryTotal>${itemsXml}
+</Invoice>`;
+
+        const blob = new Blob([xmlContent], { type: 'text/xml' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${rucEmpresa}-${docType}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}.xml`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleShareWhatsapp = () => {
+        if (!successInvoice || !successInvoice.invoice) return;
+        const phone = whatsappPhone.trim();
+        if (!phone) {
+            alert('Por favor ingrese un número de teléfono válido.');
+            return;
+        }
+
+        let cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length === 9) {
+            cleanPhone = '51' + cleanPhone;
+        }
+
+        const invoice = successInvoice.invoice;
+        const docName = invoice.tipo === 'factura' ? 'Factura' : 'Boleta';
+        const invoiceCode = `${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}`;
+        
+        const text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*.\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
+
+        const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+        window.open(waUrl, '_blank');
+    };
 
     const searchClientData = async () => {
         const doc = clientForm.dni.trim();
@@ -47,8 +417,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     fullName = `${res.data.nombres || ''} ${res.data.apellidoPaterno || ''} ${res.data.apellidoMaterno || ''}`.trim();
                     if (!fullName) fullName = res.data.nombre || res.data.nombreCompleto || '';
                 }
+                const address = res.data.direccion || '';
                 if (fullName) {
-                    setClientForm(prev => ({ ...prev, name: fullName }));
+                    setClientForm(prev => ({ ...prev, name: fullName, direccion: address }));
                 } else {
                     alert('No se encontró el nombre para este documento.');
                 }
@@ -171,6 +542,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
         fetchAccount();
         fetchDailyMenu();
         fetchDrinkPromotions(); // Loading 2x1 promos
+        fetchBillingConfig();
 
         // Escape Key Listener
         const handleKeyDown = (e) => {
@@ -219,6 +591,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 setClientForm({
                     name: accRes.data.customerName,
                     dni: accRes.data.clientDni || '',
+                    direccion: '',
                     accountType: accRes.data.accountType || 'standard'
                 });
 
@@ -228,7 +601,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 }
             } else {
                 setAccount(null);
-                setClientForm(prev => ({ name: 'Cliente', dni: '', accountType: prev.accountType || 'standard' }));
+                setClientForm(prev => ({ name: 'Cliente', dni: '', direccion: '', accountType: prev.accountType || 'standard' }));
             }
         } catch (aErr) {
             console.error("Error loading account:", aErr);
@@ -283,6 +656,19 @@ export default function TableControl({ tableId, accountId, onClose }) {
         };
     }, [socket]); // Re-bind if socket changes
 
+    useEffect(() => {
+        if (!socket) return;
+        if (showPaymentModal) {
+            socket.emit('set_client_screen_mode', { mode: 'qr_fixed' });
+        } else {
+            socket.emit('set_client_screen_mode', { mode: 'ads' });
+        }
+
+        return () => {
+            socket.emit('set_client_screen_mode', { mode: 'ads' });
+        };
+    }, [socket, showPaymentModal]);
+
     // Set loading false after initial checks
     useEffect(() => {
         // Simple timeout to clear loading state if it gets stuck, 
@@ -334,6 +720,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
             setClientForm({
                 name: res.data.customerName,
                 dni: res.data.clientDni || '',
+                direccion: '',
                 accountType: res.data.accountType || 'standard'
             });
             return res.data;
@@ -650,15 +1037,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         setShowPaymentModal(true);
         setIsConfirmingPayment(false); // Reset confirmation state
-        
-        // Auto-detect invoice type based on client form
-        if (clientForm.dni) {
-            setIssueInvoice(true);
-            setInvoiceType(clientForm.dni.length === 11 ? 'factura' : 'boleta');
-        } else {
-            setIssueInvoice(false);
-            setInvoiceType('boleta');
-        }
+        setIssueInvoice(false); // ALWAYS start disabled
+        setInvoiceType(clientForm.dni && clientForm.dni.length === 11 ? 'factura' : 'boleta');
     };
 
     const confirmPayment = async () => {
@@ -721,6 +1101,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     tipo: invoiceType,
                     clienteDocumento: clientForm.dni || '00000000',
                     clienteNombre: clientForm.name || 'CLIENTES VARIOS',
+                    clienteDireccion: clientForm.direccion || '',
                     items: itemsToBill,
                     userId: user.id
                 });
@@ -1835,6 +2216,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
                                         placeholder="Nombre / Razón Social" 
                                     />
+                                    {clientForm.dni && clientForm.dni.trim().length === 11 && (
+                                        <input 
+                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1" 
+                                            value={clientForm.direccion || ''} 
+                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                            placeholder="Dirección Fiscal" 
+                                        />
+                                    )}
                                     <div className="flex gap-2">
                                         <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm">Cancelar</button>
                                         <button onClick={updateClientInfo} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm">Guardar</button>
@@ -2175,25 +2564,64 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         })();
 
                                         return (
-                                            <div className="flex gap-2 pt-2">
-                                                <button
-                                                    onClick={() => pdf && window.open(pdf, '_blank')}
-                                                    disabled={!pdf}
-                                                    className={`flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm
-                                                    ${pdf ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
-                                                >
-                                                    <Printer size={16} />
-                                                    Ver PDF
-                                                </button>
-                                                <button
-                                                    onClick={() => xml && window.open(xml, '_blank')}
-                                                    disabled={!xml}
-                                                    className={`flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm
-                                                    ${xml ? 'bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
-                                                >
-                                                    <Download size={16} />
-                                                    XML
-                                                </button>
+                                            <div className="space-y-4">
+                                                <div className="flex gap-2 pt-2">
+                                                    <button
+                                                        onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(successInvoice.invoice)}
+                                                        className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200"
+                                                    >
+                                                        <Printer size={16} />
+                                                        Ver PDF
+                                                    </button>
+                                                    <button
+                                                        onClick={() => xml ? window.open(xml, '_blank') : handleDownloadLocalXml(successInvoice.invoice)}
+                                                        className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
+                                                    >
+                                                        <Download size={16} />
+                                                        XML
+                                                    </button>
+                                                </div>
+
+                                                {/* WhatsApp Sharing Block */}
+                                                <div className="border-t border-gray-100 pt-4">
+                                                    {showWhatsappInput ? (
+                                                        <div className="space-y-2 animate-in slide-in-from-bottom-2">
+                                                            <label className="block text-xs font-bold text-gray-500 text-left">Número de WhatsApp</label>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="51987654321"
+                                                                    value={whatsappPhone}
+                                                                    onChange={e => setwhatsappPhone(e.target.value)}
+                                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                />
+                                                                <button
+                                                                    onClick={handleShareWhatsapp}
+                                                                    disabled={!whatsappPhone.trim()}
+                                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                                                                >
+                                                                    Enviar
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setShowWhatsappInput(false)}
+                                                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                                                                >
+                                                                    X
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setShowWhatsappInput(true)}
+                                                            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all active:scale-95 shadow-md hover:shadow-emerald-200 flex items-center justify-center gap-2 text-sm"
+                                                        >
+                                                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                                                <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.982L2 22l5.233-1.372a9.954 9.954 0 0 0 4.781 1.218h.004c5.502 0 9.987-4.478 9.988-9.984C22.008 6.478 17.521 2 12.012 2zm6.935 14.177c-.285.807-1.42 1.48-1.956 1.58-.466.086-1.077.126-1.722-.08-.415-.133-.943-.327-1.605-.595-2.822-1.139-4.646-3.99-4.786-4.179-.142-.19-1.157-1.528-1.157-2.917 0-1.39.73-2.072 1.01-2.355.28-.28.618-.35.823-.35.205 0 .41.002.59.01.19.01.446-.073.7.535.263.63.898 2.167.978 2.327.08.16.133.348.028.563-.106.216-.16.348-.316.53-.158.18-.33.4-.47.53-.158.146-.323.305-.14.618.18.305.8 1.3 1.713 2.112.915.811 1.685 1.06 1.99 1.182.305.123.48.103.66-.1.18-.205.776-.897.98-1.206.205-.308.41-.256.69-.153.284.103 1.8.847 2.11 1.002.312.155.518.23.593.36.075.13.075.753-.21 1.56z"/>
+                                                            </svg>
+                                                            Compartir por WhatsApp
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })()}
@@ -2202,6 +2630,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     <button
                                         onClick={() => {
                                             setSuccessInvoice(null);
+                                            setwhatsappPhone('');
+                                            setShowWhatsappInput(false);
                                             setShowPaymentModal(false);
                                             onClose();
                                         }}
@@ -2341,6 +2771,19 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                                                     />
                                                 </div>
+                                                {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Dirección Fiscal de la Empresa"
+                                                            value={clientForm.direccion || ''}
+                                                            onChange={e => setClientForm({...clientForm, direccion: e.target.value})}
+                                                            disabled={isConfirmingPayment}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -2353,6 +2796,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 setIsConfirmingPayment(false);
                                             } else {
                                                 setShowPaymentModal(false);
+                                                setIssueInvoice(false);
                                             }
                                         }}
                                         className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors"

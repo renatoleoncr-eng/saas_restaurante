@@ -78,6 +78,14 @@ const Account = sequelize.define('Account', {
     accountType: {
         type: DataTypes.ENUM('standard', 'staff'),
         defaultValue: 'standard'
+    },
+    roulette_interaction: {
+        type: DataTypes.STRING,
+        defaultValue: 'none'
+    },
+    roulette_prize: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 });
 
@@ -585,6 +593,7 @@ Expense.belongsTo(CashSession);
 const BillingConfig = sequelize.define('BillingConfig', {
     ruc: { type: DataTypes.STRING(11), allowNull: true },
     razonSocial: { type: DataTypes.STRING, allowNull: true },
+    direccion: { type: DataTypes.STRING, allowNull: true },
     facturacionElectronica: { type: DataTypes.BOOLEAN, defaultValue: false },
     igvTasa: { type: DataTypes.DECIMAL(5, 2), defaultValue: 10.50 }, // Valor por defecto restaurante
     operacionesExoneradas: { type: DataTypes.BOOLEAN, defaultValue: false },

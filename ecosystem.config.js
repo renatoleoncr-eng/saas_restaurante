@@ -13,8 +13,9 @@ module.exports = {
         {
             name: 'restaurante-frontend',
             cwd: './client',
-            script: 'npm',
+            script: 'npm.cmd',
             args: 'run dev',
+            interpreter: 'none',
             watch: false,
             env: {
                 NODE_ENV: 'development'

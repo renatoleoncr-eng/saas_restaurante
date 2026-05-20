@@ -8,7 +8,7 @@ import { formatTableName } from '../utils/tableUtils';
 import SessionsHistoryTab from '../components/SessionsHistoryTab';
 
 export default function AccountManagementView() {
-    const { user } = useRestaurant();
+    const { user, socket } = useRestaurant();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('cuentas'); // 'cuentas' | 'turnos'
@@ -71,6 +71,19 @@ export default function AccountManagementView() {
     const [payMethod, setPayMethod] = useState('efectivo');
     const [payFiles, setPayFiles] = useState([]);
     const [isPaying, setIsPaying] = useState(false);
+
+    useEffect(() => {
+        if (!socket) return;
+        if (payAccount) {
+            socket.emit('set_client_screen_mode', { mode: 'qr_fixed' });
+        } else {
+            socket.emit('set_client_screen_mode', { mode: 'ads' });
+        }
+
+        return () => {
+            socket.emit('set_client_screen_mode', { mode: 'ads' });
+        };
+    }, [socket, payAccount]);
 
     // View Payments Modal
     const [viewPaymentsAccount, setViewPaymentsAccount] = useState(null);

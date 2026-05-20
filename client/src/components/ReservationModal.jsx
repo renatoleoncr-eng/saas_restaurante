@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { X, Calendar, User, Phone, Clock } from 'lucide-react';
 
 export default function ReservationModal({ tableId, onClose }) {
-    const { refreshData } = useRestaurant();
+    const { refreshData, socket } = useRestaurant();
+
+    useEffect(() => {
+        if (socket) {
+            socket.emit('set_client_screen_mode', { mode: 'qr_fixed' });
+        }
+        return () => {
+            if (socket) {
+                socket.emit('set_client_screen_mode', { mode: 'ads' });
+            }
+        };
+    }, [socket]);
     const [form, setForm] = useState({
         customerName: '',
         contactInfo: '',

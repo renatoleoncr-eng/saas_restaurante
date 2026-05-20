@@ -67,6 +67,341 @@ const BillingConfigModal = ({ onClose }) => {
         }));
     }, [newInvoice.tipo]);
 
+    const handlePrintLocalInvoice = (invoice) => {
+        if (!invoice) return;
+        const printWindow = window.open('', '_blank', 'width=600,height=800');
+        if (!printWindow) {
+            alert('Por favor habilite las ventanas emergentes (popups) para poder imprimir.');
+            return;
+        }
+
+        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+        const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
+        const docName = invoice.tipo === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
+        
+        const rucEmpresa = config?.ruc || '20614409593';
+        const nameEmpresa = config?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
+        const addressEmpresa = config?.direccion || 'Av. Larco 123, Miraflores, Lima';
+
+        // Check for Amazonas exoneration (exoneradas or igv === 0)
+        const isExonerated = config?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
+        const totalAmount = parseFloat(invoice.total || 0);
+        const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
+        const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
+        const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
+        const igvLabel = isExonerated ? 'I.G.V. (0%):' : 'I.G.V. (18%):';
+
+        // Generate SUNAT QR Code pipe-delimited string
+        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
+        let tipoDocAdq = '0';
+        if (invoice.clienteDocumento) {
+            if (invoice.clienteDocumento.length === 11) tipoDocAdq = '6'; // RUC
+            else if (invoice.clienteDocumento.length === 8) tipoDocAdq = '1'; // DNI
+        }
+        const nroDocAdq = invoice.clienteDocumento || '00000000';
+        
+        const rawDate = invoice.emitidoAt || invoice.createdAt || new Date();
+        const dateObj = new Date(rawDate);
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+        const qrString = `${rucEmpresa}|${tipoComp}|${invoice.serie}|${invoice.correlativo}|${igvAmount.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdq}|${nroDocAdq}|`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
+
+        // Verify if it is electronic
+        const isElectronico = !!(invoice.sunatResponse || config?.apiToken);
+
+        const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
+                <style>
+                    @page {
+                        size: 80mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        font-family: 'Courier New', Courier, monospace, sans-serif;
+                        width: 72mm;
+                        margin: 0 auto;
+                        padding: 5mm 2mm;
+                        font-size: 11px;
+                        color: #000;
+                        line-height: 1.3;
+                    }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .bold { font-weight: bold; }
+                    .header { margin-bottom: 5mm; }
+                    .company-name { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+                    .document-title { font-size: 12px; font-weight: bold; border: 1px solid #000; padding: 4px; margin: 4mm 0; text-transform: uppercase; }
+                    .divider { border-top: 1px dashed #000; margin: 3mm 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+                    th { border-bottom: 1px dashed #000; padding: 2px 0; font-size: 10px; text-transform: uppercase; }
+                    td { padding: 3px 0; vertical-align: top; }
+                    .totals { margin-top: 4mm; }
+                    .totals-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+                    .footer { margin-top: 8mm; font-size: 9px; }
+                    .sunat-badge {
+                        background-color: #e6f4ea;
+                        color: #137333;
+                        font-weight: bold;
+                        border: 1px solid #a8dab5;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        display: inline-block;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        margin-bottom: 3mm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="text-center header">
+                    <div class="company-name">${nameEmpresa}</div>
+                    <div>RUC: ${rucEmpresa}</div>
+                    <div>${addressEmpresa.toUpperCase()}</div>
+                    <div class="document-title">
+                        ${docName}<br>
+                        ${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}
+                    </div>
+                </div>
+                
+                <div>
+                    <div><b>FECHA EMISIÓN:</b> ${dateStr}</div>
+                    <div><b>SEÑOR(ES):</b> ${(invoice.clienteNombre || 'CLIENTES VARIOS').toUpperCase()}</div>
+                    <div><b>${invoice.tipo === 'factura' ? 'RUC' : 'DNI'}:</b> ${nroDocAdq}</div>
+                    ${clienteDireccionHtml}
+                    <div><b>MÉTODO PAGO:</b> EFECTIVO</div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 10%;">CANT</th>
+                            <th style="width: 45%;">DESCRIPCIÓN</th>
+                            <th class="text-right" style="width: 20%;">P.UNIT</th>
+                            <th class="text-right" style="width: 25%;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => {
+                            const qty = item.qty || item.quantity || 1;
+                            const total = parseFloat(item.amount || item.subtotal || 0);
+                            const pUnit = total / qty;
+                            return `
+                                <tr>
+                                    <td class="text-center">${qty}</td>
+                                    <td style="text-transform: uppercase;">${item.description}</td>
+                                    <td class="text-right">S/ ${pUnit.toFixed(2)}</td>
+                                    <td class="text-right">S/ ${total.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="divider"></div>
+                
+                <div class="totals">
+                    <div class="totals-row">
+                        <span>${opLabel}</span>
+                        <span>S/ ${opAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>OP. INAFECTA:</span>
+                        <span>S/ 0.00</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>${igvLabel}</span>
+                        <span>S/ ${igvAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row bold" style="font-size: 13px;">
+                        <span>TOTAL A PAGAR:</span>
+                        <span>S/ ${totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                ${isElectronico ? `
+                <div class="text-center" style="margin-top: 3mm; margin-bottom: 3mm;">
+                    <div class="sunat-badge">
+                        [✓] ACEPTADA POR SUNAT
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="text-center" style="margin-top: 4mm; margin-bottom: 4mm;">
+                    <img src="${qrCodeUrl}" style="width: 120px; height: 120px;" alt="Código QR SUNAT" />
+                </div>
+
+                <div class="text-center footer">
+                    <b>REPRESENTACIÓN IMPRESA DE COMPROBANTE DE PAGO</b><br>
+                    <span>Autorizado mediante Resolución de SUNAT</span><br><br>
+                    <b>¡Gracias por su preferencia!</b>
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    const handleDownloadLocalXml = (invoice) => {
+        if (!invoice) return;
+        const rucEmpresa = config?.ruc || '20614409593';
+        const nameEmpresa = config?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
+        const clientDoc = invoice.clienteDocumento || '00000000';
+        const clientName = invoice.clienteNombre || 'CLIENTES VARIOS';
+        const dateStr = invoice.createdAt ? invoice.createdAt.split('T')[0] : new Date().toISOString().split('T')[0];
+        const docType = invoice.tipo === 'factura' ? '01' : '03'; 
+        const clientDocType = invoice.tipo === 'factura' ? '6' : '1'; 
+        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+
+        const isExonerated = config?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
+        const totalVal = parseFloat(invoice.total || 0);
+        const subtotalVal = isExonerated ? totalVal : parseFloat(invoice.subtotal || 0);
+        const igvVal = isExonerated ? 0 : parseFloat(invoice.igv || 0);
+
+        let itemsXml = '';
+        items.forEach((item, idx) => {
+            const lineTotal = parseFloat(item.amount || item.subtotal || 0);
+            const qty = parseInt(item.qty || item.quantity || 1);
+            const unitVal = lineTotal / qty;
+
+            const itemTaxAmount = isExonerated ? 0 : (lineTotal * 0.18 / 1.18);
+            const itemTaxableAmount = isExonerated ? lineTotal : (lineTotal / 1.18);
+            const itemPriceAmount = isExonerated ? unitVal : (unitVal / 1.18);
+            const itemPercent = isExonerated ? "0.00" : "18.00";
+            const itemExemptionCode = isExonerated ? "20" : "10";
+            const taxSchemeId = isExonerated ? "9997" : "1000";
+            const taxSchemeName = isExonerated ? "EXO" : "IGV";
+
+            itemsXml += `
+        <cac:InvoiceLine>
+            <cbc:ID>${idx + 1}</cbc:ID>
+            <cbc:InvoicedQuantity unitCode="NIU">${qty}</cbc:InvoicedQuantity>
+            <cbc:LineExtensionAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:LineExtensionAmount>
+            <cac:PricingReference>
+                <cac:AlternativeConditionPrice>
+                    <cbc:PriceAmount currencyID="PEN">${unitVal.toFixed(2)}</cbc:PriceAmount>
+                    <cbc:PriceTypeCode>01</cbc:PriceTypeCode>
+                </cac:AlternativeConditionPrice>
+            </cac:PricingReference>
+            <cac:TaxTotal>
+                <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
+                <cac:TaxSubtotal>
+                    <cbc:TaxableAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:TaxableAmount>
+                    <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
+                    <cac:TaxCategory>
+                        <cbc:Percent>${itemPercent}</cbc:Percent>
+                        <cbc:TaxExemptionReasonCode>${itemExemptionCode}</cbc:TaxExemptionReasonCode>
+                        <cac:TaxScheme>
+                            <cbc:ID>${taxSchemeId}</cbc:ID>
+                            <cbc:Name>${taxSchemeName}</cbc:Name>
+                            <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
+                        </cac:TaxScheme>
+                    </cac:TaxCategory>
+                </cac:TaxSubtotal>
+            </cac:TaxTotal>
+            <cac:Item>
+                <cbc:Description><![CDATA[${item.description}]]></cbc:Description>
+            </cac:Item>
+            <cac:Price>
+                <cbc:PriceAmount currencyID="PEN">${itemPriceAmount.toFixed(2)}</cbc:PriceAmount>
+            </cac:Price>
+        </cac:InvoiceLine>`;
+        });
+
+        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
+    <ext:UBLExtensions>
+        <ext:UBLExtension>
+            <ext:ExtensionContent>
+                <!-- Firma Digital Mock -->
+            </ext:ExtensionContent>
+        </ext:UBLExtension>
+    </ext:UBLExtensions>
+    <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+    <cbc:CustomizationID>2.0</cbc:CustomizationID>
+    <cbc:ID>${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</cbc:ID>
+    <cbc:IssueDate>${dateStr}</cbc:IssueDate>
+    <cbc:InvoiceTypeCode listID="0101">${docType}</cbc:InvoiceTypeCode>
+    <cbc:DocumentCurrencyCode>PEN</cbc:DocumentCurrencyCode>
+    <cac:AccountingSupplierParty>
+        <cac:Party>
+            <cac:PartyIdentification>
+                <cbc:ID schemeID="6">${rucEmpresa}</cbc:ID>
+            </cac:PartyIdentification>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName><![CDATA[${nameEmpresa}]]></cbc:RegistrationName>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+    <cac:AccountingCustomerParty>
+        <cac:Party>
+            <cac:PartyIdentification>
+                <cbc:ID schemeID="${clientDocType}">${clientDoc}</cbc:ID>
+            </cac:PartyIdentification>
+            ${invoice.clienteDireccion ? `
+            <cac:PostalAddress>
+                <cbc:StreetName><![CDATA[${invoice.clienteDireccion}]]></cbc:StreetName>
+            </cac:PostalAddress>
+            ` : ''}
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName><![CDATA[${clientName}]]></cbc:RegistrationName>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
+        <cac:TaxSubtotal>
+            <cbc:TaxableAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:TaxableAmount>
+            <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
+            <cac:TaxCategory>
+                <cac:TaxScheme>
+                    <cbc:ID>${isExonerated ? '9997' : '1000'}</cbc:ID>
+                    <cbc:Name>${isExonerated ? 'EXO' : 'IGV'}</cbc:Name>
+                    <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
+                </cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+    </cac:TaxTotal>
+    <cac:LegalMonetaryTotal>
+        <cbc:LineExtensionAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:LineExtensionAmount>
+        <cbc:TaxInclusiveAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:PayableAmount>
+    </cac:LegalMonetaryTotal>${itemsXml}
+</Invoice>`;
+
+        const blob = new Blob([xmlContent], { type: 'text/xml' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${rucEmpresa}-${docType}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}.xml`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     const fetchConfig = async () => {
         try {
             const res = await axios.get('/api/billing/config');
@@ -337,16 +672,16 @@ const BillingConfigModal = ({ onClose }) => {
                                                     <td className="px-4 py-3 text-center">
                                                         <div className="flex justify-center gap-2">
                                                             <button
-                                                                onClick={() => pdf ? window.open(pdf, '_blank') : alert('Este comprobante fue emitido localmente y no cuenta con PDF de SUNAT.')}
-                                                                title={pdf ? "Ver PDF" : "PDF no disponible"}
-                                                                className={`p-1.5 rounded border transition ${pdf ? 'text-blue-600 hover:bg-blue-50 border-blue-200' : 'text-gray-300 border-gray-150 cursor-not-allowed bg-gray-50'}`}
+                                                                onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
+                                                                title={pdf ? "Ver PDF" : "Imprimir comprobante local"}
+                                                                className="p-1.5 rounded border transition text-blue-600 hover:bg-blue-50 border-blue-200"
                                                             >
                                                                 <Printer size={16} />
                                                             </button>
                                                             <button
-                                                                onClick={() => xml ? window.open(xml, '_blank') : alert('Este comprobante fue emitido localmente y no cuenta con XML de SUNAT.')}
-                                                                title={xml ? "Descargar XML" : "XML no disponible"}
-                                                                className={`p-1.5 rounded border transition ${xml ? 'text-gray-600 hover:bg-gray-50 border-gray-200' : 'text-gray-300 border-gray-150 cursor-not-allowed bg-gray-50'}`}
+                                                                onClick={() => xml ? window.open(xml, '_blank') : handleDownloadLocalXml(inv)}
+                                                                title={xml ? "Descargar XML" : "Descargar XML local"}
+                                                                className="p-1.5 rounded border transition text-gray-600 hover:bg-gray-50 border-gray-200"
                                                             >
                                                                 <Download size={16} />
                                                             </button>
@@ -549,7 +884,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                 setLoading(true);
                                                 try {
                                                     const res = await axios.get(`/api/billing/consulta?doc=${val}`);
-                                                    if (res.data) setConfig(prev => ({...prev, ruc: val, razonSocial: res.data.razon_social || res.data.nombre}));
+                                                    if (res.data) setConfig(prev => ({...prev, ruc: val, razonSocial: res.data.razon_social || res.data.nombre, direccion: res.data.direccion || prev.direccion || ''}));
                                                 } catch (err) { console.error('RUC no encontrado'); }
                                                 finally { setLoading(false); }
                                             }
@@ -563,6 +898,16 @@ const BillingConfigModal = ({ onClose }) => {
                                         className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold"
                                         value={config.razonSocial}
                                         onChange={(e) => setConfig({...config, razonSocial: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Dirección de la Empresa</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold"
+                                        placeholder="Se autocompleta al buscar RUC o ingrese manualmente"
+                                        value={config.direccion || ''}
+                                        onChange={(e) => setConfig({...config, direccion: e.target.value})}
                                     />
                                 </div>
                                 <div className="space-y-1">

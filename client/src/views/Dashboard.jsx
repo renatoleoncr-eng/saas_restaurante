@@ -11,9 +11,11 @@ import AccountManagementView from './AccountManagementView';
 import { useNavigate } from 'react-router-dom';
 import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
 import BillingConfigModal from '../components/BillingConfigModal';
+import QrManagement from './QrManagement';
 import { 
     LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
-    Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard 
+    Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard,
+    Tv
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -30,9 +32,9 @@ export default function Dashboard() {
     // Role-based view protection
     useEffect(() => {
         const restrictedViews = {
-            waiter: ['drink_promos'],
+            waiter: ['drink_promos', 'qr_management'],
             cashier: ['stock', 'accounts', 'drink_promos'], // Cashier already has reports in current logic
-            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos']
+            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management']
         };
 
         if (user && restrictedViews[user.role]?.includes(currentView)) {
@@ -120,6 +122,9 @@ export default function Dashboard() {
         }
         if (currentView === 'drink_promos') {
             return <DrinkPromotionsConfig />;
+        }
+        if (currentView === 'qr_management') {
+            return <QrManagement />;
         }
 
         switch (user.role) {
@@ -336,6 +341,8 @@ export default function Dashboard() {
                                 {!isCollapsed && <span>Caja / Reportes</span>}
                             </button>
                         )}
+
+                        {/* QrManagement option is now in the user popover menu */}
                     </nav>
 
                     {/* User Menu - Hide on Mobile if Collapsed */}
@@ -373,6 +380,14 @@ export default function Dashboard() {
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
                                         <CreditCard size={16} /> Config. Facturación
+                                    </button>
+                                )}
+                                {['admin', 'cashier'].includes(user.role) && (
+                                    <button
+                                        onClick={() => { setCurrentView('qr_management'); setShowUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <Tv size={16} /> Pantalla Cliente
                                     </button>
                                 )}
                                 <button
