@@ -25,6 +25,7 @@ services:
       - db
     networks:
       - restaurante-network
+      - makala-network
 
   db:
     image: mysql:8.0
@@ -44,6 +45,8 @@ services:
 networks:
   restaurante-network:
     driver: bridge
+  makala-network:
+    external: true
 
 volumes:
   db_data:

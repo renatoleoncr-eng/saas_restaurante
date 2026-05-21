@@ -770,9 +770,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
             // Auto-add if there's exactly 1 option
             if (allOptions.length === 1) {
                 const singleOption = allOptions[0];
-                const isHH = singleOption.happyHourPrice && isHappyHourActive(singleOption.happyHourStart, singleOption.happyHourEnd);
-                const finalPrice = isHH ? singleOption.happyHourPrice : singleOption.price;
-                addToCart(product, '', [], singleOption.name, finalPrice);
+                addToCart(product, '', [], singleOption.name);
                 return;
             }
 
@@ -814,18 +812,33 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         const isStaffConsumption = (account?.accountType === 'staff') || (!account && clientForm?.accountType === 'staff');
 
-        let originalPriceCalc = overridePrice !== null ? parseFloat(overridePrice) : (product.price !== undefined ? parseFloat(product.price) : 0);
+        let basePrice = 0;
+        let activePrice = 0;
 
-        // Ensure originalPriceCalc captures the variant price if provided and not overwritten by a staff 0
-        if (presentationName && product.parsedVariants) {
-            const variantEntry = product.parsedVariants.find(v => v.name === presentationName);
+        const variants = product.parsedVariants || product.ProductVariants;
+
+        if (overridePrice !== null) {
+            basePrice = parseFloat(overridePrice);
+            activePrice = parseFloat(overridePrice);
+        } else if (presentationName && variants) {
+            const variantEntry = variants.find(v => v.name === presentationName);
             if (variantEntry) {
+                basePrice = parseFloat(variantEntry.price || 0);
                 const isHH = variantEntry.happyHourPrice && isHappyHourActive(variantEntry.happyHourStart, variantEntry.happyHourEnd);
-                originalPriceCalc = isHH ? parseFloat(variantEntry.happyHourPrice) : parseFloat(variantEntry.price);
+                activePrice = isHH ? parseFloat(variantEntry.happyHourPrice) : basePrice;
+            } else {
+                basePrice = product.price !== undefined ? parseFloat(product.price) : 0;
+                const isHH = product.happyHourPrice && isHappyHourActive(product.happyHourStart, product.happyHourEnd);
+                activePrice = isHH ? parseFloat(product.happyHourPrice) : basePrice;
             }
+        } else {
+            basePrice = product.price !== undefined ? parseFloat(product.price) : 0;
+            const isHH = product.happyHourPrice && isHappyHourActive(product.happyHourStart, product.happyHourEnd);
+            activePrice = isHH ? parseFloat(product.happyHourPrice) : basePrice;
         }
 
-        const finalPriceCalc = isStaffConsumption ? 0 : (overridePrice !== null ? parseFloat(overridePrice) : originalPriceCalc);
+        const finalPriceCalc = isStaffConsumption ? 0 : activePrice;
+        const originalPriceCalc = isStaffConsumption ? activePrice : basePrice;
 
         setCart(prev => {
             // Use custom ticket name over original name if provided (helpful for decoupled combos)
@@ -1466,7 +1479,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 // Disable if stock is 0
                                                 disabled={v.stock <= 0}
                                                 onClick={() => {
-                                                    addToCart(pendingVariantProduct, '', [], v.name, v.price);
+                                                    addToCart(pendingVariantProduct, '', [], v.name);
                                                     setPendingVariantProduct(null);
                                                 }}
                                                 className={`w-full text-center p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group flex justify-between items-center ${v.stock <= 0 ? 'opacity-60 grayscale' : ''}`}

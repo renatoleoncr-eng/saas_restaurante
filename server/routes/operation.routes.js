@@ -902,7 +902,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
 // Add Order Items to Account
 router.post('/orders', async (req, res) => {
     console.log("[Orders] Received order request", JSON.stringify(req.body));
-    const { sequelize, Account, Product, Order } = getModels();
+    const { sequelize, Account, Product, Order, ProductVariant } = getModels();
     const t = await sequelize.transaction();
 
     try {
@@ -976,7 +976,9 @@ router.post('/orders', async (req, res) => {
                 continue;
             }
 
-            const product = await Product.findByPk(item.productId); // Just basic info for price/name
+            const product = await Product.findByPk(item.productId, {
+                include: [ProductVariant]
+            }); // Just basic info for price/name
 
             if (!product) {
                 console.warn(`[Orders] Product ID ${item.productId} NOT FOUND. Skipping.`);
@@ -1014,6 +1016,17 @@ router.post('/orders', async (req, res) => {
                 console.log(`[Orders] Staff Account: Forcing price to 0 for ${product.name}`);
             } else if (item.price !== undefined && item.price !== null && !isNaN(parseFloat(item.price))) {
                 finalPrice = parseFloat(item.price); // Trust the custom price generated for split items or combos
+            } else if (item.presentation && product.ProductVariants && product.ProductVariants.length > 0) {
+                const variant = product.ProductVariants.find(v => v.name === item.presentation);
+                if (variant) {
+                    // Check if variant has Happy Hour
+                    if (variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd)) {
+                        finalPrice = parseFloat(variant.happyHourPrice);
+                        appliedHappyHour = true;
+                    } else {
+                        finalPrice = parseFloat(variant.price);
+                    }
+                }
             } else if (item.presentation && product.presentations) {
                 try {
                     const variants = JSON.parse(product.presentations);
