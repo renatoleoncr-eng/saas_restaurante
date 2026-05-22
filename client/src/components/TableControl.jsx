@@ -591,7 +591,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 setClientForm({
                     name: accRes.data.customerName,
                     dni: accRes.data.clientDni || '',
-                    direccion: '',
+                    direccion: accRes.data.clientAddress || '',
                     accountType: accRes.data.accountType || 'standard'
                 });
 
@@ -720,7 +720,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
             setClientForm({
                 name: res.data.customerName,
                 dni: res.data.clientDni || '',
-                direccion: '',
+                direccion: res.data.clientAddress || '',
                 accountType: res.data.accountType || 'standard'
             });
             return res.data;
@@ -744,6 +744,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
             const res = await axios.put(`/api/accounts/${account.id}`, {
                 customerName: clientForm.name,
                 clientDni: clientForm.dni,
+                clientAddress: clientForm.direccion,
                 accountType: clientForm.accountType
             });
             setAccount(res.data);
@@ -1081,10 +1082,11 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         try {
             // Save inline client edits if any
-            if (account && (clientForm.dni !== account.clientDni || clientForm.name !== account.customerName)) {
+            if (account && (clientForm.dni !== account.clientDni || clientForm.name !== account.customerName || clientForm.direccion !== account.clientAddress)) {
                 await axios.put(`/api/accounts/${account.id}`, {
                     customerName: clientForm.name,
                     clientDni: clientForm.dni,
+                    clientAddress: clientForm.direccion,
                     accountType: clientForm.accountType
                 });
             }
@@ -2477,9 +2479,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
             {/* PAYMENT MODAL */}
             {
                 showPaymentModal && (
-                    <div className="absolute inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 z-[60] flex justify-center items-start overflow-y-auto p-4">
                         {successInvoice ? (
-                            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200">
+                            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200 my-auto">
                                 {/* Premium Green/Mint Gradient Header */}
                                 <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-center text-white relative">
                                     <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-3 shadow-inner">
@@ -2656,7 +2658,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
+                            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95 my-auto">
                                 <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Confirmar Pago</h2>
 
                                 <div className="bg-blue-50 p-4 rounded-lg mb-6 text-center border border-blue-100">
