@@ -40,7 +40,7 @@ router.get('/accounts/all', async (req, res) => {
 
         const query = `
             SELECT 
-                a.id, a.status, a.total, a.customerName, a.paymentMethod, a.paymentEvidence,
+                a.id, a.status, a.total, a.customerName, a.clientDni, a.clientAddress, a.paymentMethod, a.paymentEvidence,
                 a.openedAt, a.closedAt, a.createdAt, a.updatedAt, a.TableId, a.accountType,
                 t.number as tableNumber,
                 ar.name as areaName,

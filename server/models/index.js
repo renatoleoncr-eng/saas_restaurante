@@ -55,6 +55,10 @@ const Account = sequelize.define('Account', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    clientAddress: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     total: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0.00

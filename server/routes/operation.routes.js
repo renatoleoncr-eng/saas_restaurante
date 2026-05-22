@@ -10,7 +10,7 @@ const { getHotelDayRange } = require('../utils/dateUtils');
 router.post('/accounts/open', async (req, res) => {
     try {
         const { Account, Table } = getModels();
-        const { tableId, customerName, clientDni, userId, accountType } = req.body;
+        const { tableId, customerName, clientDni, clientAddress, userId, accountType } = req.body;
 
         // Check if table is occupied
         const table = await Table.findByPk(tableId);
@@ -22,6 +22,7 @@ router.post('/accounts/open', async (req, res) => {
             TableId: tableId,
             customerName: customerName || (accountType === 'staff' ? 'Personal' : 'Cliente'),
             clientDni: clientDni || null,
+            clientAddress: clientAddress || null,
             status: 'open',
             accountType: accountType || 'standard'
         });
@@ -46,13 +47,14 @@ router.post('/accounts/open', async (req, res) => {
 router.put('/accounts/:id', async (req, res) => {
     try {
         const { Account } = getModels();
-        const { customerName, clientDni, accountType } = req.body;
+        const { customerName, clientDni, clientAddress, accountType } = req.body;
         const account = await Account.findByPk(req.params.id);
 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         if (customerName !== undefined) account.customerName = customerName;
         if (clientDni !== undefined) account.clientDni = clientDni;
+        if (clientAddress !== undefined) account.clientAddress = clientAddress;
         if (accountType !== undefined && accountType !== account.accountType) {
             account.accountType = accountType;
             // If converting to staff, force all orders to 0 and reset total

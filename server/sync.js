@@ -9,6 +9,7 @@ async function runAutomaticFix() {
         { table: 'Accounts', column: 'accountType', type: "VARCHAR(50) DEFAULT 'standard'" },
         { table: 'Accounts', column: 'roulette_interaction', type: "VARCHAR(255) DEFAULT 'none'" },
         { table: 'Accounts', column: 'roulette_prize', type: 'VARCHAR(255)' },
+        { table: 'Accounts', column: 'clientAddress', type: 'VARCHAR(255)' },
 
         // PRODUCTS
         { table: 'Products', column: 'presentations', type: 'TEXT' },
