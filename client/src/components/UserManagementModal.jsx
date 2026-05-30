@@ -106,10 +106,13 @@ export default function UserManagementModal({ onClose }) {
                                             {editingUser ? <Edit size={20} /> : <UserPlus size={20} />}
                                             {editingUser ? 'Editar Usuario' : 'Crear Usuario'}
                                         </h2>
-                                        <form onSubmit={handleSave} className="space-y-4">
+                                        <form onSubmit={handleSave} className="space-y-4" autoComplete="off">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Usuario (Login)</label>
                                                 <input
+                                                    type="text"
+                                                    name="username"
+                                                    autoComplete="new-username"
                                                     className="w-full border p-2 rounded bg-gray-50"
                                                     value={formData.username}
                                                     onChange={e => setFormData({ ...formData, username: e.target.value })}
@@ -123,6 +126,8 @@ export default function UserManagementModal({ onClose }) {
                                                     <label className="block text-sm font-medium text-gray-700">Contraseña Inicial</label>
                                                     <input
                                                         type="password"
+                                                        name="password"
+                                                        autoComplete="new-password"
                                                         className="w-full border p-2 rounded"
                                                         value={formData.password}
                                                         onChange={e => setFormData({ ...formData, password: e.target.value })}
@@ -156,7 +161,17 @@ export default function UserManagementModal({ onClose }) {
                                             </div>
 
                                             <div className="flex justify-end gap-2 pt-4">
-                                                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowForm(false);
+                                                        setEditingUser(null);
+                                                        setFormData({ username: '', password: '', displayName: '', role: 'waiter' });
+                                                    }}
+                                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                                                >
+                                                    Cancelar
+                                                </button>
                                                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">Guardar</button>
                                             </div>
                                         </form>
