@@ -150,6 +150,7 @@ export default function UserManagementModal({ onClose }) {
                                                 >
                                                     <option value="waiter">Mesero</option>
                                                     <option value="kitchen">Cocina</option>
+                                                    <option value="cashier">Cajero</option>
                                                     <option value="admin">Administrador</option>
                                                 </select>
                                             </div>
@@ -188,7 +189,7 @@ export default function UserManagementModal({ onClose }) {
                                                 <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
                                                 <td className="px-6 py-4 text-gray-600">{u.displayName}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'kitchen' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'kitchen' ? 'bg-orange-100 text-orange-700' : u.role === 'cashier' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                                         {u.role}
                                                     </span>
                                                 </td>
