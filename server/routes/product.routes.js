@@ -52,10 +52,16 @@ router.post('/products', async (req, res) => {
             where: {
                 [Op.and]: [
                     sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), name.trim().toLowerCase()),
-                    isMenuOption ? { type } : { requiresPreparation: finalRequiresPreparation }
+                    isMenuOption ? { type } : { 
+                        requiresPreparation: finalRequiresPreparation,
+                        [Op.or]: [
+                            { type: { [Op.notIn]: ['daily_entry', 'daily_main'] } },
+                            { type: null }
+                        ]
+                    }
                 ]
             },
-            paranoid: false
+            paranoid: true
         });
         if (existingProduct) {
             await t.rollback();
@@ -187,12 +193,18 @@ router.put('/products/:id', async (req, res) => {
                 where: {
                     [Op.and]: [
                         sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmedName),
-                        isMenuOption ? { type: finalType } : { requiresPreparation: finalRequiresPreparation },
+                        isMenuOption ? { type: finalType } : { 
+                            requiresPreparation: finalRequiresPreparation,
+                            [Op.or]: [
+                                { type: { [Op.notIn]: ['daily_entry', 'daily_main'] } },
+                                { type: null }
+                            ]
+                        },
                         { id: { [Op.ne]: id } }
                     ]
                 },
                 transaction: t,
-                paranoid: false
+                paranoid: true
             });
             if (existingProduct) {
                 await t.rollback();

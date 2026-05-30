@@ -2,9 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     X, Settings, FileText, Plus, Search, Trash2, 
     CheckCircle, AlertCircle, Printer, Download,
-    CreditCard, Building2, ShieldCheck, Zap, Loader
+    CreditCard, Building2, ShieldCheck, Zap, Loader,
+    ArrowRight, ExternalLink, MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
+import AccountDetailsModal from './AccountDetailsModal';
+
+const WhatsAppIcon = ({ size = 16, className = "" }) => (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.395 0 .01 5.385.01 12.037c0 2.125.547 4.197 1.59 6.042L0 24l6.135-1.61a11.745 11.745 0 005.907 1.577h.005c6.65 0 12.034-5.388 12.037-12.04a11.744 11.744 0 00-3.465-8.52z" />
+    </svg>
+);
 
 const BillingConfigModal = ({ onClose }) => {
     const [activeTab, setActiveTab] = useState('history');
@@ -12,12 +20,14 @@ const BillingConfigModal = ({ onClose }) => {
     const [config, setConfig] = useState({
         ruc: '',
         razonSocial: '',
+        direccion: '',
         facturacionElectronica: false,
         igvTasa: 10.5,
         operacionesExoneradas: false,
         serieFactura: 'F001',
         serieBoleta: 'B001',
-        apiToken: ''
+        apiToken: '',
+        billingMode: 'libre'
     });
 
     // New Invoice State
@@ -26,11 +36,14 @@ const BillingConfigModal = ({ onClose }) => {
         clienteDocumento: '',
         clienteNombre: '',
         clienteDireccion: '',
-        items: [{ description: '', amount: '', quantity: 1 }]
+        items: [{ description: '', amount: '', quantity: 1 }],
+        accountId: null
     });
 
     const [invoices, setInvoices] = useState([]);
+    const [accounts, setAccounts] = useState([]);
     const [filters, setFilters] = useState({ documento: '', desde: '', hasta: '' });
+    const [selectedAccountId, setSelectedAccountId] = useState(null);
 
     // Derived helpers
     const isFactura = newInvoice.tipo === 'factura';
@@ -46,8 +59,20 @@ const BillingConfigModal = ({ onClose }) => {
             try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
         }
         if (!parsed) return { pdf: null, xml: null };
-        const pdf = parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || null;
-        const xml = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+        let pdf = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || null;
+        let xml = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+
+        // Apply SSL fix
+        if (pdf && typeof pdf === 'string') {
+            if (pdf.includes('72.61.57.199') || pdf.includes('maksuites') || pdf.includes('bluzcx')) {
+                pdf = pdf.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+            }
+        }
+        if (xml && typeof xml === 'string') {
+            if (xml.includes('72.61.57.199') || xml.includes('maksuites') || xml.includes('bluzcx')) {
+                xml = xml.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+            }
+        }
         return { pdf, xml };
     };
 
@@ -55,6 +80,73 @@ const BillingConfigModal = ({ onClose }) => {
         fetchConfig();
         fetchInvoices();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'new' && config.billingMode === 'reserva') {
+            fetchAccounts();
+        }
+    }, [activeTab, config.billingMode]);
+
+    const fetchAccounts = async () => {
+        try {
+            const res = await axios.get('/api/accounts/all?status=all');
+            setAccounts(res.data);
+        } catch (err) {
+            console.error('Error fetching accounts for billing select', err);
+        }
+    };
+
+    const handleSelectAccount = async (id) => {
+        if (!id) {
+            setNewInvoice(prev => ({
+                ...prev,
+                accountId: null,
+                clienteDocumento: '',
+                clienteNombre: '',
+                clienteDireccion: '',
+                items: [{ description: '', amount: '', quantity: 1 }]
+            }));
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await axios.get(`/api/accounts/specific/${id}`);
+            const acc = res.data;
+            
+            const newItems = acc.Orders && acc.Orders.length > 0
+                ? acc.Orders.map(ord => {
+                    const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) 
+                        ? parseFloat(ord.priceAtOrder) 
+                        : parseFloat(ord.Product?.price || 0);
+                    const qty = parseInt(ord.quantity || 1);
+                    return {
+                        description: ord.Product?.name || 'Consumo',
+                        quantity: qty,
+                        amount: (price * qty).toFixed(2)
+                    };
+                })
+                : [{ description: 'Consumo de Mesa', amount: parseFloat(acc.total).toFixed(2), quantity: 1 }];
+
+            const doc = acc.clientDni || '';
+            const newTipo = doc.length === 11 ? 'factura' : 'boleta';
+
+            setNewInvoice(prev => ({
+                ...prev,
+                accountId: acc.id,
+                tipo: newTipo,
+                clienteDocumento: doc,
+                clienteNombre: acc.customerName || '',
+                clienteDireccion: acc.clientAddress || '',
+                items: newItems
+            }));
+        } catch (err) {
+            console.error("Error loading specific account for invoice", err);
+            alert("Error al cargar detalles de la reserva");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // LOGIC: When tipo changes → clear customer fields (like Gestion Mak)
     // Factura always starts empty to avoid using DNI as RUC by mistake
@@ -111,7 +203,17 @@ const BillingConfigModal = ({ onClose }) => {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
 
         // Verify if it is electronic
-        const isElectronico = !!(invoice.sunatResponse || config?.apiToken);
+        const isElectronico = !!(
+            invoice.sunatResponse && 
+            (() => {
+                try {
+                    const parsed = typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse;
+                    return parsed && !parsed.error && parsed.success !== false;
+                } catch (e) {
+                    return false;
+                }
+            })()
+        );
 
         const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
 
@@ -402,6 +504,51 @@ const BillingConfigModal = ({ onClose }) => {
         URL.revokeObjectURL(url);
     };
 
+    const handleShareWhatsapp = (inv, type = 'invoice') => {
+        const { pdf } = getSunatUrls(inv.sunatResponse);
+        const url = type === 'nc' ? inv.notaCreditoUrl : pdf;
+        if (!url) {
+            alert('No hay enlace de PDF disponible para compartir');
+            return;
+        }
+        const busterUrl = `${url}?v=${Date.now()}`;
+        const phone = inv.clienteDocumento?.length === 9 ? inv.clienteDocumento : '';
+        const docName = type === 'nc' ? 'Nota de Crédito' : (inv.tipo === 'factura' ? 'Factura' : 'Boleta');
+        const docId = type === 'nc' ? inv.notaCredito : `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+        
+        const userPhone = window.prompt('Ingrese el número de WhatsApp del cliente (ej. 999888777):', phone);
+        if (userPhone === null) return; // cancelled
+        const cleanPhone = userPhone.replace(/\D/g, '');
+        
+        const message = `Hola ${inv.clienteNombre}, le adjuntamos su ${docName} ${docId}: ${busterUrl}`;
+        const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    const handleAnnulInvoice = async (inv) => {
+        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+        const reason = window.prompt(`¿Está seguro de anular el comprobante ${docId}? Ingrese el motivo de la anulación (se emitirá una Nota de Crédito):`, 'ANULACION DE LA OPERACION');
+        if (reason === null) return; // cancelled
+
+        setLoading(true);
+        try {
+            const res = await axios.post(`/api/billing/invoices/${inv.id}/anular`, { reason });
+            if (res.data.success) {
+                alert('✅ Comprobante anulado correctamente y Nota de Crédito emitida.');
+                fetchInvoices();
+                const ncUrl = res.data.invoice?.notaCreditoUrl;
+                if (ncUrl && window.confirm('¿Desea abrir el PDF de la Nota de Crédito generada?')) {
+                    window.open(ncUrl, '_blank');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            alert('❌ Error al anular: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchConfig = async () => {
         try {
             const res = await axios.get('/api/billing/config');
@@ -537,7 +684,8 @@ const BillingConfigModal = ({ onClose }) => {
                     clienteDocumento: '',
                     clienteNombre: '',
                     clienteDireccion: '',
-                    items: [{ description: '', amount: '', quantity: 1 }]
+                    items: [{ description: '', amount: '', quantity: 1 }],
+                    accountId: null
                 });
             }
         } catch (err) {
@@ -549,7 +697,7 @@ const BillingConfigModal = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
                 
                 {/* Header */}
                 <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
@@ -636,62 +784,139 @@ const BillingConfigModal = ({ onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="border rounded-xl overflow-hidden">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 text-gray-600 font-bold border-b uppercase text-[11px]">
-                                        <tr>
-                                            <th className="px-4 py-3">Fecha</th>
-                                            <th className="px-4 py-3">Documento</th>
-                                            <th className="px-4 py-3">Cliente</th>
-                                            <th className="px-4 py-3">Total</th>
-                                            <th className="px-4 py-3">Estado</th>
-                                            <th className="px-4 py-3 text-center">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {invoices.length === 0 ? (
+                            <div className="border rounded-xl overflow-hidden bg-white shadow-sm border-gray-100">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-100 text-sm">
+                                        <thead className="bg-gray-50">
                                             <tr>
-                                                <td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay comprobantes emitidos</td>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Reserva</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Monto</th>
+                                                <th className="px-4 py-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Acciones</th>
                                             </tr>
-                                        ) : invoices.map(inv => {
-                                            const { pdf, xml } = getSunatUrls(inv.sunatResponse);
-                                            return (
-                                                <tr key={inv.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 whitespace-nowrap">{new Date(inv.emitidoAt).toLocaleString()}</td>
-                                                    <td className="px-4 py-3 font-mono font-bold text-blue-600 uppercase">{inv.serie}-{String(inv.correlativo).padStart(6, '0')}</td>
-                                                    <td className="px-4 py-3 max-w-[200px] truncate">
-                                                        <div className="font-bold">{inv.clienteNombre}</div>
-                                                        <div className="text-xs text-gray-500">{inv.clienteDocumento}</div>
-                                                    </td>
-                                                    <td className="px-4 py-3 font-bold text-gray-800">S/ {parseFloat(inv.total).toFixed(2)}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${inv.sunatResponse ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {inv.sunatResponse ? 'Aceptado' : 'Local'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <div className="flex justify-center gap-2">
-                                                            <button
-                                                                onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
-                                                                title={pdf ? "Ver PDF" : "Imprimir comprobante local"}
-                                                                className="p-1.5 rounded border transition text-blue-600 hover:bg-blue-50 border-blue-200"
-                                                            >
-                                                                <Printer size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => xml ? window.open(xml, '_blank') : handleDownloadLocalXml(inv)}
-                                                                title={xml ? "Descargar XML" : "Descargar XML local"}
-                                                                className="p-1.5 rounded border transition text-gray-600 hover:bg-gray-50 border-gray-200"
-                                                            >
-                                                                <Download size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {invoices.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-400 italic">No hay comprobantes emitidos</td>
                                                 </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                            ) : invoices.map(inv => {
+                                                const { pdf } = getSunatUrls(inv.sunatResponse);
+                                                const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+                                                
+                                                // Format Date/Time helper
+                                                const formatDate = (dateStr) => {
+                                                    if (!dateStr) return 'N/A';
+                                                    try {
+                                                        const d = new Date(dateStr);
+                                                        const day = String(d.getDate()).padStart(2, '0');
+                                                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                        const year = String(d.getFullYear()).slice(-2);
+                                                        const hours = String(d.getHours()).padStart(2, '0');
+                                                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                                                        return `${day}/${month}/${year} ${hours}:${minutes}`;
+                                                    } catch (e) {
+                                                        return new Date(dateStr).toLocaleString();
+                                                    }
+                                                };
+
+                                                return (
+                                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition">
+                                                        <td className="px-4 py-3 whitespace-nowrap">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-gray-900">{docId}</span>
+                                                                <span className="text-[10px] text-gray-400 font-medium">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="text-sm text-gray-700 font-medium truncate max-w-[200px]" title={inv.clienteNombre}>
+                                                                {inv.clienteNombre}
+                                                            </div>
+                                                            <div className="text-[11px] text-gray-400 font-mono">{inv.clienteDocumento}</div>
+                                                        </td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                            {formatDate(inv.emitidoAt)}
+                                                        </td>
+                                                        <td className="px-4 py-3 whitespace-nowrap">
+                                                            {inv.AccountId ? (
+                                                                <button
+                                                                    onClick={() => setSelectedAccountId(inv.AccountId)}
+                                                                    className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[11px] font-bold w-fit hover:bg-blue-100 transition cursor-pointer"
+                                                                >
+                                                                    Reserva #{inv.AccountId}
+                                                                    {inv.Account?.Table && (
+                                                                        <span className="text-[9px] text-gray-500 font-medium ml-1">
+                                                                            (Mesa {inv.Account.Table.number})
+                                                                        </span>
+                                                                    )}
+                                                                    <ArrowRight size={10} />
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-[11px] font-bold text-gray-300 italic">Libre</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 whitespace-nowrap">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-black text-gray-900">S/ {parseFloat(inv.total).toFixed(2)}</span>
+                                                                <div className="flex flex-col gap-1 mt-1">
+                                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded w-fit ${
+                                                                        inv.status === 'anulado' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                                                                    }`}>
+                                                                        {inv.status === 'anulado' ? 'ANULADA' : 'ACEPTADA'}
+                                                                    </span>
+                                                                    {inv.status === 'anulado' && inv.notaCredito && (
+                                                                        <span className="text-[8px] font-bold text-gray-400">NC: {inv.notaCredito}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button 
+                                                                    onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
+                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                                    title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
+                                                                >
+                                                                    <ExternalLink size={18} />
+                                                                </button>
+
+                                                                {inv.status === 'anulado' && inv.notaCreditoUrl && (
+                                                                    <button
+                                                                        onClick={() => window.open(inv.notaCreditoUrl, '_blank')}
+                                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition border border-red-100"
+                                                                        title="Ver Nota de Crédito"
+                                                                    >
+                                                                        <FileText size={18} />
+                                                                    </button>
+                                                                )}
+                                                                
+                                                                <button
+                                                                    onClick={() => handleShareWhatsapp(inv, inv.status === 'anulado' ? 'nc' : 'invoice')}
+                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                                                    title="Compartir por WhatsApp"
+                                                                >
+                                                                    <WhatsAppIcon size={18} />
+                                                                </button>
+
+                                                                {inv.status !== 'anulado' && (
+                                                                    <button
+                                                                        onClick={() => handleAnnulInvoice(inv)}
+                                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition ml-2 border-l pl-3"
+                                                                        title="Anular"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -699,6 +924,26 @@ const BillingConfigModal = ({ onClose }) => {
                     {activeTab === 'new' && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="md:col-span-2 space-y-6">
+                                {config.billingMode === 'reserva' && (
+                                    <section className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                            🏢 Vincular a Reserva / Mesa
+                                        </h3>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-lg text-sm bg-white"
+                                            value={newInvoice.accountId || ''}
+                                            onChange={(e) => handleSelectAccount(e.target.value)}
+                                        >
+                                            <option value="">-- Seleccionar Mesa / Reserva --</option>
+                                            {accounts.map(acc => (
+                                                <option key={acc.id} value={acc.id}>
+                                                    Mesa {acc.tableNumber || acc.Table?.number || acc.TableId || '?'} - {acc.customerName} ({new Date(acc.createdAt).toLocaleDateString()} S/ {parseFloat(acc.total).toFixed(2)})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </section>
+                                )}
+
                                 <section className="space-y-4">
                                     <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                                         <Building2 size={16} /> Datos del Cliente
@@ -938,6 +1183,17 @@ const BillingConfigModal = ({ onClose }) => {
                                         onChange={(e) => setConfig({...config, igvTasa: e.target.value})}
                                     />
                                 </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Modo de Facturación</label>
+                                    <select 
+                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold bg-white"
+                                        value={config.billingMode || 'libre'}
+                                        onChange={(e) => setConfig({...config, billingMode: e.target.value})}
+                                    >
+                                        <option value="libre">Emisión Libre (Manual)</option>
+                                        <option value="reserva">Ligado a Reserva / Mesa</option>
+                                    </select>
+                                </div>
                                 <div className="flex items-end pb-1 gap-6">
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <div className="relative">
@@ -995,6 +1251,12 @@ const BillingConfigModal = ({ onClose }) => {
                     )}
                 </div>
             </div>
+            {selectedAccountId && (
+                <AccountDetailsModal 
+                    accountId={selectedAccountId} 
+                    onClose={() => setSelectedAccountId(null)} 
+                />
+            )}
         </div>
     );
 };

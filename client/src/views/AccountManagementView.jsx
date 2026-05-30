@@ -308,7 +308,23 @@ export default function AccountManagementView() {
                                     const isComplete = acc.status === 'closed';
                                     return (
                                         <tr key={acc.id} className="border-b hover:bg-gray-50 transition-colors">
-                                            <td className="p-4 font-mono font-medium text-gray-700">{acc.id}</td>
+                                            <td className="p-4">
+                                                <button 
+                                                    onClick={() => {
+                                                        if (isComplete || acc.status === 'cancelled') {
+                                                            handleViewHistory(acc.id);
+                                                        } else if (acc.TableId) {
+                                                            setSelectedTableId(acc.TableId);
+                                                        } else {
+                                                            handleViewHistory(acc.id);
+                                                        }
+                                                    }}
+                                                    className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors focus:outline-none"
+                                                    title="Ver detalle de la cuenta"
+                                                >
+                                                    #{acc.id}
+                                                </button>
+                                            </td>
                                             <td className="p-4">
                                                 <div className="flex flex-col gap-1 items-start">
                                                     {acc.status === 'cancelled' ? (

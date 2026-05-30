@@ -27,6 +27,7 @@ async function runAutomaticFix() {
         { table: 'Orders', column: 'presentation', type: 'VARCHAR(255)' },
         { table: 'Orders', column: 'subItemsData', type: 'TEXT' },
         { table: 'Orders', column: 'priceAtOrder', type: 'DECIMAL(10, 2)' },
+        { table: 'Orders', column: 'priceAtOrderAtCreation', type: 'DECIMAL(10, 2)' },
         { table: 'Orders', column: 'UserId', type: 'INTEGER' },
 
         // PRODUCT MOVEMENTS
@@ -52,7 +53,15 @@ async function runAutomaticFix() {
         { table: 'Payments', column: 'CashSessionId', type: 'INTEGER' },
         
         // CLIENT SCREEN PAYMENTS QR LINK
-        { table: 'Payments', column: 'qr_id', type: 'INTEGER' }
+        { table: 'Payments', column: 'qr_id', type: 'INTEGER' },
+
+        // BILLING CONFIGS
+        { table: 'BillingConfigs', column: 'billingMode', type: "VARCHAR(50) DEFAULT 'libre'" },
+
+        // INVOICES
+        { table: 'Invoices', column: 'AccountId', type: 'INTEGER' },
+        { table: 'Invoices', column: 'notaCredito', type: 'VARCHAR(255)' },
+        { table: 'Invoices', column: 'notaCreditoUrl', type: 'VARCHAR(255)' }
     ];
 
     for (const m of migrations) {
@@ -62,6 +71,14 @@ async function runAutomaticFix() {
         } catch (e) {
             // Ignore if column already exists
         }
+    }
+
+    // Populate priceAtOrderAtCreation for legacy orders
+    try {
+        await sequelize.query(`UPDATE Orders SET priceAtOrderAtCreation = priceAtOrder WHERE priceAtOrderAtCreation IS NULL;`);
+        console.log(`[Fix] Populated priceAtOrderAtCreation for legacy orders`);
+    } catch (e) {
+        console.error(`[Fix] Error populating priceAtOrderAtCreation:`, e);
     }
 }
 

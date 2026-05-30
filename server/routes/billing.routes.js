@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { BillingConfig, Invoice, User } = require('../models');
+const { BillingConfig, Invoice, User, Account, Table } = require('../models');
 const { Op } = require('sequelize');
 
 const SUNAT_HUB_URL = process.env.SUNAT_HUB_URL || 'https://sunat.maksuites.com.pe';
@@ -27,7 +27,8 @@ router.get('/billing/config', async (req, res) => {
                 operacionesExoneradas: false,
                 serieFactura: 'F001',
                 serieBoleta: 'B001',
-                apiToken: ''
+                apiToken: '',
+                billingMode: 'libre'
             };
         }
         res.json(config);
@@ -39,7 +40,7 @@ router.get('/billing/config', async (req, res) => {
 // PUT /billing/config
 router.put('/billing/config', async (req, res) => {
     try {
-        const fields = ['ruc', 'razonSocial', 'direccion', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken'];
+        const fields = ['ruc', 'razonSocial', 'direccion', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken', 'billingMode'];
         const data = {};
         fields.forEach(f => {
             if (req.body[f] !== undefined) data[f] = req.body[f];
@@ -99,7 +100,10 @@ router.get('/billing/invoices', async (req, res) => {
 
         const invoices = await Invoice.findAll({
             where,
-            include: [{ model: User, attributes: ['id', 'username'] }],
+            include: [
+                { model: User, attributes: ['id', 'username'] },
+                { model: Account, include: [Table] }
+            ],
             order: [['emitidoAt', 'DESC']],
             limit: 200
         });
@@ -115,8 +119,13 @@ router.post('/billing/invoices', async (req, res) => {
         const config = await BillingConfig.findOne();
         if (!config) return res.status(400).json({ error: 'Configuración no encontrada' });
 
-        const { tipo, clienteDocumento, clienteNombre, clienteDireccion, items, userId } = req.body;
+        const { tipo, clienteDocumento, clienteNombre, clienteDireccion, items, userId, accountId } = req.body;
         if (!tipo || !items?.length) return res.status(400).json({ error: 'tipo e items son requeridos' });
+        
+        // Validar que el RUC del receptor no sea igual al RUC de la empresa emisora para Facturas
+        if (tipo === 'factura' && clienteDocumento && config.ruc && clienteDocumento.trim() === config.ruc.trim()) {
+            return res.status(400).json({ error: 'El RUC del receptor no puede ser igual al RUC de la empresa emisora.' });
+        }
 
         const isExonerado = config.operacionesExoneradas;
         const afeCode = isExonerado ? '20' : '10';
@@ -194,7 +203,8 @@ router.post('/billing/invoices', async (req, res) => {
             tipo, serie, correlativo, clienteDocumento, clienteNombre, clienteDireccion,
             subtotal: finalTotalBase, igv: finalTotalIgv, total: finalTotalPay,
             items: JSON.stringify(items),
-            UserId: userId
+            UserId: userId,
+            AccountId: accountId || null
         });
 
         // Enviar al Hub si está activo
@@ -206,15 +216,207 @@ router.post('/billing/invoices', async (req, res) => {
                     timeout: 20000
                 });
                 sunatResponse = resHub.data;
-                await invoice.update({ sunatResponse: JSON.stringify(sunatResponse) });
+                if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {
+                    await invoice.destroy();
+                    return res.status(400).json({ error: sunatResponse?.message || sunatResponse?.error || 'Error al emitir comprobante en SUNAT Hub' });
+                }
+
+                // Apply SSL fix / subdomain replacement to the PDF URL in the response
+                let ticketUrl = sunatResponse.url_ticket || sunatResponse.url || sunatResponse.pdf_url || (sunatResponse.links && sunatResponse.links.pdf);
+                if (ticketUrl && typeof ticketUrl === 'string') {
+                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('maksuites') || ticketUrl.includes('bluzcx')) {
+                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                        
+                        // Update inside sunatResponse
+                        if (sunatResponse.url_ticket) sunatResponse.url_ticket = ticketUrl;
+                        if (sunatResponse.url) sunatResponse.url = ticketUrl;
+                        if (sunatResponse.pdf_url) sunatResponse.pdf_url = ticketUrl;
+                        if (sunatResponse.links && sunatResponse.links.pdf) sunatResponse.links.pdf = ticketUrl;
+                    }
+                }
+                
+                // Extraer el correlativo real asignado por el Hub para mantener sincronizado el correlativo local
+                let realCorrelativo = correlativo;
+                if (sunatResponse.fileName) {
+                    const parts = sunatResponse.fileName.split('-');
+                    if (parts.length === 4) {
+                        const parsedNum = parseInt(parts[3], 10);
+                        if (!isNaN(parsedNum)) {
+                            realCorrelativo = parsedNum;
+                        }
+                    }
+                }
+                
+                await invoice.update({ 
+                    sunatResponse: JSON.stringify(sunatResponse),
+                    correlativo: realCorrelativo
+                });
             } catch (err) {
-                sunatResponse = { error: err.response?.data?.message || err.message };
-                await invoice.update({ sunatResponse: JSON.stringify(sunatResponse) });
+                await invoice.destroy();
+                const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+                return res.status(400).json({ error: `Error de SUNAT Hub: ${errMsg}` });
             }
         }
 
         res.json({ success: true, invoice, sunatResponse });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/billing/invoices/:id/anular
+router.post('/billing/invoices/:id/anular', async (req, res) => {
+    try {
+        const invoice = await Invoice.findByPk(req.params.id);
+        if (!invoice) return res.status(404).json({ error: 'Comprobante no encontrado' });
+
+        if (invoice.status === 'anulado') {
+            return res.status(200).json({
+                success: true,
+                message: 'El comprobante ya se encuentra anulado.',
+                invoice
+            });
+        }
+
+        const config = await BillingConfig.findOne();
+        if (!config) return res.status(400).json({ error: 'Configuración no encontrada' });
+
+        const reason = req.body.reason || req.body.motivoText || 'ANULACION DE LA OPERACION';
+
+        if (config.facturacionElectronica && config.apiToken) {
+            const isFactura = invoice.tipo === 'factura';
+            const refTipoDoc = isFactura ? '01' : '03';
+            const refSerieCorrelativo = `${invoice.serie}-${String(invoice.correlativo).padStart(8, '0')}`;
+
+            // Determine credit note series based on the original invoice series suffix
+            const originalSeriesSuffix = invoice.serie.slice(-2);
+            const noteSeries = (isFactura ? 'FC' : 'BC') + (originalSeriesSuffix.length === 2 ? originalSeriesSuffix : '01');
+
+            const isExonerado = config.operacionesExoneradas;
+            const afeCode = isExonerado ? '20' : '10';
+            const taxName = isExonerado ? 'EXO' : 'IGV';
+            const taxCode = isExonerado ? '9997' : '1000';
+            const igvRate = parseFloat(config.igvTasa) / 100;
+
+            const rawItems = JSON.parse(invoice.items || '[]');
+
+            let total_gravada = 0;
+            let total_exonerada = 0;
+            let total_igv = 0;
+
+            const hubItems = rawItems.map((item, i) => {
+                const lineTotal = parseFloat(item.amount || item.subtotal || 0);
+                const qty = parseInt(item.quantity || item.qty || 1);
+                const unitTotal = lineTotal / qty;
+
+                const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
+                const unitPrecio = isExonerado ? unitTotal : parseFloat((unitBase * (1 + igvRate)).toFixed(6));
+                const lineBase = parseFloat((unitBase * qty).toFixed(6));
+                const lineIgv = isExonerado ? 0 : parseFloat((lineBase * igvRate).toFixed(6));
+
+                if (isExonerado) {
+                    total_exonerada += lineBase;
+                } else {
+                    total_gravada += lineBase;
+                    total_igv += lineIgv;
+                }
+
+                return {
+                    code: `P${String(i + 1).padStart(3, '0')}`,
+                    description: item.description,
+                    qty: qty,
+                    valor_unitario: unitBase,
+                    precio_unitario: unitPrecio,
+                    valor_venta: lineBase,
+                    porcentaje_igv: isExonerado ? 0 : (igvRate * 100),
+                    igv: parseFloat(lineIgv.toFixed(2)),
+                    monto_base_igv: parseFloat(lineBase.toFixed(2)),
+                    tipo_afe_igv: afeCode,
+                    codigo_tipo_tributo: taxCode,
+                    nombre_tributo: taxName,
+                    codigo_tipo_internacional_tributo: 'VAT'
+                };
+            });
+
+            const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
+            const finalTotalPay = parseFloat(invoice.total);
+            const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+
+            const hubPayload = {
+                tipo_doc: '07',
+                serie: noteSeries,
+                currency: 'PEN',
+                ref_tipo_doc: refTipoDoc,
+                ref_serie_correlativo: refSerieCorrelativo,
+                motivo_code: '01', // Anulación de la operación
+                motivo_text: reason,
+                company: { 
+                    ruc: config.ruc, 
+                    razon_social: config.razonSocial, 
+                    address: config.direccion || '' 
+                },
+                total_gravada: isExonerado ? 0 : finalTotalBase,
+                total_exonerada: isExonerado ? finalTotalBase : 0,
+                total_igv: finalTotalIgv,
+                total_pay: finalTotalPay,
+                total_text: numToText(finalTotalPay),
+                client: {
+                    number: String(invoice.clienteDocumento || '00000000'),
+                    name: invoice.clienteNombre || 'CLIENTES VARIOS',
+                    type: String(isFactura ? '6' : '1'),
+                    address: invoice.clienteDireccion || ''
+                },
+                items: hubItems,
+                legends: isExonerado ? [{ code: '1000', value: 'OP. EXONERADA' }] : []
+            };
+
+            try {
+                const resHub = await axios.post(`${SUNAT_HUB_URL}/generate/note`, hubPayload, {
+                    headers: { Authorization: `Bearer ${config.apiToken}`, 'Content-Type': 'application/json' },
+                    timeout: 25000
+                });
+
+                const sunatResponse = resHub.data;
+                if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {
+                    return res.status(400).json({ error: sunatResponse?.message || sunatResponse?.error || 'Error al anular comprobante en SUNAT Hub' });
+                }
+
+                let ticketUrl = sunatResponse.url_ticket || sunatResponse.url || sunatResponse.pdf_url;
+                if (ticketUrl && typeof ticketUrl === 'string') {
+                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('maksuites') || ticketUrl.includes('bluzcx')) {
+                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                    }
+                }
+
+                const rawNoteFileName = sunatResponse.fileName || sunatResponse.file_name || null;
+                let finalNoteId = rawNoteFileName;
+                if (rawNoteFileName && rawNoteFileName.split('-').length >= 4) {
+                    const p = rawNoteFileName.split('-');
+                    finalNoteId = `${p[2]}-${p[3].padStart(8, '0')}`;
+                }
+
+                await invoice.update({
+                    status: 'anulado',
+                    notaCredito: finalNoteId,
+                    notaCreditoUrl: ticketUrl,
+                    sunatResponse: JSON.stringify({
+                        ...JSON.parse(invoice.sunatResponse || '{}'),
+                        noteResponse: sunatResponse
+                    })
+                });
+
+            } catch (err) {
+                const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+                return res.status(400).json({ error: `Error de SUNAT Hub al anular: ${errMsg}` });
+            }
+        } else {
+            // Local annulment fallback
+            await invoice.update({ status: 'anulado' });
+        }
+
+        res.json({ success: true, invoice });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });

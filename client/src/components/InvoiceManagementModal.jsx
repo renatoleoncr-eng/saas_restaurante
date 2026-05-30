@@ -1,0 +1,958 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+    X, 
+    FileText, 
+    Calendar, 
+    ShoppingCart, 
+    ChevronDown, 
+    ChevronUp, 
+    Check, 
+    User, 
+    CreditCard, 
+    ArrowRight, 
+    Printer, 
+    Trash2,
+    FileX,
+    RefreshCw,
+    Search,
+    AlertCircle,
+    Loader,
+    Building,
+    MessageCircle
+} from 'lucide-react';
+import axios from 'axios';
+import { useRestaurant } from '../contexts/RestaurantContext';
+
+const WhatsAppIcon = ({ size = 16, className = "" }) => (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.395 0 .01 5.385.01 12.037c0 2.125.547 4.197 1.59 6.042L0 24l6.135-1.61a11.745 11.745 0 005.907 1.577h.005c6.65 0 12.034-5.388 12.037-12.04a11.744 11.744 0 00-3.465-8.52z" />
+    </svg>
+);
+
+const getSunatUrls = (sunatResp) => {
+    if (!sunatResp) return { pdf: null, xml: null };
+    let parsed = sunatResp;
+    if (typeof sunatResp === 'string') {
+        try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
+    }
+    if (!parsed) return { pdf: null, xml: null };
+    let pdf = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || null;
+    let xml = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+
+    // Apply SSL fix
+    if (pdf && typeof pdf === 'string') {
+        if (pdf.includes('72.61.57.199') || pdf.includes('maksuites') || pdf.includes('bluzcx')) {
+            pdf = pdf.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+        }
+    }
+    if (xml && typeof xml === 'string') {
+        if (xml.includes('72.61.57.199') || xml.includes('maksuites') || xml.includes('bluzcx')) {
+            xml = xml.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+        }
+    }
+    return { pdf, xml };
+};
+
+const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
+    const { socket } = useRestaurant();
+
+    useEffect(() => {
+        if (socket) {
+            console.log('FolioSplitModal mounted: setting qr_fixed');
+            socket.emit('set_client_screen_mode', { mode: 'qr_fixed' });
+        }
+        return () => {
+            if (socket) {
+                console.log('FolioSplitModal unmounting: setting qr_countdown');
+                socket.emit('set_client_screen_mode', { mode: 'qr_countdown' });
+            }
+        };
+    }, [socket]);
+    // Core logic state
+    const [loading, setLoading] = useState(false);
+    const [history, setHistory] = useState([]);
+    const [expandedGroups, setExpandedGroups] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
+
+    const [isSearchLoading, setIsSearchLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [lastIssuedUrl, setLastIssuedUrl] = useState(null);
+    const [successType, setSuccessType] = useState('invoice'); // 'invoice' or 'nc'
+    const [isExonerado, setIsExonerado] = useState(false);
+    const [igvRateInput, setIgvRateInput] = useState(10.5);
+    const [errorMsg, setErrorMsg] = useState(null);
+
+    // Form fields
+    const [docType, setDocType] = useState('03'); // 03 = Boleta
+    const [docNumber, setDocNumber] = useState('');
+    const [customerName, setCustomerName] = useState('');
+    const [customerAddress, setCustomerAddress] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
+    const [series, setSeries] = useState('B002');
+
+    // Toggle between Boleta (DNI) and Factura (RUC)
+    useEffect(() => {
+        setSeries(docType === '03' ? 'B002' : 'F002');
+
+        if (docType === '03') {
+            // Initial Pre-fill from account for Boleta
+            if (account) {
+                setDocNumber(account.clientDni || '');
+                setCustomerName(account.customerName || '');
+                setCustomerAddress(account.clientAddress || '');
+            }
+        } else {
+            // Clear fields for RUC/Factura to start fresh
+            setDocNumber('');
+            setCustomerName('');
+            setCustomerAddress('');
+            setCustomerEmail('');
+        }
+    }, [docType, account]);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await axios.get('/api/billing/config');
+            if (res.data) {
+                setIsExonerado(res.data.operacionesExoneradas === true || res.data.operacionesExoneradas === 'true');
+                setIgvRateInput(parseFloat(res.data.igvTasa || '18'));
+            }
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        }
+    };
+
+    // Fetch History
+    const fetchHistory = async () => {
+        try {
+            const res = await axios.get(`/api/accounts/specific/${account.id}`);
+            if (res.data && res.data.Invoices) {
+                setHistory(res.data.Invoices);
+            }
+        } catch (error) {
+            console.error('Error fetching billing history:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (account?.id) {
+            fetchHistory();
+            fetchSettings();
+        }
+    }, [account.id]);
+
+    // Generate Items from Account (Orders)
+    const availableItems = useMemo(() => {
+        const items = [];
+        
+        if (account.Orders && account.Orders.length > 0) {
+            account.Orders.forEach((ord, idx) => {
+                if (ord.status === 'cancelled') return;
+
+                const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? parseFloat(ord.priceAtOrder) : (ord.Product?.price || 0);
+
+                items.push({
+                    id: `ord-${ord.id || idx}`,
+                    group: 'Consumos',
+                    description: ord.Product?.name || 'Producto',
+                    amount: parseFloat((price * (ord.quantity || 1)).toFixed(2)),
+                    qty: ord.quantity || 1,
+                    icon: <ShoppingCart size={16} />,
+                    orderId: ord.id
+                });
+            });
+        }
+
+        return items;
+    }, [account]);
+
+    // Calculate totals for summary (excluding cancelled/anulado)
+    const activeHistory = useMemo(() => history.filter(d => d.status !== 'anulado'), [history]);
+
+    // Track which items are already billed (Only from active/non-cancelled documents)
+    const billedMap = useMemo(() => {
+        const counts = new Map();
+        activeHistory.forEach(doc => {
+            try {
+                const items = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
+                items.forEach(i => {
+                    const current = counts.get(i.description) || 0;
+                    counts.set(i.description, current + (parseInt(i.quantity || i.qty || 1)));
+                });
+            } catch (e) {}
+        });
+        return counts;
+    }, [activeHistory]);
+
+    // NEW Robust Billed Item Matching (Sequential)
+    const pendingItems = useMemo(() => {
+        // 1. Get total count of items already billed from history
+        let totalQtyBilled = 0;
+        activeHistory.forEach(doc => {
+            try {
+                const items = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
+                items.forEach(i => {
+                    totalQtyBilled += parseInt(i.quantity || i.qty || 1);
+                });
+            } catch (e) {}
+        });
+
+        // 2. Consume items from the top of availableItems
+        // This is more robust than matching by description string, which can change
+        return availableItems.slice(totalQtyBilled);
+    }, [availableItems, activeHistory]);
+    
+    // Unified Sync & Auto-Select Hook
+    useEffect(() => {
+        setSelectedItems(prevSelection => {
+            // Priority 1: Sync (Remove stale items that are no longer pending)
+            const stillPending = prevSelection.filter(s => 
+                pendingItems.some(p => p.id === s.id)
+            );
+            
+            // Priority 2: Auto-select everything ONLY if nothing is selected yet 
+            // AND the user hasn't explicitly unselected everything.
+            // This also automatically selects everything on first open.
+            if (stillPending.length === 0 && pendingItems.length > 0 && prevSelection.length === 0 && history.length > 0) {
+               return pendingItems;
+            }
+
+            // Provide initial fallback if history is 0 but we want to auto-select
+            if (history.length === 0 && pendingItems.length > 0 && prevSelection.length === 0) {
+               return pendingItems;
+            }
+
+            return stillPending;
+        });
+    }, [pendingItems, history.length]);
+
+    // Grouping logic for the sidebar
+    const groupedItems = useMemo(() => {
+        const groups = {};
+        pendingItems.forEach(item => {
+            if (!groups[item.group]) groups[item.group] = [];
+            groups[item.group].push(item);
+        });
+        return groups;
+    }, [pendingItems]);
+
+    // Calculate totals
+    const totalSelected = selectedItems.reduce((acc, item) => acc + item.amount, 0);
+    const totalAlreadyBilled = useMemo(() => activeHistory.reduce((acc, doc) => acc + parseFloat(doc.total || 0), 0), [activeHistory]);
+    const totalPossible = availableItems.reduce((acc, item) => acc + item.amount, 0);
+    const remainingBalance = Math.max(0, totalPossible - totalAlreadyBilled);
+
+    // Tax Breakdown Calculation (Wave 3 Match)
+    const breakdown = useMemo(() => {
+        const totalPay = totalSelected;
+        const finalTotalPay = totalSelected;
+        const rate = isExonerado ? 0 : (igvRateInput / 100);
+        const finalTotalIgv = isExonerado ? 0 : parseFloat((finalTotalPay - (finalTotalPay / (1 + rate))).toFixed(2));
+        const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+
+        return {
+            total_gravada: isExonerado ? 0 : finalTotalBase,
+            total_exonerada: isExonerado ? finalTotalBase : 0,
+            total_inafecta: 0,
+            total_igv: finalTotalIgv,
+            total_pay: finalTotalPay,
+            total: finalTotalPay
+        };
+    }, [totalSelected, isExonerado, igvRateInput]);
+
+    // Toggle item selection
+    const toggleItem = (item) => {
+        if (selectedItems.find(i => i.id === item.id)) {
+            setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+        } else {
+            setSelectedItems([...selectedItems, item]);
+        }
+    };
+
+    // UTILITIES from BillingModal
+    const handleShareWhatsapp = (url, overrideDocName = null) => {
+        if (!url) return;
+        const busterUrl = url.includes('?') ? `${url}&v=${Date.now()}` : `${url}?v=${Date.now()}`;
+        const guestPhone = account?.clientPhone || '';
+        const cleanPhone = guestPhone.replace(/\D/g, '');
+        
+        const docName = overrideDocName || (docType === '01' ? 'Factura' : 'Boleta');
+        const message = `Hola ${customerName}, le adjuntamos su ${docName} de nuestro restaurante: ${busterUrl}`;
+        
+        const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    const handleDirectPrint = (url) => {
+        if (!url) return;
+        const busterUrl = url.includes('?') ? `${url}&v=${Date.now()}` : `${url}?v=${Date.now()}`;
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = busterUrl;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+            try { iframe.contentWindow.print(); } catch (e) { window.open(busterUrl, '_blank'); }
+            setTimeout(() => document.body.removeChild(iframe), 5000);
+        };
+    };
+
+    const handleSearchCustomer = async () => {
+        if (!docNumber || docNumber.length < 8) return;
+        setIsSearchLoading(true);
+        try {
+            const res = await axios.get(`/api/billing/consulta?doc=${docNumber}`);
+            if (res.data) {
+                const name = res.data.razon_social
+                    || res.data.nombre
+                    || `${res.data.nombres || ''} ${res.data.apellidoPaterno || ''} ${res.data.apellidoMaterno || ''}`.trim();
+                const address = res.data.direccion || '';
+                if (name) setCustomerName(name);
+                if (address) setCustomerAddress(address);
+                if (docNumber.length === 11) setDocType('01');
+                else setDocType('03');
+            }
+        } catch (error) {
+            console.warn('Customer lookup failed');
+        } finally {
+            setIsSearchLoading(false);
+        }
+    };
+
+    // Submit Invoice
+    const handleSubmit = async () => {
+        if (selectedItems.length === 0) return;
+        if (!customerName) return;
+
+        setLoading(true);
+        try {
+            const payload = {
+                accountId: account.id,
+                userId: 1, // Will be set by backend using JWT or session if available
+                items: selectedItems.map(i => ({
+                    description: i.description,
+                    amount: i.amount,
+                    quantity: i.qty
+                })),
+                clienteDocumento: docNumber,
+                clienteNombre: customerName,
+                clienteDireccion: customerAddress || '-',
+                tipo: docType === '01' ? 'factura' : 'boleta'
+            };
+
+            const res = await axios.post(`/api/billing/invoices`, payload);
+            const ticketUrl = res.data.sunatResponse?.url_ticket || res.data.sunatResponse?.url || res.data.sunatResponse?.pdf_url || res.data.invoice?.pdfUrl;
+
+            if (res.data.success) {
+                setLastIssuedUrl(ticketUrl || '#');
+                setSuccessType('invoice');
+                setIsSuccess(true);
+                setSelectedItems([]);
+                fetchHistory(); 
+                if (onRefresh) onRefresh();
+                if (socket) {
+                    socket.emit('trigger_qr_display');
+                }
+            } else {
+                throw new Error(res.data.error || 'Error desconocido al emitir comprobante');
+            }
+        } catch (error) {
+            console.error('Split error:', error);
+            setErrorMsg(error.response?.data?.error || 'Error al conectar con el servidor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAnnul = async (doc) => {
+        if (!window.confirm(`¿Está seguro de anular el comprobante ${doc.serie}-${doc.correlativo}? Se emitirá una Nota de Crédito.`)) return;
+        
+        setLoading(true);
+        try {
+            const res = await axios.post(`/api/billing/invoices/${doc.id}/anular`, {
+                reason: 'Anulación por error en datos / Gestión de Comprobantes'
+            });
+            
+            if (res.data.success) {
+                const ncUrl = res.data.invoice?.notaCreditoUrl || res.data.sunatResponse?.url_ticket || '#';
+                fetchHistory();
+                if (onRefresh) onRefresh();
+                
+                // Show success modal for NC
+                setLastIssuedUrl(ncUrl);
+                setSuccessType('nc');
+                setIsSuccess(true);
+            }
+        } catch (error) {
+            setErrorMsg(error.response?.data?.error || error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (isSuccess) {
+        return (
+            <div className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-white">
+                    <div className="p-8 text-center bg-slate-50/50 border-b border-slate-100">
+                        <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl shadow-emerald-900/10">
+                            <Check className="text-emerald-600" size={40} strokeWidth={3} />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tighter">
+                            {successType === 'nc' ? '¡Anulado!' : '¡Éxito!'}
+                        </h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                            {successType === 'nc' ? 'Nota de Crédito generada' : 'Comprobante generado correctamente'}
+                        </p>
+                    </div>
+                    
+                    <div className="p-6 space-y-3">
+                        <button
+                            onClick={() => handleShareWhatsapp(lastIssuedUrl, successType === 'nc' ? 'Nota de Crédito' : null)}
+                            className="w-full flex items-center justify-center gap-3 py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95"
+                        >
+                            <WhatsAppIcon size={20} />
+                            Compartir WhatsApp
+                        </button>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => handleDirectPrint(lastIssuedUrl)}
+                                className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 text-slate-600 active:scale-95 transition-all"
+                            >
+                                <Printer size={16} />
+                                Imprimir
+                            </button>
+                            <button
+                                onClick={() => setIsSuccess(false)}
+                                className="flex items-center justify-center gap-2 py-3 bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black active:scale-95 transition-all shadow-md"
+                            >
+                                Nueva Emisión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full md:max-w-[1400px] h-screen md:h-[94vh] rounded-none md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-y-auto md:overflow-hidden border border-slate-200">
+                
+                {/* Header Area */}
+                <div className="px-6 md:px-10 py-4 md:py-6 border-b flex items-center justify-between bg-white/95 backdrop-blur-md sticky top-0 z-[70]">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 flex-shrink-0 animate-in zoom-in-50 duration-500">
+                            <FileText size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">Gestión de Comprobantes</h2>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Cuenta #{account.id}</span>
+                                {account.Table && (
+                                    <>
+                                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                        <span className="text-[10px] font-black bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Mesa #{account.Table.number}</span>
+                                    </>
+                                )}
+                                <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{account.customerName}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        onClick={onClose} 
+                        disabled={loading}
+                        className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all group
+                            ${loading ? 'bg-blue-50 text-blue-600' : 'hover:bg-red-50 text-slate-300 hover:text-red-500'}
+                        `}
+                    >
+                        {loading ? (
+                            <Loader size={24} className="animate-spin" />
+                        ) : (
+                            <X size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+                        )}
+                    </button>
+                </div>
+
+                {/* Error Alert Section */}
+                {errorMsg && (
+                    <div className="mx-6 md:mx-10 mt-6 animate-in slide-in-from-top-2 duration-300">
+                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-3xl flex items-start gap-4">
+                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-rose-500 shadow-sm shrink-0">
+                                <AlertCircle size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Error de Comunicación SUNAT</h4>
+                                <p className="text-xs font-bold text-rose-800 leading-tight">{errorMsg}</p>
+                            </div>
+                            <button onClick={() => setErrorMsg(null)} className="text-rose-300 hover:text-rose-500 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Split Body */}
+                <div className="flex-1 flex flex-col md:flex-row bg-slate-50/5 md:overflow-hidden">
+                    
+                    {/* SIDEBAR: (30%) Financials + Items + History Navigator */}
+                    <div className="w-full md:w-[420px] md:min-w-[420px] md:basis-[420px] h-auto md:h-full md:border-r border-b md:border-b-0 flex flex-col bg-white shrink-0 shadow-xl md:shadow-lg relative z-10">
+                        
+                        {/* Summary Header Section - MATCHING REFERENCE IMAGE */}
+                        <div className="bg-indigo-700 p-6 md:p-8 text-white relative shrink-0 border-b border-indigo-800 shadow-xl shadow-slate-100/50">
+                            <span className="text-[9px] font-bold text-indigo-200/80 uppercase tracking-widest block mb-2">SALDO PENDIENTE</span>
+                            
+                            <div className="text-4xl font-black mb-6 tracking-tighter">
+                                <span className="text-2xl font-bold text-indigo-100 mr-2">S/</span>
+                                {remainingBalance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] font-bold">
+                                <div className="text-indigo-100/80">
+                                    Total cuenta: <span className="text-white">S/ {totalPossible.toFixed(2)}</span>
+                                </div>
+                                <div className="text-indigo-100/80">
+                                    Emitido: <span className="text-white">S/ {totalAlreadyBilled.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Navigation / Items (Independent Scroll) */}
+                        <div className="flex-1 h-auto md:overflow-y-scroll custom-scrollbar p-6 pt-2 space-y-8">
+                            
+                            {/* Section 1: Items to Invoice (NOW AT THE TOP) */}
+                            <div>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Ítems Disponibles</h3>
+                                {Object.keys(groupedItems).length === 0 ? (
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center py-8">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">No hay ítems pendientes<br/>de facturación</p>
+                                    </div>
+                                ) : (
+                                    Object.keys(groupedItems).map((groupName) => {
+                                        const groupItems = groupedItems[groupName];
+                                        const isExpanded = expandedGroups.includes(groupName);
+                                        const allSelected = groupItems.length > 0 && groupItems.every(i => selectedItems.find(s => s.id === i.id));
+
+                                        const handleToggleGroup = (e) => {
+                                            e.stopPropagation();
+                                            if (allSelected) {
+                                                setSelectedItems(prev => prev.filter(p => !groupItems.find(g => g.id === p.id)));
+                                            } else {
+                                                const newSelection = [...selectedItems];
+                                                groupItems.forEach(item => {
+                                                    if (!newSelection.find(s => s.id === item.id)) {
+                                                        newSelection.push(item);
+                                                    }
+                                                });
+                                                setSelectedItems(newSelection);
+                                            }
+                                        };
+
+                                        return (
+                                            <div key={groupName} className="mb-3">
+                                                <div 
+                                                    onClick={() => setExpandedGroups(isExpanded ? expandedGroups.filter(g => g !== groupName) : [...expandedGroups, groupName])}
+                                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border cursor-pointer group/header
+                                                        ${isExpanded ? 'bg-slate-50 border-slate-200' : 'bg-white border-transparent hover:bg-slate-50'}
+                                                    `}
+                                                >
+                                                    <div className="flex-1 flex items-center justify-between mr-6">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[11px] font-black text-slate-700 tracking-tight capitalize">{groupName.toLowerCase()}</span>
+                                                            <span className="text-[10px] font-bold text-slate-300">({groupItems.length} {groupName.toLowerCase().includes('alojamiento') ? 'noches' : 'ítems'})</span>
+                                                        </div>
+                                                        <span className="text-[11px] font-black text-slate-800">
+                                                            {groupItems.reduce((acc, curr) => acc + curr.amount, 0).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <button 
+                                                            onClick={handleToggleGroup}
+                                                            className={`text-[9px] font-black px-2 py-1 rounded-lg transition-all
+                                                                ${allSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-100 hover:bg-blue-50'}
+                                                            `}
+                                                        >
+                                                            {allSelected ? 'QUITAR' : 'TODO'}
+                                                        </button>
+                                                        {isExpanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                                                    </div>
+                                                </div>
+
+                                                {isExpanded && (
+                                                    <div className="mt-2 space-y-1.5 ml-2 border-l-2 border-slate-100 pl-3">
+                                                        {groupItems.map((item) => {
+                                                            const isSelected = selectedItems.find(i => i.id === item.id);
+                                                            return (
+                                                                <button
+                                                                    key={item.id}
+                                                                    onClick={() => toggleItem(item)}
+                                                                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all border
+                                                                        ${isSelected 
+                                                                            ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-900/10' 
+                                                                            : 'bg-white border-transparent hover:bg-slate-50 text-slate-600'}
+                                                                    `}
+                                                                >
+                                                                    <div className="flex-1 overflow-hidden">
+                                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                                            <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                                {item.qty} {item.qty > 1 ? 'UNI' : 'UNI'}
+                                                                            </span>
+                                                                            <span className="text-[10px] font-black truncate leading-tight block">{item.description}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-[9px] font-bold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>S/ {item.amount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    {isSelected && <Check size={14} strokeWidth={4} className="shrink-0" />}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Section 2: History */}
+                            <div>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Comprobantes Emitidos</h3>
+                                <div className="space-y-3">
+                                    {/* Trigger for "Preparation" Slide (Only if balance remains) */}
+                                    {remainingBalance > 0.01 && (
+                                        <button 
+                                            className="w-full text-left p-4 rounded-[1.5rem] border-2 border-dashed border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                                            onClick={() => document.getElementById('preparation-slide')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/20">
+                                                    <FileText size={18} />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[11px] font-black text-blue-700 uppercase tracking-widest block leading-none">Nueva Emisión</span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
+
+                                    {history.length === 0 && !remainingBalance > 0.01 && (
+                                        <p className="text-[10px] font-black text-slate-300 uppercase text-center py-4 tracking-widest">Sin historial de emisiones</p>
+                                    )}
+
+                                    {history.map((doc) => (
+                                        <button 
+                                            key={doc.id}
+                                            className="w-full text-left p-4 rounded-2xl md:rounded-3xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all group relative overflow-hidden active:scale-[0.98]"
+                                            onClick={() => {
+                                                const el = document.getElementById(`doc-slide-${doc.id}`);
+                                                if (el) {
+                                                    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-3 md:gap-4">
+                                                <div className="w-10 h-10 rounded-xl md:rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
+                                                    <Printer size={18} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="text-[10px] font-black text-slate-800 tracking-tight flex items-center gap-2 overflow-hidden">
+                                                            <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white shadow-sm' : 'bg-emerald-500 text-white shadow-sm'}`}>
+                                                                {doc.serie}-{doc.correlativo}
+                                                            </span>
+                                                            {doc.status === 'anulado' && <span className="text-[8px] font-black text-rose-400 shrink-0">ANULADA</span>}
+                                                        </div>
+                                                        <div className="text-[10px] font-black text-slate-900 shrink-0">S/ {parseFloat(doc.total).toFixed(2)}</div>
+                                                    </div>
+                                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                                                        {doc.clienteNombre || account.customerName || 'Varios'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MAIN AREA: (70%) Carousel View */}
+                    <div className="flex-1 flex flex-col relative bg-slate-50/10 md:overflow-hidden">
+                        
+                        {/* THE CAROUSEL CONTAINER - UPDATED FOR MULTI-VOUCHERS */}
+                        <div className="flex-1 flex flex-col md:flex-row md:overflow-x-auto md:snap-x p-6 md:pr-24 md:p-8 gap-6 md:gap-8 items-start">
+                            
+                            {/* SLIDE 1: Preparation (Emission Form) - ONLY IF BALANCE REMAINS */}
+                            {remainingBalance > 0.01 && (
+                                <div id="preparation-slide" className="min-w-full md:min-w-[calc(100%/2.15)] h-auto md:h-[calc(100vh-250px)] md:max-h-[850px] md:snap-start shrink-0">
+                                    <div className="bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border border-slate-100 shadow-2xl shadow-blue-900/5 overflow-hidden transition-all relative">
+                                        <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
+                                            {/* Header Area */}
+                                            <div className="flex items-start justify-between">
+                                                <div className="space-y-1">
+                                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Preparación</span>
+                                                    <h1 className="text-3xl font-black text-slate-800 tracking-tighter leading-none">Comprobante</h1>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL PARCIAL</span>
+                                                    <div className="text-3xl font-black text-slate-800 flex items-baseline gap-1 tracking-tighter leading-none">
+                                                        <span className="text-sm font-medium text-slate-300">S/</span>
+                                                        {totalSelected.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Form UI - COMPACT VERSION */}
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Doc. Cliente</label>
+                                                        <div className="flex p-1 bg-slate-50 rounded-xl w-full border border-slate-100">
+                                                            <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '03' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('03')}>DNI</button>
+                                                            <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '01' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('01')}>RUC</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Número</label>
+                                                        <div className="relative">
+                                                            <input type="text" value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
+                                                            <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>
+                                                                {isSearchLoading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-span-2 space-y-2">
+                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Nombre / Razón Social</label>
+                                                        <div className="relative">
+                                                             <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Voucher Details Selection */}
+                                                <div className="bg-blue-50/30 border border-blue-50 p-4 rounded-2xl flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm">
+                                                            <FileText size={16} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">{docType === '03' ? 'BOLETA' : 'FACTURA'}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Serie {series}</span>
+                                                </div>
+
+                                                <div className="pt-4 border-t border-slate-50">
+                                                    <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Ítems Seleccionados</div>
+                                                    <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
+                                                        {selectedItems.map(item => (
+                                                            <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-transparent">
+                                                                <span className="text-[10px] font-black text-slate-600 truncate max-w-[200px]">{item.description}</span>
+                                                                <span className="text-[10px] font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
+                                                            </div>
+                                                        ))}
+                                                        {selectedItems.length === 0 && (
+                                                            <div className="py-8 text-center text-slate-200 text-[9px] font-bold uppercase tracking-widest border-2 border-dashed border-slate-50 flex flex-col gap-2 rounded-2xl">
+                                                                Seleccione ítems a la izquierda
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-8 bg-slate-50/50 border-t border-slate-50">
+                                            <button 
+                                                onClick={handleSubmit} 
+                                                disabled={loading || selectedItems.length === 0}
+                                                className={`w-full py-5 rounded-[1.2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all active:scale-[0.98]
+                                                    ${loading || selectedItems.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-900/20 hover:bg-black'}`}
+                                            >
+                                                {loading ? <RefreshCw className="animate-spin" size={18} /> : <><span>EMITIR COMPROBANTE</span><ArrowRight size={16} /></>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* DOTTED SEPARATOR */}
+                            {remainingBalance > 0.01 && history.length > 0 && (
+                                <div className="md:h-full h-0 md:border-r-2 border-b-2 border-dashed border-slate-200/50 shrink-0 mx-2 md:my-0 my-4 shadow-inner" />
+                            )}
+
+                            {/* SLIDES FOR HISTORY VOUCHERS */}
+                            {history.map((doc, idx) => {
+                                const isAnulado = doc.status === 'anulado';
+                                const docLabel = doc.tipo === 'factura' ? 'Factura' : 'Boleta';
+                                const docItems = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
+                                const { pdf: billingUrl, xml: xmlUrl } = getSunatUrls(doc.sunatResponse);
+                                const creditNoteId = doc.notaCredito;
+                                const creditNoteUrl = doc.notaCreditoUrl;
+
+                                return (
+                                    <div id={`doc-slide-${doc.id}`} key={doc.id} className="min-w-full md:min-w-[calc(100%/2.15)] h-auto md:h-[calc(100vh-250px)] md:max-h-[850px] md:snap-start shrink-0">
+                                        <div className={`bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border transition-all overflow-hidden shadow-2xl shadow-blue-900/5
+                                            ${isAnulado ? 'border-rose-100 opacity-90' : 'border-slate-100'}
+                                        `}>
+                                            <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
+                                                {/* Header */}
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                                                {isAnulado ? 'ANULADO' : 'EMITIDO'}
+                                                            </span>
+                                                        </div>
+                                                        <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'}`}>
+                                                            {docLabel}
+                                                            <span className="ml-3 text-slate-300 font-medium tracking-normal text-lg">[{doc.serie}-{doc.correlativo}]</span>
+                                                        </h2>
+                                                        {isAnulado && creditNoteId && (
+                                                            <div className="flex items-center gap-2 pt-1">
+                                                                <span className="text-[10px] font-black bg-rose-50 text-rose-500 px-2 py-0.5 rounded-lg border border-rose-100 uppercase tracking-widest shadow-sm">
+                                                                    NC: {creditNoteId}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL</span>
+                                                        <div className="text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
+                                                            <span className="text-sm font-medium text-slate-300">S/</span>
+                                                            {parseFloat(doc.total || 0).toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Client & Detail */}
+                                                <div className="space-y-6">
+                                                    <div className="space-y-1">
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Cliente</span>
+                                                        <p className="text-sm font-black text-slate-700 leading-tight uppercase">{doc.clienteNombre || account.customerName || 'Varios'}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{doc.clienteDocumento || '---'}</p>
+                                                    </div>
+
+                                                    <div className="pt-4 border-t border-slate-50">
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-3">Detalle de Cobro</span>
+                                                        <div className="space-y-2">
+                                                            {docItems.map((it, i) => (
+                                                                <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50/50 rounded-lg">
+                                                                    <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">{it.description || it.name}</span>
+                                                                    <span className="text-[10px] font-black text-slate-800 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Actions Footer */}
+                                            <div className="p-8 bg-slate-50/50 border-t border-slate-50 mt-auto">
+                                                <div className="space-y-4">
+                                                    {/* PRIMARY DOCUMENT ACTION ROW */}
+                                                    <div className="flex gap-3">
+                                                        <a 
+                                                            href={billingUrl ? (billingUrl.includes('?') ? `${billingUrl}&v=${Date.now()}` : `${billingUrl}?v=${Date.now()}`) : '#'} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer" 
+                                                            className={`flex-1 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm border
+                                                                ${isAnulado ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 text-slate-600'}
+                                                            `}
+                                                        >
+                                                            <FileText size={16} /> VER {doc.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}
+                                                        </a>
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <button 
+                                                                onClick={() => handleShareWhatsapp(billingUrl)} 
+                                                                className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
+                                                                title="WhatsApp Comprobante"
+                                                            >
+                                                                <WhatsAppIcon size={20} />
+                                                            </button>
+                                                            {!isAnulado && (
+                                                                <button 
+                                                                    onClick={() => handleAnnul(doc)}
+                                                                    className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all border border-rose-100 shadow-sm"
+                                                                    title="Anular Documento"
+                                                                >
+                                                                    <Trash2 size={20} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* CREDIT NOTE ACTION ROW (If applicable) */}
+                                                    {isAnulado && creditNoteUrl && (
+                                                        <div className="flex gap-3 pt-3 border-t border-slate-100/50">
+                                                            <a 
+                                                                href={creditNoteUrl.includes('?') ? `${creditNoteUrl}&v=${Date.now()}` : `${creditNoteUrl}?v=${Date.now()}`} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                className="flex-1 bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/30 text-rose-600 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                                                            >
+                                                                <FileText size={16} /> VER NOTA DE CRÉDITO
+                                                            </a>
+                                                            <button 
+                                                                onClick={() => handleShareWhatsapp(creditNoteUrl)} 
+                                                                className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
+                                                                title="WhatsApp Nota de Crédito"
+                                                            >
+                                                                <WhatsAppIcon size={20} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* SPACER AT THE END TO ENSURE LAST CARD IS FULLY VISIBLE & SCROLLABLE ON DESKTOP */}
+                            <div className="hidden md:block w-48 shrink-0 h-1" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e2e8f0;
+                    border-radius: 20px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #cbd5e1;
+                }
+
+                .custom-scrollbar-h::-webkit-scrollbar {
+                    height: 10px;
+                }
+                .custom-scrollbar-h::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar-h::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border-radius: 20px;
+                }
+                .custom-scrollbar-h::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8;
+                }
+                
+                @keyframes shine {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+            `}} />
+        </div>
+    );
+};
+
+export default InvoiceManagementModal;

@@ -189,6 +189,10 @@ const Order = sequelize.define('Order', {
     priceAtOrder: { // Store the price at the time of order (snapshot)
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
+    },
+    priceAtOrderAtCreation: { // Store original resolved price (snapshot at creation)
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
     }
 });
 
@@ -604,6 +608,7 @@ const BillingConfig = sequelize.define('BillingConfig', {
     serieFactura: { type: DataTypes.STRING(10), defaultValue: 'F001' },
     serieBoleta: { type: DataTypes.STRING(10), defaultValue: 'B001' },
     apiToken: { type: DataTypes.STRING, allowNull: true },
+    billingMode: { type: DataTypes.STRING, defaultValue: 'libre' },
 }, { timestamps: false });
 
 // INVOICE (Comprobante emitido)
@@ -620,11 +625,17 @@ const Invoice = sequelize.define('Invoice', {
     items: { type: DataTypes.TEXT, defaultValue: '[]' }, // JSON string
     status: { type: DataTypes.ENUM('emitido', 'anulado'), defaultValue: 'emitido' },
     sunatResponse: { type: DataTypes.TEXT, allowNull: true }, // JSON response del Hub
+    notaCredito: { type: DataTypes.STRING, allowNull: true }, // Referencia a nota de credito si existe
+    notaCreditoUrl: { type: DataTypes.STRING, allowNull: true }, // URL de nota de credito
     emitidoAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    AccountId: { type: DataTypes.INTEGER, allowNull: true },
 });
 
 User.hasMany(Invoice);
 Invoice.belongsTo(User);
+
+Account.hasMany(Invoice);
+Invoice.belongsTo(Account);
 
 // --- NEW CLIENT SCREEN MODELS ---
 

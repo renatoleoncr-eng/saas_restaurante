@@ -16,10 +16,11 @@ router.get('/accounts/all', async (req, res) => {
         // Use Hotel Day Logic (7 AM to 6:59:59 AM next day)
         // If no startDate provided, getHotelDayRange defaults to today's hotel day
         const [start, end] = getHotelDayRange(startDate, startDate);
-        const startISO = start.toISOString();
+        // SQLite date comparison requires space instead of T for lexicographical match with Sequelize stored format ('YYYY-MM-DD HH:MM:SS.SSS +00:00')
+        const startStr = start.toISOString().replace('T', ' ').replace('Z', '');
 
         // Build date filter (Allow 'open' accounts to bypass the date filter so they are never hidden)
-        let dateFilter = `AND (a.createdAt >= '${startISO}' OR a.status = 'open')`;
+        let dateFilter = `AND (a.createdAt >= '${startStr}' OR a.status = 'open')`;
 
         // Status filter
         let statusFilter = '';
@@ -134,14 +135,15 @@ router.delete('/accounts/:id', async (req, res) => {
 // GET /api/accounts/specific/:id - Fetch a specific account history by ID 
 router.get('/accounts/specific/:id', async (req, res) => {
     try {
-        const { Account, Order, Product } = getModels();
+        const { Account, Order, Product, Invoice } = getModels();
         const { id } = req.params;
 
         const account = await Account.findByPk(id, {
             include: [
                 { model: Order, include: [Product] },
                 { model: getModels().Payment },
-                { model: getModels().Table, include: [getModels().Area] }
+                { model: getModels().Table, include: [getModels().Area] },
+                { model: getModels().Invoice }
             ]
         });
 

@@ -84,66 +84,7 @@ router.post('/menu/daily', async (req, res) => {
 
         if (!date) return res.status(400).json({ error: 'Date is required' });
 
-        // --- VALIDATE STOCK FOR LINKED PRODUCTS ---
-        const { Product, Recipe, Ingredient, ProductVariant } = require('../models');
-        const allItemsRaw = [...(entries || []), ...(mains || [])];
-        for (const item of allItemsRaw) {
-            if (item.linkId && item.stock) {
-                let prod = await Product.findByPk(item.linkId, {
-                    include: [
-                        { model: Recipe, include: [Ingredient] },
-                        { model: ProductVariant }
-                    ]
-                });
-
-                // NEW: If it's a menu option linked to a finished product, swap to the real product
-                if (prod && (prod.type === 'daily_entry' || prod.type === 'daily_main') && prod.linkedProductId) {
-                    const linked = await Product.findByPk(prod.linkedProductId, {
-                        include: [
-                            { model: Recipe, include: [Ingredient] },
-                            { model: ProductVariant }
-                        ]
-                    });
-                    if (linked) prod = linked;
-                }
-                if (prod && prod.Recipes && prod.Recipes.length > 0) {
-                    // Calculate max possible stock based on ingredients
-                    let maxStock = Infinity;
-                    let limitingFactor = '';
-
-                    for (const recipe of prod.Recipes) {
-                        if (recipe.Ingredient) {
-                            const possible = Math.floor(parseFloat(recipe.Ingredient.stock) / parseFloat(recipe.quantity));
-                            if (possible < maxStock) {
-                                maxStock = possible;
-                                limitingFactor = recipe.Ingredient.name;
-                            }
-                        }
-                    }
-
-                    if (parseInt(item.stock) > maxStock) {
-                        return res.status(400).json({
-                            error: `Stock insuficiente para configurar ${item.name}`,
-                            details: `Máximo permitido: ${maxStock} unidades (Limitado por: ${limitingFactor})`
-                        });
-                    }
-                } else if (prod && prod.isStockManaged) {
-                    // Check stock for finished products (sum variants if they exist)
-                    let availableStock = parseInt(prod.stock);
-
-                    if (prod.ProductVariants && prod.ProductVariants.length > 0) {
-                        availableStock = prod.ProductVariants.reduce((sum, v) => sum + parseInt(v.stock || 0), 0);
-                    }
-
-                    if (parseInt(item.stock) > availableStock) {
-                        return res.status(400).json({
-                            error: `Stock insuficiente para configurar ${item.name}`,
-                            details: `Stock físico disponible: ${availableStock}`
-                        });
-                    }
-                }
-            }
-        }
+        const { Product } = require('../models');
 
         // Upsert logic
         const [menu, created] = await DailyMenu.findOrCreate({

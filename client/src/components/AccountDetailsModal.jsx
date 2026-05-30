@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, FileText, Receipt } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import InvoiceManagementModal from './InvoiceManagementModal';
 
 const AccountDetailsModal = ({
     account: initialAccount,
@@ -19,6 +20,7 @@ const AccountDetailsModal = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
     useEffect(() => {
         if (socket) {
@@ -32,17 +34,18 @@ const AccountDetailsModal = ({
     }, [socket]);
 
     useEffect(() => {
-        if (!initialAccount && accountId) {
-            fetchAccount();
+        const id = accountId || (initialAccount && initialAccount.id);
+        if (id) {
+            fetchAccount(id);
         }
     }, [accountId, initialAccount]);
 
-    const fetchAccount = async () => {
+    const fetchAccount = async (id) => {
         setLoading(true);
         setError(null);
         try {
-            // Use the existing endpoint that returns account with orders and payments
-            const response = await axios.get(`/api/accounts/specific/${accountId}`);
+            // Use the existing endpoint that returns account with orders, payments and invoices
+            const response = await axios.get(`/api/accounts/specific/${id}`);
             setAccount(response.data);
         } catch (err) {
             console.error("Error fetching account details:", err);
@@ -97,9 +100,27 @@ const AccountDetailsModal = ({
                             {subtitle || `#${account.id} - ${account.Table ? formatTableName(account.Table) : `Mesa #${account.TableId}`}`}
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors">
-                        <X size={24} strokeWidth={2} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {account.status === 'closed' && (
+                            <button
+                                onClick={() => setShowInvoiceModal(true)}
+                                className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors ${
+                                    account.Invoices?.some(i => i.status !== 'anulado') 
+                                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                        : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/30'
+                                }`}
+                            >
+                                {account.Invoices?.some(i => i.status !== 'anulado') ? (
+                                    <><FileText size={18} /> Comprobantes</>
+                                ) : (
+                                    <><Receipt size={18} /> Facturar</>
+                                )}
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors">
+                            <X size={24} strokeWidth={2} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* CONTENT LIST */}
@@ -161,6 +182,38 @@ const AccountDetailsModal = ({
                             )}
                         </div>
                     </section>
+
+                    {/* COMPROBANTES SECTION */}
+                    {account.Invoices && account.Invoices.length > 0 && (
+                        <section>
+                            <h4 className="text-sm font-bold text-gray-500 mb-3">Comprobantes Emitidos</h4>
+                            <div className="space-y-3">
+                                {account.Invoices.map((inv, idx) => (
+                                    <div key={idx} className="bg-blue-50/50 border border-blue-100/50 rounded-lg p-4 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-bold text-blue-800 text-sm uppercase">
+                                                {inv.tipo === 'factura' ? 'Factura' : 'Boleta'} Electrónica
+                                            </div>
+                                            <div className="text-sm font-mono font-bold text-gray-700 mt-1">
+                                                {inv.serie}-{String(inv.correlativo).padStart(6, '0')}
+                                            </div>
+                                            <div className="text-xs text-gray-400 mt-2">
+                                                {new Date(inv.emitidoAt || inv.createdAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-bold text-blue-700 text-sm">
+                                                {formatCurrency(inv.total)}
+                                            </div>
+                                            <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700">
+                                                {inv.sunatResponse ? 'Aceptado SUNAT' : 'Local'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* EVIDENCIAS SECTION */}
                     {(account.Payments?.some(p => p.evidence) || account.paymentEvidence) && (
@@ -248,6 +301,14 @@ const AccountDetailsModal = ({
                         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
                     />
                 </div>
+            )}
+
+            {showInvoiceModal && (
+                <InvoiceManagementModal 
+                    account={account} 
+                    onClose={() => setShowInvoiceModal(false)}
+                    onRefresh={() => fetchAccount(account.id)}
+                />
             )}
         </div>
     );

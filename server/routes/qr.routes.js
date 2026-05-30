@@ -445,15 +445,27 @@ router.get('/movements', async (req, res) => {
 
         // 2. Filter by month
         if (month && month !== 'all' && month !== '') {
-            conditions.push(
-                sequelize.where(
-                    sequelize.fn('DATE_FORMAT', 
-                        sequelize.fn('DATE_SUB', sequelize.col('Payment.createdAt'), sequelize.literal('INTERVAL 5 HOUR')), 
-                        '%Y-%m'
-                    ),
-                    month
-                )
-            );
+            const isSqlite = sequelize.options.dialect === 'sqlite';
+            if (isSqlite) {
+                conditions.push(
+                    sequelize.where(
+                        sequelize.fn('strftime', '%Y-%m', 
+                            sequelize.fn('datetime', sequelize.col('Payment.createdAt'), '-5 hours')
+                        ),
+                        month
+                    )
+                );
+            } else {
+                conditions.push(
+                    sequelize.where(
+                        sequelize.fn('DATE_FORMAT', 
+                            sequelize.fn('DATE_SUB', sequelize.col('Payment.createdAt'), sequelize.literal('INTERVAL 5 HOUR')), 
+                            '%Y-%m'
+                        ),
+                        month
+                    )
+                );
+            }
         }
 
         // 3. UI Filters

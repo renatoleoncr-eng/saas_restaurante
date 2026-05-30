@@ -53,7 +53,19 @@ export default function SessionManagerModal({ onClose }) {
     };
 
     const handleCloseSession = async () => {
-        if (!confirm('¿Está seguro de cerrar el turno? Esta acción no se puede deshacer.')) return;
+        const diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
+        const diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
+        const diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
+        const diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+
+        const hasDifferences = diffEfectivo !== 0 || diffTarjeta !== 0 || diffYape !== 0 || diffTransferencia !== 0;
+
+        let confirmMessage = 'El cuadre de caja ha sido exitoso. ¿Seguro que desea cerrar el turno? Esta acción no se puede deshacer.';
+        if (hasDifferences) {
+            confirmMessage = 'El cuadre de caja no es exacto (existen diferencias). ¿Aún así desea continuar? Esta acción no se puede deshacer.';
+        }
+
+        if (!confirm(confirmMessage)) return;
         
         try {
             const userString = localStorage.getItem('user');

@@ -171,85 +171,31 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
             // Flatten groups into a single list for storage
             // Schema: { name, stock, groupName, category, linkId }
             let flatList = [];
-            let validationError = null;
-
-            // GLOBAL VALIDATION: AGGREGATE DEMAND
-            const resourceMap = {}; // { 'ing_ID': { name, stock, used }, 'prod_ID': { name, stock, used } }
-
-            const addToResourceMap = (key, name, stock, qty) => {
-                if (!resourceMap[key]) {
-                    resourceMap[key] = { name, stock, used: 0 };
-                }
-                resourceMap[key].used += qty;
-            };
-
             const allItems = [];
             menuGroups.forEach(g => {
                 if (g.entries) allItems.push(...g.entries);
                 if (g.mains) allItems.push(...g.mains);
             });
 
-            // Calculate total usage
-            for (const item of allItems) {
-                if (!item.linkId || !item.stock || item.stock <= 0) continue;
-                const qty = parseInt(item.stock);
-                let prod = products.find(p => p.id === parseInt(item.linkId));
-
-                // NEW: Check if linked to inventory product
-                if (prod && (prod.type === 'daily_entry' || prod.type === 'daily_main') && prod.linkedProductId) {
-                    const linked = products.find(p => p.id === prod.linkedProductId);
-                    if (linked) prod = linked;
-                }
-
-                if (prod) {
-                    if (prod.Recipes && prod.Recipes.length > 0) {
-                        // Consumes Ingredients
-                        prod.Recipes.forEach(r => {
-                            if (r.Ingredient) {
-                                const needed = qty * parseFloat(r.quantity);
-                                addToResourceMap(`ing_${r.Ingredient.id}`, r.Ingredient.name, parseFloat(r.Ingredient.stock), needed);
-                            }
-                        });
-                    } else if (prod.isStockManaged) {
-                        // Consumes Product Stock directly
-                        addToResourceMap(`prod_${prod.id}`, prod.name, parseFloat(prod.stock), qty);
-                    }
-                }
-            }
-
-            // Check for overages
-            const errors = [];
-            Object.values(resourceMap).forEach(res => {
-                // Allow a small epsilon for float comparison if needed, but ingredients are usually integers or simple decimals.
-                // Using simple comparison for now.
-                if (res.used > res.stock) {
-                    errors.push(`- ${res.name}: Requerido ${res.used}, Disponible ${res.stock}`);
-                }
-            });
-
-            if (errors.length > 0) {
-                return alert(`No hay suficiente stock para cubrir la demanda total:\n\n${errors.join('\n')}`);
-            }
-
-            // VALIDATION: Price > 0 and Items Stock > 0
+            // VALIDATION: Price > 0
             if (activeGroup.price <= 0) {
                 return alert("El precio del menú debe ser mayor a 0.");
             }
 
             for (const item of allItems) {
-                if (!item.stock || parseInt(item.stock) <= 0) {
-                    return alert(`El stock de "${item.name || 'Item sin nombre'}" debe ser mayor a 0.`);
+                if (!item.linkId) {
+                    return alert(`Debe seleccionar una opción para todos los platos del menú.`);
                 }
             }
 
             menuGroups.forEach(group => {
                 const cleanEntries = group.entries
                     .filter(e => e.name.trim() !== '')
-                    .map(e => ({ ...e, groupName: group.name, menuPrice: group.price, category: 'entry' }));
+                    .map(e => ({ ...e, stock: 9999, groupName: group.name, menuPrice: group.price, category: 'entry' }));
 
                 const cleanMains = group.mains
                     .filter(m => m.name.trim() !== '')
-                    .map(m => ({ ...m, groupName: group.name, menuPrice: group.price, category: 'main' }));
+                    .map(m => ({ ...m, stock: 9999, groupName: group.name, menuPrice: group.price, category: 'main' }));
 
                 flatList = [...flatList, ...cleanEntries, ...cleanMains];
             });
@@ -277,7 +223,7 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
             if (g.id === activeGroupId) {
                 return {
                     ...g,
-                    [category]: [...g[category], { id: generateId(), name: '', stock: 0, linkId: null }]
+                    [category]: [...g[category], { id: generateId(), name: '', stock: 9999, linkId: null }]
                 };
             }
             return g;
@@ -298,12 +244,12 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                 ...newList[index],
                                 linkId: prod.id,
                                 name: prod.name,
-                                stock: prod.stock // Initial view, but stock should be read-only if linked
+                                stock: 9999 // Let physical limit govern
                             };
                         }
                     } else {
                         // Unlink
-                        newList[index] = { ...newList[index], linkId: null, stock: 20 };
+                        newList[index] = { ...newList[index], linkId: null, stock: 9999 };
                     }
                 } else if (field === 'name') {
                     // If changing name manually, unlink? Optional. Let's keep it simple.
@@ -581,29 +527,29 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
                                         </option>
                                     ))}
                                 </select>
-                                <div className="flex flex-col w-20 shrink-0">
-                                    <input
-                                        type="number"
-                                        className={`w-full border p-2 rounded text-center font-bold text-gray-700 outline-none ${item.linkId && getTheoreticalMaxStock(item.linkId) !== null && parseInt(item.stock) > getTheoreticalMaxStock(item.linkId) ? 'border-red-500 bg-red-50' : 'focus:ring-2 focus:ring-blue-100'}`}
-                                        value={item.stock}
-                                        onChange={e => updateItem(category, idx, 'stock', e.target.value)}
-                                        title="Stock Diario"
-                                    />
-                                    {item.linkId && (
-                                        <div className="text-[10px] text-center mt-1 w-full overflow-hidden text-nowrap font-bold">
+                                <div className="flex flex-col justify-center items-center w-28 shrink-0 bg-gray-50 border border-gray-200 rounded p-2">
+                                    {item.linkId ? (
+                                        <div className="text-center w-full font-bold">
                                             {(() => {
                                                 const max = getTheoreticalMaxStock(item.linkId);
                                                 if (max !== null) {
-                                                    const isOver = parseInt(item.stock) > max;
                                                     return (
-                                                        <span className={isOver ? 'text-red-600 font-extrabold' : 'text-gray-600'}>
-                                                            Máx: {max}
-                                                        </span>
+                                                        <div className="flex flex-col items-center justify-center text-blue-700">
+                                                            <span className="text-[10px] text-gray-500 uppercase leading-none mb-1">Stock Disponible</span>
+                                                            <span className="text-lg leading-none">{max}</span>
+                                                        </div>
                                                     );
                                                 }
-                                                return <span className="text-gray-400">Inf.</span>;
+                                                return (
+                                                    <div className="flex flex-col items-center justify-center text-green-600 pt-1">
+                                                        <span className="text-xs uppercase font-extrabold leading-tight">Producto</span>
+                                                        <span className="text-xs uppercase font-extrabold leading-tight">Libre</span>
+                                                    </div>
+                                                );
                                             })()}
                                         </div>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs">-</span>
                                     )}
                                 </div>
                                 <button

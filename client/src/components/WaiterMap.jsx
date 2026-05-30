@@ -6,7 +6,8 @@ import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import { formatTableName } from '../utils/tableUtils';
 import axios from 'axios';
-import { Calendar, Lock } from 'lucide-react';
+import { Calendar, Lock, Calculator } from 'lucide-react';
+import SessionManagerModal from './SessionManagerModal';
 
 export default function WaiterMap() {
     const { areas, refreshData, reservations, refreshTrigger } = useRestaurant();
@@ -17,6 +18,7 @@ export default function WaiterMap() {
     const [activeAreaId, setActiveAreaId] = useState(null);
     const [activeSession, setActiveSession] = useState(null);
     const [loadingSession, setLoadingSession] = useState(true);
+    const [showSessionModal, setShowSessionModal] = useState(false);
     const navigate = useNavigate();
 
     const checkActiveSession = async () => {
@@ -56,7 +58,19 @@ export default function WaiterMap() {
 
             {/* Ready Orders Logic Removed as per user request */}
 
-            <h2 className="text-xl font-bold mb-4 text-center">Seleccione una Mesa</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Seleccione una Mesa</h2>
+                <button
+                    onClick={() => setShowSessionModal(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold shadow-sm transition-all transform active:scale-95 text-sm ${activeSession
+                        ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                        }`}
+                >
+                    <Calculator size={16} />
+                    {activeSession ? 'Turno Abierto' : 'Abrir Turno'}
+                </button>
+            </div>
             
             {loadingSession ? (
                 <div className="text-center py-10 text-gray-500 animate-pulse">Cargando estado del turno...</div>
@@ -64,9 +78,15 @@ export default function WaiterMap() {
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-6 mx-4">
                     <Lock size={48} className="text-gray-400 mb-4" />
                     <h3 className="text-xl font-bold text-gray-700 mb-2">Turno Cerrado</h3>
-                    <p className="text-gray-500 text-center max-w-md">
-                        Debe pedir al administrador o cajero que abra el turno de salón para poder tomar pedidos.
+                    <p className="text-gray-500 text-center max-w-md mb-6">
+                        El turno está cerrado. Debe abrir el turno de salón para poder visualizar las mesas y tomar pedidos.
                     </p>
+                    <button
+                        onClick={() => setShowSessionModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all transform active:scale-95"
+                    >
+                        Abrir Turno Ahora
+                    </button>
                 </div>
             ) : (
                 <>
@@ -161,6 +181,16 @@ export default function WaiterMap() {
                 <ReservationModal
                     tableId={reservationTable}
                     onClose={() => { setReservationTable(null); refreshData(); }}
+                />
+            )}
+
+            {showSessionModal && (
+                <SessionManagerModal
+                    onClose={() => {
+                        setShowSessionModal(false);
+                        checkActiveSession();
+                        refreshData();
+                    }}
                 />
             )}
         </div>

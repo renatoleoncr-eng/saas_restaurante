@@ -85,8 +85,19 @@ export default function TableControl({ tableId, accountId, onClose }) {
         const qrString = `${rucEmpresa}|${tipoComp}|${invoice.serie}|${invoice.correlativo}|${igvAmount.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdq}|${nroDocAdq}|`;
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
 
-        // Verify if it is electronic (remote API token or direct SUNAT response is active)
-        const isElectronico = !!(invoice.sunatResponse || successInvoice?.sunatResponse || billingConfig?.apiToken);
+        // Verify if it is electronic (successfully sent to SUNAT Hub)
+        const isElectronico = !!(
+            (invoice.sunatResponse || successInvoice?.sunatResponse) && 
+            (() => {
+                try {
+                    const rawResp = invoice.sunatResponse || successInvoice?.sunatResponse;
+                    const parsed = typeof rawResp === 'string' ? JSON.parse(rawResp) : rawResp;
+                    return parsed && !parsed.error && parsed.success !== false;
+                } catch (e) {
+                    return false;
+                }
+            })()
+        );
 
         const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
 
@@ -394,7 +405,33 @@ export default function TableControl({ tableId, accountId, onClose }) {
         const docName = invoice.tipo === 'factura' ? 'Factura' : 'Boleta';
         const invoiceCode = `${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}`;
         
-        const text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*.\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
+        // Extract PDF URL from sunatResponse
+        const sunatResp = successInvoice.sunatResponse;
+        let pdfUrl = '';
+        if (sunatResp) {
+            let parsed = sunatResp;
+            if (typeof sunatResp === 'string') {
+                try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
+            }
+            if (parsed) {
+                pdfUrl = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || '';
+            }
+        }
+
+        // Apply SSL fix
+        if (pdfUrl && typeof pdfUrl === 'string') {
+            if (pdfUrl.includes('72.61.57.199') || pdfUrl.includes('maksuites') || pdfUrl.includes('bluzcx')) {
+                pdfUrl = pdfUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+            }
+        }
+
+        const busterUrl = pdfUrl ? `${pdfUrl}?v=${Date.now()}` : '';
+        
+        let text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*.\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
+        
+        if (busterUrl) {
+            text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*:\n${busterUrl}\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
+        }
 
         const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
         window.open(waUrl, '_blank');
@@ -1118,7 +1155,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     clienteNombre: clientForm.name || 'CLIENTES VARIOS',
                     clienteDireccion: clientForm.direccion || '',
                     items: itemsToBill,
-                    userId: user.id
+                    userId: user.id,
+                    accountId: account.id
                 });
                 resInvoiceData = resInvoice.data;
             }
@@ -2246,11 +2284,16 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 </div>
                             ) : (
                                 <div className="flex flex-col mt-2">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-800 font-medium">{account.customerName}</span>
-                                            {account.accountType === 'staff' && (
-                                                <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-800 font-medium">{account.customerName}</span>
+                                                {account.accountType === 'staff' && (
+                                                    <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
+                                                )}
+                                            </div>
+                                            {account.clientDni && (
+                                                <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
                                             )}
                                         </div>
                                         <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-semibold px-2 py-1 rounded hover:bg-blue-50">Editar Cliente</button>
@@ -2513,10 +2556,21 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
                                             }
                                             if (!parsed) return { pdf: null, xml: null };
-                                            return {
-                                                pdf: parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || null,
-                                                xml: parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null
-                                            };
+                                            let pdfUrl = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || null;
+                                            let xmlUrl = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+                                            
+                                            // Apply SSL fix
+                                            if (pdfUrl && typeof pdfUrl === 'string') {
+                                                if (pdfUrl.includes('72.61.57.199') || pdfUrl.includes('maksuites') || pdfUrl.includes('bluzcx')) {
+                                                    pdfUrl = pdfUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                                                }
+                                            }
+                                            if (xmlUrl && typeof xmlUrl === 'string') {
+                                                if (xmlUrl.includes('72.61.57.199') || xmlUrl.includes('maksuites') || xmlUrl.includes('bluzcx')) {
+                                                    xmlUrl = xmlUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                                                }
+                                            }
+                                            return { pdf: pdfUrl, xml: xmlUrl };
                                         })();
 
                                         return (
@@ -2573,8 +2627,20 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             }
                                             if (!parsed) return { pdf: null, xml: null };
                                             return {
-                                                pdf: parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || null,
-                                                xml: parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null
+                                                pdf: (() => {
+                                                    let u = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || null;
+                                                    if (u && typeof u === 'string' && (u.includes('72.61.57.199') || u.includes('maksuites') || u.includes('bluzcx'))) {
+                                                        u = u.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                                                    }
+                                                    return u;
+                                                })(),
+                                                xml: (() => {
+                                                    let u = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+                                                    if (u && typeof u === 'string' && (u.includes('72.61.57.199') || u.includes('maksuites') || u.includes('bluzcx'))) {
+                                                        u = u.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                                                    }
+                                                    return u;
+                                                })()
                                             };
                                         })();
 
@@ -2589,11 +2655,11 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                         Ver PDF
                                                     </button>
                                                     <button
-                                                        onClick={() => xml ? window.open(xml, '_blank') : handleDownloadLocalXml(successInvoice.invoice)}
+                                                        onClick={() => handlePrintLocalInvoice(successInvoice.invoice)}
                                                         className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
                                                     >
-                                                        <Download size={16} />
-                                                        XML
+                                                        <Printer size={16} />
+                                                        Imprimir
                                                     </button>
                                                 </div>
 
@@ -2716,93 +2782,95 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 )}
 
                                 {/* INVOICE OPTIONS */}
-                                <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <input 
-                                            type="checkbox" 
-                                            id="issue_invoice"
-                                            checked={issueInvoice}
-                                            onChange={(e) => setIssueInvoice(e.target.checked)}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                            disabled={isConfirmingPayment}
-                                        />
-                                        <label htmlFor="issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
-                                            Emitir Comprobante Electrónico
-                                        </label>
-                                    </div>
-                                    
-                                    {issueInvoice && (
-                                        <div className="animate-in fade-in slide-in-from-top-2">
-                                            <div className="flex gap-2 mb-3">
-                                                <button
-                                                    onClick={() => setInvoiceType('boleta')}
-                                                    disabled={isConfirmingPayment}
-                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    Boleta
-                                                </button>
-                                                <button
-                                                    onClick={() => setInvoiceType('factura')}
-                                                    disabled={isConfirmingPayment}
-                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    Factura
-                                                </button>
-                                            </div>
-                                            <div className="space-y-2 text-left">
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
-                                                            value={clientForm.dni}
-                                                            onChange={e => {
-                                                                setClientForm({...clientForm, dni: e.target.value});
-                                                                if (e.target.value.length === 11) setInvoiceType('factura');
-                                                                else if (e.target.value.length === 8) setInvoiceType('boleta');
-                                                            }}
-                                                            disabled={isConfirmingPayment}
-                                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                                                            onKeyDown={e => e.key === 'Enter' && searchClientData()}
-                                                        />
-                                                        <button 
-                                                            onClick={searchClientData} 
-                                                            disabled={isSearchingClient || isConfirmingPayment || !clientForm.dni}
-                                                            className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
-                                                        >
-                                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
-                                                        value={clientForm.name}
-                                                        onChange={e => setClientForm({...clientForm, name: e.target.value})}
+                                {billingConfig?.facturacionElectronica && (
+                                    <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <input 
+                                                type="checkbox" 
+                                                id="issue_invoice"
+                                                checked={issueInvoice}
+                                                onChange={(e) => setIssueInvoice(e.target.checked)}
+                                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                disabled={isConfirmingPayment}
+                                            />
+                                            <label htmlFor="issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
+                                                Emitir Comprobante Electrónico
+                                            </label>
+                                        </div>
+                                        
+                                        {issueInvoice && (
+                                            <div className="animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex gap-2 mb-3">
+                                                    <button
+                                                        onClick={() => setInvoiceType('boleta')}
                                                         disabled={isConfirmingPayment}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                                                    />
+                                                        className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        Boleta
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setInvoiceType('factura')}
+                                                        disabled={isConfirmingPayment}
+                                                        className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        Factura
+                                                    </button>
                                                 </div>
-                                                {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
+                                                <div className="space-y-2 text-left">
                                                     <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
+                                                                value={clientForm.dni}
+                                                                onChange={e => {
+                                                                    setClientForm({...clientForm, dni: e.target.value});
+                                                                    if (e.target.value.length === 11) setInvoiceType('factura');
+                                                                    else if (e.target.value.length === 8) setInvoiceType('boleta');
+                                                                }}
+                                                                disabled={isConfirmingPayment}
+                                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                onKeyDown={e => e.key === 'Enter' && searchClientData()}
+                                                            />
+                                                            <button 
+                                                                onClick={searchClientData} 
+                                                                disabled={isSearchingClient || isConfirmingPayment || !clientForm.dni}
+                                                                className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                                            >
+                                                                {isSearchingClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
                                                         <input 
                                                             type="text" 
-                                                            placeholder="Dirección Fiscal de la Empresa"
-                                                            value={clientForm.direccion || ''}
-                                                            onChange={e => setClientForm({...clientForm, direccion: e.target.value})}
+                                                            placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
+                                                            value={clientForm.name}
+                                                            onChange={e => setClientForm({...clientForm, name: e.target.value})}
                                                             disabled={isConfirmingPayment}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                                                         />
                                                     </div>
-                                                )}
+                                                    {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Dirección Fiscal de la Empresa"
+                                                                value={clientForm.direccion || ''}
+                                                                onChange={e => setClientForm({...clientForm, direccion: e.target.value})}
+                                                                disabled={isConfirmingPayment}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="flex gap-3 mt-4">
                                     <button

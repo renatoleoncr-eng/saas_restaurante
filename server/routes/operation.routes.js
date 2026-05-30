@@ -57,11 +57,57 @@ router.put('/accounts/:id', async (req, res) => {
         if (clientAddress !== undefined) account.clientAddress = clientAddress;
         if (accountType !== undefined && accountType !== account.accountType) {
             account.accountType = accountType;
+            const { Order } = getModels();
             // If converting to staff, force all orders to 0 and reset total
             if (accountType === 'staff') {
-                const { Order } = getModels();
                 await Order.update({ priceAtOrder: 0 }, { where: { AccountId: account.id } });
                 account.total = 0;
+            } else if (accountType === 'standard') {
+                // Restore priceAtOrder from priceAtOrderAtCreation
+                const orders = await Order.findAll({ where: { AccountId: account.id } });
+                const { Product, ProductVariant } = getModels();
+                let newTotal = 0;
+                for (const order of orders) {
+                    let originalPrice = order.priceAtOrderAtCreation !== null && order.priceAtOrderAtCreation !== undefined
+                        ? parseFloat(order.priceAtOrderAtCreation)
+                        : parseFloat(order.priceAtOrder || 0);
+
+                    // Fallback recovery if originalPrice is 0 (likely a legacy staff order)
+                    if (originalPrice === 0 && order.ProductId) {
+                        try {
+                            const product = await Product.findByPk(order.ProductId, {
+                                include: [ProductVariant]
+                            });
+                            if (product) {
+                                if (order.presentation && product.ProductVariants && product.ProductVariants.length > 0) {
+                                    const variant = product.ProductVariants.find(v => v.name === order.presentation);
+                                    if (variant) originalPrice = parseFloat(variant.price);
+                                }
+                                if (originalPrice === 0 && order.presentation && product.presentations) {
+                                    const variants = JSON.parse(product.presentations);
+                                    const variant = variants.find(v => v.name === order.presentation);
+                                    if (variant) originalPrice = parseFloat(variant.price);
+                                }
+                                if (originalPrice === 0) {
+                                    originalPrice = parseFloat(product.price);
+                                }
+                            }
+                        } catch (fallbackErr) {
+                            console.error("[Fallback Price Recovery] Error:", fallbackErr);
+                        }
+                    }
+
+                    order.priceAtOrder = originalPrice;
+                    // Also save it back to priceAtOrderAtCreation to heal the database record permanently!
+                    if (order.priceAtOrderAtCreation === null || parseFloat(order.priceAtOrderAtCreation) === 0) {
+                        order.priceAtOrderAtCreation = originalPrice;
+                    }
+                    await order.save();
+                    if (order.status !== 'cancelled') {
+                        newTotal += originalPrice * order.quantity;
+                    }
+                }
+                account.total = newTotal;
             }
         }
 
@@ -942,6 +988,7 @@ router.post('/orders', async (req, res) => {
             return res.status(400).json({ error: 'Cuenta no activa' });
         }
 
+        const isStaff = account.accountType === 'staff';
         const createdOrders = [];
         let totalAdd = 0;
 
@@ -950,6 +997,9 @@ router.post('/orders', async (req, res) => {
 
             // COMBO ITEMS (2x1 drink promotions have no productId)
             if (item.isCombo || !item.productId) {
+                const originalComboPrice = parseFloat(item.price) || 0;
+                const finalComboPrice = isStaff ? 0 : originalComboPrice;
+
                 const comboOrder = await Order.create({
                     AccountId: accountId,
                     ProductId: null,
@@ -957,7 +1007,8 @@ router.post('/orders', async (req, res) => {
                     notes: item.notes || item.name || 'Combo',
                     presentation: null,
                     status: 'served',
-                    priceAtOrder: parseFloat(item.price) || 0,
+                    priceAtOrder: finalComboPrice,
+                    priceAtOrderAtCreation: originalComboPrice,
                     subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
                     UserId: userId
 
@@ -973,7 +1024,7 @@ router.post('/orders', async (req, res) => {
                     }
                 }
 
-                totalAdd += parseFloat(item.price || 0) * (item.quantity || 1);
+                totalAdd += finalComboPrice * (item.quantity || 1);
                 createdOrders.push(comboOrder);
                 continue;
             }
@@ -991,42 +1042,21 @@ router.post('/orders', async (req, res) => {
             // Determine status: ALWAYS 'served' now
             const initialStatus = 'served';
 
-            // Determine Price based on Presentation (or respect frontend calculated price)
-            let finalPrice = parseFloat(product.price);
+            // Determine standard resolved price
+            let originalResolvedPrice = parseFloat(product.price);
             let appliedHappyHour = false;
 
-            // Validate Happy Hour logic first. Server time is used to avoid client tampering.
-            const now = new Date();
-            // Convert current time to "HH:mm:ss" in local time to compare
-            const currentHours = String(now.getHours()).padStart(2, '0');
-            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-            const currentTimeStr = `${currentHours}:${currentMinutes}`;
-
-            const isHappyHourActive = (startStr, endStr) => {
-                if (!startStr || !endStr) return false;
-                if (startStr <= endStr) {
-                    return currentTimeStr >= startStr && currentTimeStr <= endStr;
-                } else {
-                    return currentTimeStr >= startStr || currentTimeStr <= endStr;
-                }
-            };
-
-            const isStaff = account.accountType === 'staff';
-
-            if (isStaff) {
-                finalPrice = 0;
-                console.log(`[Orders] Staff Account: Forcing price to 0 for ${product.name}`);
-            } else if (item.price !== undefined && item.price !== null && !isNaN(parseFloat(item.price))) {
-                finalPrice = parseFloat(item.price); // Trust the custom price generated for split items or combos
+            if (item.price !== undefined && item.price !== null && !isNaN(parseFloat(item.price)) && !isStaff) {
+                originalResolvedPrice = parseFloat(item.price); // Trust the custom price generated for split items or combos
             } else if (item.presentation && product.ProductVariants && product.ProductVariants.length > 0) {
                 const variant = product.ProductVariants.find(v => v.name === item.presentation);
                 if (variant) {
                     // Check if variant has Happy Hour
                     if (variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd)) {
-                        finalPrice = parseFloat(variant.happyHourPrice);
+                        originalResolvedPrice = parseFloat(variant.happyHourPrice);
                         appliedHappyHour = true;
                     } else {
-                        finalPrice = parseFloat(variant.price);
+                        originalResolvedPrice = parseFloat(variant.price);
                     }
                 }
             } else if (item.presentation && product.presentations) {
@@ -1036,10 +1066,10 @@ router.post('/orders', async (req, res) => {
                     if (variant) {
                         // Check if variant has Happy Hour
                         if (variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd)) {
-                            finalPrice = parseFloat(variant.happyHourPrice);
+                            originalResolvedPrice = parseFloat(variant.happyHourPrice);
                             appliedHappyHour = true;
                         } else {
-                            finalPrice = parseFloat(variant.price);
+                            originalResolvedPrice = parseFloat(variant.price);
                         }
                     }
                 } catch (e) {
@@ -1048,13 +1078,19 @@ router.post('/orders', async (req, res) => {
             } else {
                 // Base Product Happy Hour Check
                 if (product.happyHourPrice && isHappyHourActive(product.happyHourStart, product.happyHourEnd)) {
-                    finalPrice = parseFloat(product.happyHourPrice);
+                    originalResolvedPrice = parseFloat(product.happyHourPrice);
                     appliedHappyHour = true;
                 }
             }
 
             if (appliedHappyHour) {
-                console.log(`[Orders] Happy Hour Applied! Product: ${product.name}, Original: ${product.price}, HH Price: ${finalPrice}`);
+                console.log(`[Orders] Happy Hour Applied! Product: ${product.name}, Original: ${product.price}, HH Price: ${originalResolvedPrice}`);
+            }
+
+            let finalPrice = originalResolvedPrice;
+            if (isStaff) {
+                finalPrice = 0;
+                console.log(`[Orders] Staff Account: Forcing price to 0 for ${product.name} (Original: ${originalResolvedPrice})`);
             }
 
             const order = await Order.create({
@@ -1065,6 +1101,7 @@ router.post('/orders', async (req, res) => {
                 presentation: item.presentation || null,
                 status: initialStatus,
                 priceAtOrder: finalPrice,
+                priceAtOrderAtCreation: originalResolvedPrice,
                 subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
                 UserId: userId // Track who placed the order
 

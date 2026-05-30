@@ -19,6 +19,7 @@ const getMediaUrl = (url) => {
 export default function QrManagement() {
     const { socket, user } = useRestaurant();
     const [activeTab, setActiveTab] = useState('qr'); // 'qr' | 'ads' | 'roulette'
+    const [qrSubTab, setQrSubTab] = useState('config'); // 'config' | 'movements'
 
     
     // Notifications State
@@ -56,7 +57,6 @@ export default function QrManagement() {
     });
     const [staffUsers, setStaffUsers] = useState([]);
 
-    // --- Tab 2: Advertising / Slides State ---
     const [promoGroups, setPromoGroups] = useState([]);
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [editingGroup, setEditingGroup] = useState(null);
@@ -75,6 +75,10 @@ export default function QrManagement() {
     });
     const [activeProjection, setActiveProjection] = useState(null); // Local tracker for manual projections
     const [clientScreenMode, setClientScreenMode] = useState('ads'); // 'ads' | 'qr_fixed' | 'qr_countdown'
+    // Ads sub-view: 'groups' = list of groups, 'slides' = managing images of selectedGroupId
+    const [adsView, setAdsView] = useState('groups');
+    // Track current slide index per group for carousel preview
+    const [slideIndexMap, setSlideIndexMap] = useState({});
 
     // --- Tab 3: Roulette State ---
     const [rouletteConfig, setRouletteConfig] = useState({
@@ -412,6 +416,32 @@ export default function QrManagement() {
         }
     };
 
+    const reorderGroup = async (index, direction) => {
+        const newIndex = direction === 'prev' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= promoGroups.length) return;
+        const updated = [...promoGroups];
+        const temp = updated[index];
+        updated[index] = updated[newIndex];
+        updated[newIndex] = temp;
+        const items = updated.map((g, idx) => ({ id: g.id, orderIndex: idx }));
+        try {
+            await axios.put('/api/promotions/groups/reorder', { items });
+            fetchPromoGroups();
+        } catch (error) {
+            console.error('Error reordering groups:', error);
+        }
+    };
+
+    const toggleGroupActive = async (group) => {
+        try {
+            await axios.put(`/api/promotions/groups/${group.id}`, { ...group, isActive: !group.isActive });
+            showAlert(`Grupo "${group.name}" ${!group.isActive ? 'activado' : 'desactivado'}`);
+            fetchPromoGroups();
+        } catch (error) {
+            console.error('Error toggling group active:', error);
+        }
+    };
+
     const triggerClientScreenMode = (mode) => {
         if (!socket) return;
         socket.emit('set_client_screen_mode', { mode });
@@ -621,318 +651,337 @@ export default function QrManagement() {
     const totalWeights = rouletteConfig?.categories?.reduce((sum, c) => sum + (c.weight || 0), 0) || 1;
 
     return (
-        <div className="flex-1 flex flex-col bg-slate-900 min-h-screen text-slate-100 p-3 md:p-6 overflow-x-hidden relative">
-            
-            {/* Top Alert Toast */}
+        <div className="flex-1 flex flex-col bg-gray-50 min-h-screen text-gray-800 overflow-x-hidden">
+            {/* Toast alert */}
             {alert && (
-                <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] border animate-in slide-in-from-top duration-300
-                    ${alert.type === 'success' ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50' : 
-                      alert.type === 'danger' ? 'bg-rose-950/90 text-rose-300 border-rose-500/50' : 
-                      'bg-sky-950/90 text-sky-300 border-sky-500/50'}`}>
-                    {alert.type === 'success' && <CheckCircle2 className="w-5 h-5 shrink-0" />}
-                    {alert.type === 'danger' && <AlertTriangle className="w-5 h-5 shrink-0" />}
-                    {alert.type === 'info' && <Gift className="w-5 h-5 shrink-0 animate-bounce" />}
-                    <span className="font-bold text-sm">{alert.message}</span>
+                <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border text-sm font-semibold animate-in slide-in-from-top duration-300
+                    ${alert.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+                      alert.type === 'danger'  ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                    {alert.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                    {alert.type === 'danger'  && <AlertTriangle className="w-4 h-4 shrink-0" />}
+                    {alert.type === 'info'    && <Gift className="w-4 h-4 shrink-0" />}
+                    {alert.message}
                 </div>
             )}
 
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            {/* Page header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-                        <Tv className="w-8 h-8 text-emerald-400 shrink-0" /> Pantalla del Cliente
+                    <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <Tv className="w-5 h-5 text-blue-600 shrink-0" /> Pantalla del Cliente
                     </h1>
-                    <p className="text-slate-400 text-sm mt-1">
+                    <p className="text-gray-500 text-xs mt-0.5">
                         Gestión integrada de cuentas de pago QR rotativas, banners promocionales y ruleta interactiva de lealtad.
                     </p>
                 </div>
-                
-                {/* Visual quick status link to customer view */}
-                <a 
-                    href="/qr-display" 
-                    target="_blank" 
+                <a
+                    href="/qr-display"
+                    target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 hover:border-slate-600 transition-all text-sm font-bold shadow-md shadow-black/20"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all text-sm font-semibold shadow-sm"
                 >
-                    <Eye className="w-4 h-4 text-emerald-400" /> Abrir Pantalla del Cliente
+                    <Eye className="w-4 h-4" /> Abrir Pantalla del Cliente
                     <ChevronRight className="w-4 h-4" />
                 </a>
             </div>
 
-            {/* Premium Glassmorphic Tab Switcher */}
-            <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl w-fit mb-6">
-                <button
-                    onClick={() => setActiveTab('qr')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all duration-300
-                        ${activeTab === 'qr'
-                            ? 'bg-slate-900 border border-slate-700/50 text-white shadow-lg shadow-black/20'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'}`}
-                >
-                    <QrCode className="w-4 h-4 text-emerald-400" />
-                    <span>Gestión QR</span>
-                </button>
-                <button
-                    onClick={() => setActiveTab('ads')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all duration-300
-                        ${activeTab === 'ads'
-                            ? 'bg-slate-900 border border-slate-700/50 text-white shadow-lg shadow-black/20'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'}`}
-                >
-                    <Tv className="w-4 h-4 text-sky-400" />
-                    <span>Publicidad</span>
-                </button>
-                <button
-                    onClick={() => setActiveTab('roulette')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all duration-300
-                        ${activeTab === 'roulette'
-                            ? 'bg-slate-900 border border-slate-700/50 text-white shadow-lg shadow-black/20'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'}`}
-                >
-                    <Gamepad className="w-4 h-4 text-amber-400" />
-                    <span>Ruleta</span>
-                </button>
+            {/* Main tabs: Gestión QR / Publicidad / Ruleta */}
+            <div className="bg-white border-b border-gray-200 px-6">
+                <div className="flex">
+                    {[{id:'qr',label:'Gestión QR'},{id:'ads',label:'Publicidad'},{id:'roulette',label:'Ruleta'}].map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTab(t.id)}
+                            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                activeTab === t.id
+                                    ? 'border-blue-600 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-
             {activeTab === 'qr' && (
-                <div className="space-y-8 animate-in fade-in duration-300">
-                    {/* QR List Section */}
-                    <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                                <div>
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                        Cuentas Yape y Plin Rotativas
-                                    </h2>
-                                    <p className="text-slate-400 text-xs mt-0.5">
-                                        El sistema rota automáticamente entre los códigos QR según sus límites mensuales y secuencia.
-                                    </p>
-                                </div>
-                                
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <button
-                                        onClick={openQrCreate}
-                                        className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md shadow-emerald-600/10 transition-all text-xs font-black"
-                                    >
-                                        <Plus className="w-4 h-4" /> Agregar Cuenta QR
-                                    </button>
-                                </div>
-                            </div>
+                <div className="flex flex-col flex-1">
+                    {/* Sub-tabs row: Configuración / Movimientos + Agregar QR button */}
+                    <div className="bg-white border-b border-gray-200 px-6 flex items-center justify-between">
+                        <div className="flex">
+                            <button
+                                onClick={() => setQrSubTab('config')}
+                                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                    qrSubTab === 'config'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                Configuración
+                            </button>
+                            <button
+                                onClick={() => setQrSubTab('movements')}
+                                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                    qrSubTab === 'movements'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                Movimientos
+                            </button>
+                        </div>
+                        {qrSubTab === 'config' && (
+                            <button
+                                onClick={openQrCreate}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-semibold my-2"
+                            >
+                                <Plus className="w-4 h-4" /> + Agregar QR
+                            </button>
+                        )}
+                    </div>
 
+                    {/* ── SUB-TAB: CONFIGURACIÓN ── */}
+                    {qrSubTab === 'config' && (
+                        <div className="flex-1 animate-in fade-in duration-200 overflow-x-auto">
                             {qrs.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/40">
-                                    <QrCode className="w-12 h-12 text-slate-600 mb-3 animate-pulse" />
-                                    <h3 className="text-white font-bold text-base">No hay cuentas QR configuradas</h3>
-                                    <p className="text-slate-400 text-xs mt-1 max-w-sm">
-                                        Registre sus cuentas Yape o Plin de la empresa para habilitar la facturación e integración en caja.
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <QrCode className="w-12 h-12 text-gray-300 mb-3" />
+                                    <h3 className="text-gray-700 font-semibold text-base">No hay cuentas QR configuradas</h3>
+                                    <p className="text-gray-400 text-sm mt-1 max-w-sm">
+                                        Registre sus cuentas Yape o Plin para habilitar la facturación.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                                    {qrs.map((qr, index) => {
-                                        const isExceeded = !qr.isUnlimited && parseFloat(qr.accumulated_month_sum || 0) >= parseFloat(qr.limitAmount || 0);
-                                        const activeRotationQr = qrs.find(q => q.isActive && (q.isUnlimited || parseFloat(q.accumulated_month_sum || 0) < parseFloat(q.limitAmount || 0)));
-                                        const isVigente = activeRotationQr && activeRotationQr.id === qr.id;
-                                        const pct = qr.isUnlimited ? 0 : Math.min(100, (parseFloat(qr.accumulated_month_sum || 0) / parseFloat(qr.limitAmount || 1)) * 100);
-                                        
-                                        return (
-                                            <div 
-                                                key={qr.id}
-                                                className={`bg-slate-950/60 border rounded-3xl p-5 shadow-xl relative overflow-hidden transition-all duration-300 flex flex-col justify-between hover:border-slate-700
-                                                    ${isVigente ? 'border-emerald-500/40 shadow-emerald-950/20' : 'border-slate-800'}`}
-                                            >
-                                                {/* Top badge */}
-                                                <div className="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-transparent via-transparent to-transparent">
-                                                    {isVigente && <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-500"></div>}
-                                                    {isExceeded && <div className="w-full h-full bg-gradient-to-r from-rose-500 to-red-500"></div>}
-                                                </div>
+                                <table className="w-full text-left text-sm border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 font-semibold text-xs uppercase tracking-wider">
+                                            <th className="py-3 px-4 w-16">QR</th>
+                                            <th className="py-3 px-4">Nombre</th>
+                                            <th className="py-3 px-4">Celular</th>
+                                            <th className="py-3 px-4">Límite</th>
+                                            <th className="py-3 px-4">Acumulado</th>
+                                            <th className="py-3 px-4 text-center">Ilimitado</th>
+                                            <th className="py-3 px-4 text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {qrs.map((qr, index) => {
+                                            const isExceeded = !qr.isUnlimited && parseFloat(qr.accumulated_month_sum || 0) >= parseFloat(qr.limitAmount || 0);
+                                            const activeRotationQr = qrs.find(q => q.isActive && (q.isUnlimited || parseFloat(q.accumulated_month_sum || 0) < parseFloat(q.limitAmount || 0)));
+                                            const isVigente = activeRotationQr && activeRotationQr.id === qr.id;
 
-                                                <div className="flex justify-between items-start gap-4 mb-4">
-                                                    <div className="flex items-center gap-3">
+                                            return (
+                                                <tr
+                                                    key={qr.id}
+                                                    className={`hover:bg-blue-50/30 transition-colors ${
+                                                        isVigente ? 'border-l-4 border-l-blue-500' : ''
+                                                    }`}
+                                                >
+                                                    {/* QR foto */}
+                                                    <td className="py-3 px-4">
                                                         {qr.imageUrl ? (
-                                                            <div className="w-14 h-14 bg-slate-900 border border-slate-850 rounded-2xl overflow-hidden shadow-inner shrink-0 group relative cursor-pointer">
-                                                                <img 
-                                                                    src={getMediaUrl(qr.imageUrl)} 
-                                                                    alt={qr.name} 
-                                                                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                                                            <div className="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden shadow-sm cursor-pointer group">
+                                                                <img
+                                                                    src={getMediaUrl(qr.imageUrl)}
+                                                                    alt={qr.name}
+                                                                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                                                 />
                                                             </div>
                                                         ) : (
-                                                            <div className="w-14 h-14 bg-slate-900 border border-slate-850 rounded-2xl flex items-center justify-center text-slate-500 shrink-0 shadow-inner">
-                                                                <QrCode className="w-6 h-6" />
+                                                            <div className="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+                                                                <QrCode className="w-5 h-5" />
                                                             </div>
                                                         )}
-                                                        <div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <h3 className="text-white font-extrabold text-sm">{qr.name}</h3>
-                                                                {isVigente && (
-                                                                    <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-wider rounded-md animate-pulse">
-                                                                        Vigente
-                                                                    </span>
-                                                                )}
-                                                                {isExceeded && (
-                                                                    <span className="px-1.5 py-0.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[9px] font-black uppercase tracking-wider rounded-md">
-                                                                        Límite Superado
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {qr.phoneNumber ? (
-                                                                <div className="flex items-center gap-1 mt-1 text-slate-400 hover:text-white transition-all cursor-pointer" onClick={() => {
+                                                    </td>
+
+                                                    {/* Nombre */}
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-semibold text-gray-800">{qr.name}</span>
+                                                            {isVigente && (
+                                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide rounded-full">
+                                                                    Vigente
+                                                                </span>
+                                                            )}
+                                                            {isExceeded && (
+                                                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wide rounded-full">
+                                                                    Límite Superado
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Celular */}
+                                                    <td className="py-3 px-4">
+                                                        {qr.phoneNumber ? (
+                                                            <div
+                                                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-blue-600 transition-colors"
+                                                                onClick={() => {
                                                                     navigator.clipboard.writeText(qr.phoneNumber);
                                                                     setCopiedId(qr.id);
                                                                     setTimeout(() => setCopiedId(null), 2000);
-                                                                }}>
-                                                                    <span className="font-mono text-xs tracking-wide">{qr.phoneNumber}</span>
-                                                                    {copiedId === qr.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-slate-500 text-xs mt-1 block">Sin celular</span>
+                                                                }}
+                                                            >
+                                                                <span className="font-mono text-sm">{qr.phoneNumber}</span>
+                                                                {copiedId === qr.id
+                                                                    ? <Check className="w-3.5 h-3.5 text-green-500" />
+                                                                    : <Copy className="w-3.5 h-3.5 text-gray-400" />
+                                                                }
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400">—</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Límite */}
+                                                    <td className="py-3 px-4">
+                                                        <span className="text-gray-700 font-mono">
+                                                            {qr.isUnlimited ? '—' : `S/ ${parseFloat(qr.limitAmount || 0).toFixed(2)}`}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* Acumulado */}
+                                                    <td className="py-3 px-4">
+                                                        <div>
+                                                            <span className={`font-bold font-mono text-sm ${
+                                                                isExceeded ? 'text-red-600' : 'text-blue-600'
+                                                            }`}>
+                                                                S/ {parseFloat(qr.accumulated_month_sum || 0).toFixed(2)}
+                                                            </span>
+                                                            {isVigente && !isExceeded && (
+                                                                <div className="text-[10px] text-green-600 font-semibold uppercase">VIGENTE</div>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                    
-                                                    <button 
-                                                        onClick={() => toggleQrActive(qr)}
-                                                        type="button"
-                                                        className="text-slate-400 hover:text-white transition-colors"
-                                                    >
-                                                        {qr.isActive ? (
-                                                            <ToggleRight className="w-8 h-8 text-emerald-400 fill-emerald-950/20" />
-                                                        ) : (
-                                                            <ToggleLeft className="w-8 h-8 text-slate-600" />
-                                                        )}
-                                                    </button>
-                                                </div>
+                                                    </td>
 
-                                                <div className="bg-slate-900/60 border border-slate-850 rounded-2xl p-3.5 mb-4">
-                                                    <div className="flex justify-between items-center text-xs mb-2">
-                                                        <span className="text-slate-400 font-bold">Acumulado Mes:</span>
-                                                        <span className="text-white font-mono font-black text-sm">S/ {parseFloat(qr.accumulated_month_sum || 0).toFixed(2)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs mb-2.5">
-                                                        <span className="text-slate-400 font-bold">Límite Mensual:</span>
-                                                        <span className="text-slate-300 font-mono font-black">
-                                                            {qr.isUnlimited ? 'Ilimitado' : `S/ ${parseFloat(qr.limitAmount).toFixed(2)}`}
-                                                        </span>
-                                                    </div>
-                                                    {!qr.isUnlimited && (
-                                                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden relative">
-                                                            <div 
-                                                                className={`h-full rounded-full transition-all duration-500 
-                                                                    ${isExceeded ? 'bg-gradient-to-r from-rose-500 to-red-500' : 
-                                                                      pct > 80 ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 
-                                                                      'bg-gradient-to-r from-emerald-500 to-teal-500'}`}
-                                                                style={{ width: `${pct}%` }}
-                                                            />
+                                                    {/* Ilimitado */}
+                                                    <td className="py-3 px-4 text-center">
+                                                        {qr.isUnlimited
+                                                            ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">Sí</span>
+                                                            : <span className="text-gray-400">—</span>
+                                                        }
+                                                    </td>
+
+                                                    {/* Acciones */}
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-1 justify-end flex-wrap">
+                                                            {/* Flechas orden */}
+                                                            <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                                                                <button
+                                                                    onClick={() => reorderQr(index, 'up')}
+                                                                    disabled={index === 0}
+                                                                    title="Subir orden"
+                                                                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ArrowUp className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <div className="w-px h-4 bg-gray-200" />
+                                                                <button
+                                                                    onClick={() => reorderQr(index, 'down')}
+                                                                    disabled={index === qrs.length - 1}
+                                                                    title="Bajar orden"
+                                                                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ArrowDown className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* +SALDO */}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedQrForAdjust(qr);
+                                                                    setAdjustmentData({ type: 'income', amount: '', description: '' });
+                                                                    setShowAdjustModal(true);
+                                                                }}
+                                                                className="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-md transition-all"
+                                                            >
+                                                                + SALDO
+                                                            </button>
+
+                                                            {/* -SALDO */}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedQrForAdjust(qr);
+                                                                    setAdjustmentData({ type: 'expense', amount: '', description: '' });
+                                                                    setShowAdjustModal(true);
+                                                                }}
+                                                                className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-md border border-gray-200 transition-all"
+                                                            >
+                                                                - SALDO
+                                                            </button>
+
+                                                            {/* Editar */}
+                                                            <button
+                                                                onClick={() => openQrEdit(qr)}
+                                                                title="Editar"
+                                                                className="w-8 h-8 flex items-center justify-center text-blue-500 hover:text-blue-700 hover:bg-blue-50 border border-gray-200 rounded-md transition-all"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            {/* Eliminar */}
+                                                            <button
+                                                                onClick={() => deleteQr(qr.id)}
+                                                                title="Eliminar"
+                                                                className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-md transition-all"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
                                                         </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex justify-between items-center pt-2 border-t border-slate-900/80 mt-auto">
-                                                    <div className="flex items-center gap-1 border border-slate-850 rounded-xl overflow-hidden bg-slate-900/40 p-0.5">
-                                                        <button 
-                                                            onClick={() => reorderQr(index, 'up')}
-                                                            type="button"
-                                                            disabled={index === 0}
-                                                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 rounded-lg hover:bg-slate-800 transition-all"
-                                                        >
-                                                            <ArrowUp className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => reorderQr(index, 'down')}
-                                                            type="button"
-                                                            disabled={index === qrs.length - 1}
-                                                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 rounded-lg hover:bg-slate-800 transition-all"
-                                                        >
-                                                            <ArrowDown className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => openAdjustBalance(qr)}
-                                                            type="button"
-                                                            className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-850 hover:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            <Sliders className="w-3 h-3" /> Ajustar Saldo
-                                                        </button>
-                                                        <button
-                                                            onClick={() => openQrEdit(qr)}
-                                                            type="button"
-                                                            className="p-2 bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 border border-slate-850 hover:border-slate-700 rounded-xl transition-all"
-                                                            title="Editar Cuenta QR"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteQr(qr.id)}
-                                                            type="button"
-                                                            className="p-2 bg-slate-900 hover:bg-slate-800 text-rose-500 hover:text-rose-400 border border-slate-850 hover:border-slate-700 rounded-xl transition-all"
-                                                            title="Eliminar Cuenta QR"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             )}
                         </div>
+                    )}
 
-
-                        {/* QR Auditor / Movements Section */}
-                        <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl relative animate-in fade-in duration-300">
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-                                <div>
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                        Auditoría de Movimientos QR
-                                    </h2>
-                                    <p className="text-slate-400 text-xs mt-0.5">
-                                        Detalle del flujo financiero (Yape, Plin y ajustes de saldo) del mes seleccionado.
-                                    </p>
-                                </div>
-                                
-                                {/* Filters Bar */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full lg:w-auto">
+                    {/* ── SUB-TAB: MOVIMIENTOS ── */}
+                    {qrSubTab === 'movements' && (
+                        <div className="flex-1 p-6 animate-in fade-in duration-200">
+                            {/* Filtros */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-5 shadow-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mes</label>
-                                        <input 
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Mes</label>
+                                        <input
                                             type="month"
                                             value={movementFilters.month}
                                             onChange={(e) => setMovementFilters(prev => ({ ...prev, month: e.target.value }))}
-                                            className="w-full bg-slate-900 border border-slate-850 hover:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all"
+                                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500 transition-all"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cuenta QR</label>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Cuenta QR</label>
                                         <select
                                             value={movementFilters.qr_id}
                                             onChange={(e) => setMovementFilters(prev => ({ ...prev, qr_id: e.target.value }))}
-                                            className="w-full bg-slate-900 border border-slate-850 hover:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all"
+                                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500"
                                         >
                                             <option value="all">Todas</option>
                                             {qrs.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usuario</label>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Usuario</label>
                                         <select
                                             value={movementFilters.user_id}
                                             onChange={(e) => setMovementFilters(prev => ({ ...prev, user_id: e.target.value }))}
-                                            className="w-full bg-slate-900 border border-slate-850 hover:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all"
+                                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500"
                                         >
                                             <option value="all">Todos</option>
                                             {staffUsers.map(u => <option key={u.id} value={u.id}>{u.displayName}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo</label>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tipo</label>
                                         <select
                                             value={movementFilters.transaction_type}
                                             onChange={(e) => setMovementFilters(prev => ({ ...prev, transaction_type: e.target.value }))}
-                                            className="w-full bg-slate-900 border border-slate-850 hover:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all"
+                                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500"
                                         >
                                             <option value="all">Todos</option>
                                             <option value="yape">Yape</option>
@@ -944,78 +993,546 @@ export default function QrManagement() {
                             </div>
 
                             {movements.length === 0 ? (
-                                <div className="text-center py-10 text-slate-500 border border-slate-850 rounded-2xl">
-                                    <Calendar className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                                    <span className="text-xs">No hay movimientos registrados para este filtro</span>
+                                <div className="text-center py-16 text-gray-400 bg-white border border-gray-200 rounded-xl">
+                                    <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                                    <span className="text-sm">No hay movimientos registrados para este filtro</span>
                                 </div>
                             ) : (
+                                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 font-semibold text-xs uppercase tracking-wider">
+                                                    <th className="py-3 px-4">Fecha</th>
+                                                    <th className="py-3 px-4">Cuenta QR</th>
+                                                    <th className="py-3 px-4">Método / Tipo</th>
+                                                    <th className="py-3 px-4">Cajero / Operador</th>
+                                                    <th className="py-3 px-4">Cliente / Cuenta</th>
+                                                    <th className="py-3 px-4">Detalle / Evidencia</th>
+                                                    <th className="py-3 px-4 text-right">Monto</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {movements.map((m) => {
+                                                    const isAdjustment = m.method === 'qr_adjustment';
+                                                    let isIncome = true;
+                                                    let evidenceText = '';
+                                                    if (isAdjustment) {
+                                                        try {
+                                                            const adjData = JSON.parse(m.evidence);
+                                                            isIncome = adjData.type === 'income';
+                                                            evidenceText = adjData.description;
+                                                        } catch (e) { evidenceText = 'Ajuste'; }
+                                                    }
+                                                    return (
+                                                        <tr key={m.id} className="hover:bg-blue-50/20 transition-colors">
+                                                            <td className="py-3 px-4 text-gray-500 font-mono text-xs">{new Date(m.createdAt).toLocaleString()}</td>
+                                                            <td className="py-3 px-4 font-semibold text-gray-800">{m.QrAccount?.name || 'Sistema'}</td>
+                                                            <td className="py-3 px-4">
+                                                                {isAdjustment ? (
+                                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                                                                        isIncome ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                                                                    }`}>
+                                                                        {isIncome ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                                                                        Ajuste
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold uppercase">
+                                                                        {m.method || 'Pago'}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-gray-500">{m.User?.displayName || 'Autoservicio'}</td>
+                                                            <td className="py-3 px-4 font-semibold text-gray-800">
+                                                                {m.Account?.customerName
+                                                                    ? <span>Cuenta #{m.Account.id} - {m.Account.customerName}</span>
+                                                                    : <span className="text-gray-400">—</span>
+                                                                }
+                                                            </td>
+                                                            <td className="py-3 px-4 text-gray-400 max-w-xs truncate text-xs" title={evidenceText}>
+                                                                {isAdjustment ? evidenceText : 'Asignación automática por cobro'}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-bold font-mono">
+                                                                <span className={isAdjustment ? (isIncome ? 'text-green-600' : 'text-red-500') : 'text-gray-800'}>
+                                                                    {isAdjustment && !isIncome ? '-' : ''}S/ {parseFloat(m.amount).toFixed(2)}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'ads' && (
+                <div className="flex flex-col flex-1 animate-in fade-in duration-200">
+
+                    {/* ── VISTA: LISTA DE GRUPOS ── */}
+                    {adsView === 'groups' && (
+                        <>
+                            {/* Subheader */}
+                            <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                <div>
+                                    <h2 className="text-base font-bold text-gray-800">Panel de Publicidad (Grupos)</h2>
+                                    <p className="text-gray-400 text-xs mt-0.5">Organiza tu publicidad en categorías o grupos</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <a href="/qr-display" target="_blank" rel="noreferrer"
+                                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-semibold transition-colors">
+                                        <Eye className="w-4 h-4" />
+                                        La proyección de la pantalla del cliente está <span className="underline">AQUÍ</span>
+                                    </a>
+                                    <button
+                                        onClick={openGroupCreate}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-semibold"
+                                    >
+                                        <Plus className="w-4 h-4" /> Nuevo Grupo
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Groups grid */}
+                            <div className="p-6">
+                                {promoGroups.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-center bg-white border border-gray-200 rounded-xl">
+                                        <Image className="w-12 h-12 text-gray-300 mb-3" />
+                                        <h3 className="text-gray-700 font-semibold text-base">No hay grupos creados</h3>
+                                        <p className="text-gray-400 text-sm mt-1">Crea un grupo para empezar a subir banners publicitarios.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        {promoGroups.map((group, index) => {
+                                            const slides = group.Images || [];
+                                            const currentIdx = slideIndexMap[group.id] || 0;
+                                            const currentSlide = slides[currentIdx];
+                                            const isVideo = currentSlide?.imageUrl?.toLowerCase()?.match(/\.(mp4|webm|ogg)$/);
+
+                                            return (
+                                                <div key={group.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                                    {/* Card header */}
+                                                    <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-bold text-gray-800 text-sm truncate">{group.name}</h3>
+                                                            <p className="text-gray-400 text-xs mt-0.5">{slides.length} imagen{slides.length !== 1 ? 'es' : ''} cargada{slides.length !== 1 ? 's' : ''}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            {/* Order arrows */}
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); reorderGroup(index, 'prev'); }}
+                                                                disabled={index === 0}
+                                                                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-blue-600 border border-gray-200 rounded disabled:opacity-30 transition-all"
+                                                            >
+                                                                <ChevronDown className="w-3.5 h-3.5 rotate-90" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); reorderGroup(index, 'next'); }}
+                                                                disabled={index === promoGroups.length - 1}
+                                                                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-blue-600 border border-gray-200 rounded disabled:opacity-30 transition-all"
+                                                            >
+                                                                <ChevronRight className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            {/* Active badge toggle */}
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); toggleGroupActive(group); }}
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${
+                                                                    group.isActive
+                                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                }`}
+                                                            >
+                                                                {group.isActive ? 'Activo' : 'Inactivo'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Image preview */}
+                                                    <div className="relative bg-gray-900 aspect-video mx-4 mt-1 rounded-lg overflow-hidden border border-gray-200">
+                                                        {slides.length === 0 ? (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                                                                <Image className="w-8 h-8 text-gray-600" />
+                                                            </div>
+                                                        ) : isVideo ? (
+                                                            <div className="w-full h-full flex items-center justify-center text-blue-400 text-xs font-bold bg-blue-950/30">
+                                                                ▶ Video
+                                                            </div>
+                                                        ) : (
+                                                            <img
+                                                                src={getMediaUrl(currentSlide?.imageUrl)}
+                                                                alt={currentSlide?.name}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        )}
+                                                        {/* Slide nav dots */}
+                                                        {slides.length > 1 && (
+                                                            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                                                                {slides.map((_, i) => (
+                                                                    <button
+                                                                        key={i}
+                                                                        onClick={() => setSlideIndexMap(prev => ({ ...prev, [group.id]: i }))}
+                                                                        className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? 'bg-white' : 'bg-white/40'}`}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {/* Prev/Next arrows on hover */}
+                                                        {slides.length > 1 && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => setSlideIndexMap(prev => ({ ...prev, [group.id]: currentIdx > 0 ? currentIdx - 1 : slides.length - 1 }))}
+                                                                    className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all"
+                                                                >
+                                                                    <ChevronDown className="w-3.5 h-3.5 rotate-90" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setSlideIndexMap(prev => ({ ...prev, [group.id]: currentIdx < slides.length - 1 ? currentIdx + 1 : 0 }))}
+                                                                    className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all"
+                                                                >
+                                                                    <ChevronRight className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Proyectar button */}
+                                                    <div className="px-4 pt-3">
+                                                        <button
+                                                            onClick={() => { if (currentSlide) projectMedia(currentSlide, 5); }}
+                                                            disabled={!currentSlide}
+                                                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                                                        >
+                                                            <Play className="w-4 h-4 fill-white" />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Card footer actions */}
+                                                    <div className="px-4 pt-2 pb-3 flex items-center justify-between">
+                                                        {/* Manage images */}
+                                                        <button
+                                                            onClick={() => { setSelectedGroupId(group.id); setAdsView('slides'); }}
+                                                            className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-all"
+                                                            title="Gestionar imágenes"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                            {/* Upload images */}
+                                                            <button
+                                                                onClick={() => { setSelectedGroupId(group.id); openSlideUpload(); }}
+                                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                                                title="Subir imágenes"
+                                                            >
+                                                                <Image className="w-4 h-4" />
+                                                            </button>
+                                                            {/* Delete group */}
+                                                            <button
+                                                                onClick={() => deleteGroup(group.id)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                                title="Eliminar grupo"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* ── VISTA: GESTIÓN DE IMÁGENES DE UN GRUPO ── */}
+                    {adsView === 'slides' && (() => {
+                        const group = promoGroups.find(g => g.id === selectedGroupId);
+                        const slides = group?.Images || [];
+                        return (
+                            <>
+                                {/* Subheader */}
+                                <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => setAdsView('groups')}
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-all"
+                                        >
+                                            <ChevronDown className="w-4 h-4 rotate-90" />
+                                        </button>
+                                        <div>
+                                            <h2 className="text-base font-bold text-gray-800">Grupo: {group?.name}</h2>
+                                            <p className="text-gray-400 text-xs mt-0.5">Gestiona las imágenes de este grupo</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <a href="/qr-display" target="_blank" rel="noreferrer"
+                                            className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-semibold transition-colors">
+                                            <Eye className="w-4 h-4" />
+                                            La proyección de la pantalla del cliente está <span className="underline">AQUÍ</span>
+                                        </a>
+                                        <button
+                                            onClick={openSlideUpload}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-semibold"
+                                        >
+                                            <Plus className="w-4 h-4" /> Nueva Imagen/Video
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Slides grid */}
+                                <div className="p-6">
+                                    {slides.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-20 text-center bg-white border border-gray-200 rounded-xl">
+                                            <Image className="w-12 h-12 text-gray-300 mb-3" />
+                                            <h3 className="text-gray-700 font-semibold">Este grupo no tiene imágenes</h3>
+                                            <p className="text-gray-400 text-sm mt-1">Sube imágenes o videos para empezar.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                            {slides.map((slide, slideIdx) => {
+                                                const isVid = slide.imageUrl?.toLowerCase()?.match(/\.(mp4|webm|ogg)$/);
+                                                return (
+                                                    <div key={slide.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                                        {/* Image preview */}
+                                                        <div className="relative bg-gray-900 aspect-video">
+                                                            {isVid ? (
+                                                                <div className="w-full h-full flex items-center justify-center text-blue-400 font-bold text-sm">▶ Video</div>
+                                                            ) : (
+                                                                <img src={getMediaUrl(slide.imageUrl)} alt={slide.name} className="w-full h-full object-cover" />
+                                                            )}
+                                                            {/* Slide prev/next order */}
+                                                            <div className="absolute bottom-2 right-2 flex gap-1">
+                                                                <button
+                                                                    onClick={() => {/* reorder slide prev */}}
+                                                                    disabled={slideIdx === 0}
+                                                                    className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ChevronDown className="w-3 h-3 rotate-90" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {/* reorder slide next */}}
+                                                                    disabled={slideIdx === slides.length - 1}
+                                                                    className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ChevronRight className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Footer */}
+                                                        <div className="px-3 py-2 flex items-center justify-between">
+                                                            <button
+                                                                onClick={() => toggleSlideActive(slide)}
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${
+                                                                    slide.isActive
+                                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                }`}
+                                                            >
+                                                                {slide.isActive ? 'Activa' : 'Inactiva'}
+                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => projectMedia(slide, 5)}
+                                                                    title="Proyectar 5 min"
+                                                                    className="w-7 h-7 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded transition-all"
+                                                                >
+                                                                    <Play className="w-3.5 h-3.5 fill-white" />
+                                                                </button>
+                                                                <button
+                                                                    title="Editar"
+                                                                    className="w-7 h-7 flex items-center justify-center text-blue-500 hover:text-blue-700 hover:bg-blue-50 border border-gray-200 rounded transition-all"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => deleteSlide(slide.id)}
+                                                                    title="Eliminar"
+                                                                    className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded transition-all"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        );
+                    })()}
+
+                    {/* Active projection banner */}
+                    {activeProjection && (
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 bg-blue-700 text-white rounded-2xl shadow-2xl border border-blue-500 animate-in slide-in-from-bottom duration-300">
+                            <div className="flex items-center gap-2">
+                                <Tv className="w-4 h-4 animate-pulse" />
+                                <span className="font-bold text-sm">Proyectando: {activeProjection.promoName}</span>
+                            </div>
+                            <button
+                                onClick={stopProjection}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-all"
+                            >
+                                <Square className="w-3 h-3 fill-white" /> Detener
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'roulette' && (
+                <div className="flex flex-col flex-1 animate-in fade-in duration-200">
+                    {/* Subheader / Action Bar */}
+                    <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div>
+                            <h2 className="text-base font-bold text-gray-800">Premios y Lealtad</h2>
+                            <p className="text-gray-400 text-xs mt-0.5">Configura las reglas de recompensa de la ruleta para incentivar a los clientes.</p>
+                        </div>
+                        <button
+                            onClick={saveRouletteConfig}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-bold"
+                        >
+                            <Save className="w-4 h-4" /> Guardar Cambios
+                        </button>
+                    </div>
+
+                    <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* LEFT COLUMN: Configuration */}
+                        <div className="lg:col-span-8 space-y-6">
+                            {/* Card 1: Reglas Generales */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                                <h3 className="text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-gray-150">Reglas Generales</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="flex flex-col">
+                                        <label className="text-xs font-bold text-gray-700 mb-1.5">Estado de la Función</label>
+                                        <p className="text-[11px] text-gray-400 mb-2">Habilita o deshabilita la ruleta en la pantalla del cliente.</p>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRouletteConfigChange('is_active', !rouletteConfig.is_active)}
+                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                                                    rouletteConfig.is_active
+                                                        ? 'bg-green-55 text-green-700 border-green-200'
+                                                        : 'bg-gray-50 text-gray-500 border-gray-200'
+                                                }`}
+                                            >
+                                                <span className={`w-2.5 h-2.5 rounded-full ${rouletteConfig.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                                {rouletteConfig.is_active ? 'Activo' : 'Apagado'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-700 mb-1.5 block">Pagos Calificados Requeridos (X)</label>
+                                        <p className="text-[11px] text-gray-400 mb-2">Cantidad de pagos con Yape/Plin exitosos para habilitar el giro de ruleta.</p>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={rouletteConfig.visits_required || 1}
+                                            onChange={(e) => handleRouletteConfigChange('visits_required', parseInt(e.target.value) || 1)}
+                                            className="w-full sm:w-48 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-semibold"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Opciones / Premios */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-150">
+                                    <h3 className="text-sm font-bold text-gray-800">Opciones / Premios ({rouletteConfig.categories?.length || 0})</h3>
+                                    <button
+                                        onClick={addRouletteCategory}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-55 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg text-xs font-bold transition-all"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" /> AÑADIR PREMIO
+                                    </button>
+                                </div>
+
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-xs border-collapse">
                                         <thead>
-                                            <tr className="border-b border-slate-850 text-slate-400 font-bold bg-slate-950/20">
-                                                <th className="py-3 px-4">Fecha</th>
-                                                <th className="py-3 px-4">Cuenta QR</th>
-                                                <th className="py-3 px-4">Método / Tipo</th>
-                                                <th className="py-3 px-4">Cajero / Operador</th>
-                                                <th className="py-3 px-4">Cliente / Cuenta</th>
-                                                <th className="py-3 px-4">Detalle / Evidencia</th>
-                                                <th className="py-3 px-4 text-right">Monto</th>
+                                            <tr className="text-gray-400 font-bold uppercase text-[10px] tracking-wider border-b border-gray-150">
+                                                <th className="pb-3 w-16 text-center">Icono</th>
+                                                <th className="pb-3 px-3">Premio</th>
+                                                <th className="pb-3 px-3 w-28">Peso</th>
+                                                <th className="pb-3 px-3 w-16 text-right">% Real</th>
+                                                <th className="pb-3 w-24 text-right">Acciones</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-850/60">
-                                            {movements.map((m) => {
-                                                const isAdjustment = m.method === 'qr_adjustment';
-                                                let isIncome = true;
-                                                let evidenceText = '';
-                                                
-                                                if (isAdjustment) {
-                                                    try {
-                                                        const adjData = JSON.parse(m.evidence);
-                                                        isIncome = adjData.type === 'income';
-                                                        evidenceText = adjData.description;
-                                                    } catch (e) {
-                                                        evidenceText = 'Ajuste';
-                                                    }
-                                                }
-
+                                        <tbody className="divide-y divide-gray-100">
+                                            {rouletteConfig.categories?.map((cat, idx) => {
+                                                const percentage = ((cat.weight || 0) / totalWeights) * 100;
                                                 return (
-                                                    <tr key={m.id} className="hover:bg-slate-900/40 transition-colors">
-                                                        <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
-                                                            {new Date(m.createdAt).toLocaleString()}
+                                                    <tr key={cat.id} className="hover:bg-gray-50/50">
+                                                        <td className="py-2.5">
+                                                            <input
+                                                                type="text"
+                                                                value={cat.icon}
+                                                                onChange={(e) => handleCategoryFieldChange(idx, 'icon', e.target.value)}
+                                                                className="w-12 mx-auto bg-white border border-gray-300 rounded-lg px-1.5 py-1 text-sm text-center text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
+                                                            />
                                                         </td>
-                                                        <td className="py-3 px-4 font-bold text-white">
-                                                            {m.QrAccount?.name || 'Sistema'}
+                                                        <td className="py-2.5 px-3">
+                                                            <input
+                                                                type="text"
+                                                                value={cat.name}
+                                                                onChange={(e) => handleCategoryFieldChange(idx, 'name', e.target.value)}
+                                                                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
+                                                            />
                                                         </td>
-                                                        <td className="py-3 px-4">
-                                                            {isAdjustment ? (
-                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider
-                                                                    ${isIncome ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-400'}`}>
-                                                                    {isIncome ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-                                                                    Ajuste
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex items-center px-2 py-0.5 bg-sky-950 text-sky-400 rounded text-[10px] font-black uppercase tracking-wider">
-                                                                    {m.method || 'Pago'}
-                                                                </span>
-                                                            )}
+                                                        <td className="py-2.5 px-3">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={cat.weight || 0}
+                                                                onChange={(e) => handleCategoryWeightChange(idx, e.target.value)}
+                                                                className="w-20 bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm text-center text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
+                                                            />
                                                         </td>
-                                                        <td className="py-3 px-4 text-slate-400">
-                                                            {m.User?.displayName || 'Autoservicio'}
+                                                        <td className="py-2.5 px-3 text-right font-mono font-bold text-gray-600">
+                                                            {percentage.toFixed(0)}%
                                                         </td>
-                                                        <td className="py-3 px-4 font-bold text-white">
-                                                            {m.Account?.customerName ? (
-                                                                <span>Cuenta #{m.Account.id} - {m.Account.customerName}</span>
-                                                            ) : (
-                                                                <span className="text-slate-500">—</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-slate-400 max-w-xs truncate" title={evidenceText}>
-                                                            {isAdjustment ? evidenceText : 'Asignación automática por cobro'}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-right font-black">
-                                                            <span className={isAdjustment ? (isIncome ? 'text-emerald-400' : 'text-rose-400') : 'text-white'}>
-                                                                {isAdjustment && !isIncome ? '-' : ''}S/ {parseFloat(m.amount).toFixed(2)}
-                                                            </span>
+                                                        <td className="py-2.5 text-right">
+                                                            <div className="flex justify-end gap-1">
+                                                                <button
+                                                                    disabled={idx === 0}
+                                                                    onClick={() => {
+                                                                        const updated = [...rouletteConfig.categories];
+                                                                        const temp = updated[idx];
+                                                                        updated[idx] = updated[idx - 1];
+                                                                        updated[idx - 1] = temp;
+                                                                        handleRouletteConfigChange('categories', updated);
+                                                                    }}
+                                                                    className="w-6 h-6 flex items-center justify-center border border-gray-200 text-gray-400 hover:text-blue-600 rounded disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                                                                </button>
+                                                                <button
+                                                                    disabled={idx === rouletteConfig.categories.length - 1}
+                                                                    onClick={() => {
+                                                                        const updated = [...rouletteConfig.categories];
+                                                                        const temp = updated[idx];
+                                                                        updated[idx] = updated[idx + 1];
+                                                                        updated[idx + 1] = temp;
+                                                                        handleRouletteConfigChange('categories', updated);
+                                                                    }}
+                                                                    className="w-6 h-6 flex items-center justify-center border border-gray-200 text-gray-400 hover:text-blue-600 rounded disabled:opacity-30 transition-all"
+                                                                >
+                                                                    <ChevronDown className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => removeRouletteCategory(idx)}
+                                                                    className="w-6 h-6 flex items-center justify-center border border-gray-200 text-gray-400 hover:text-red-550 hover:bg-red-50 rounded transition-all"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -1023,493 +1540,120 @@ export default function QrManagement() {
                                         </tbody>
                                     </table>
                                 </div>
-                            )}
-                        </div>
-
-                </div>
-            )}
-
-            {activeTab === 'ads' && (
-                <div className="space-y-8 animate-in fade-in duration-300">
-                    {/* Active Projection Status Indicator */}
-                    {activeProjection && (
-                        <div className="bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border border-emerald-500/30 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl animate-pulse">
-                                    <Tv className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <div className="text-[10px] text-emerald-400 font-black uppercase tracking-widest animate-pulse">PROYECCIÓN MANUAL ACTIVA</div>
-                                    <h3 className="text-white font-bold text-lg mt-0.5">{activeProjection.promoName}</h3>
-                                    <p className="text-slate-400 text-xs mt-0.5">Se está proyectando este elemento en la pantalla del cliente.</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={stopProjection}
-                                className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow-md shadow-rose-600/10 transition-all shrink-0 animate-pulse"
-                            >
-                                <Square className="w-4 h-4 fill-white" /> Detener Proyección
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Banner Groups and Slides configuration */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        
-                        {/* LEFT COLUMN: Groups List */}
-                        <div className="lg:col-span-4 bg-slate-950/40 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col h-[550px] relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-emerald-500"></div>
-                            <div className="flex justify-between items-center mb-4 shrink-0">
-                                <h3 className="font-bold text-white text-base">Grupos Publicitarios</h3>
-                                <button
-                                    onClick={openGroupCreate}
-                                    className="p-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 rounded-lg transition-all"
-                                    title="Nuevo Grupo"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            {promoGroups.length === 0 ? (
-                                <div className="text-center py-20 text-slate-600 flex-1 flex flex-col justify-center items-center">
-                                    <List className="w-8 h-8 mb-2" />
-                                    <span className="text-xs">No hay grupos creados</span>
-                                </div>
-                            ) : (
-                                <div className="overflow-y-auto space-y-2 flex-1 pr-1">
-                                    {promoGroups.map((g) => (
-                                        <div
-                                            key={g.id}
-                                            onClick={() => setSelectedGroupId(g.id)}
-                                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3
-                                                ${selectedGroupId === g.id 
-                                                    ? 'bg-slate-900 border-emerald-500/50 shadow-md shadow-emerald-500/5' 
-                                                    : 'bg-slate-900/30 border-slate-850 hover:bg-slate-900/40 hover:border-slate-800'}`}
-                                        >
-                                            <div className="min-w-0 flex-1">
-                                                <div className="font-bold text-white text-xs truncate">{g.name}</div>
-                                                <div className="text-[10px] text-slate-500 mt-0.5">
-                                                    Banners: {g.Images?.length || 0} • {g.isActive ? 'Activo' : 'Inactivo'}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                                                <button
-                                                    onClick={() => openGroupEdit(g)}
-                                                    className="p-1 hover:bg-slate-800 text-blue-400 hover:text-blue-300 rounded"
-                                                >
-                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => deleteGroup(g.id)}
-                                                    className="p-1 hover:bg-slate-800 text-rose-500 hover:text-rose-400 rounded"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* RIGHT COLUMN: Slides Grid of Selected Group */}
-                        <div className="lg:col-span-8 bg-slate-950/40 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col h-[550px] relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
-                            
-                            {/* Selected Group Header */}
-                            {selectedGroupId ? (
-                                <>
-                                    {(() => {
-                                        const group = promoGroups.find(g => g.id === selectedGroupId);
-                                        if (!group) return null;
-                                        return (
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 shrink-0 pb-3 border-b border-slate-850">
-                                                <div>
-                                                    <h3 className="font-bold text-white text-base">
-                                                        Diapositivas en "{group.name}"
-                                                    </h3>
-                                                    <p className="text-slate-500 text-[11px] mt-0.5">
-                                                        Sube y administra los banners publicitarios que rotan en este canal.
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={openSlideUpload}
-                                                    className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md transition-all"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5" /> Subir Banners / Videos
-                                                </button>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Slides Grid */}
-                                    {(() => {
-                                        const group = promoGroups.find(g => g.id === selectedGroupId);
-                                        const slides = group?.Images || [];
-
-                                        if (slides.length === 0) {
-                                            return (
-                                                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-20 text-center">
-                                                    <Image className="w-12 h-12 text-slate-700 mb-2" />
-                                                    <span className="text-xs font-bold text-slate-400">Este grupo no tiene banners</span>
-                                                    <span className="text-[10px] text-slate-500 mt-0.5">Suba imágenes (.jpg, .png) o videos (.mp4) para empezar.</span>
-                                                </div>
-                                            );
-                                        }
-
-                                        return (
-                                            <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                {slides.map((slide) => {
-                                                    const isVideo = slide.imageUrl?.toLowerCase()?.match(/\.(mp4|webm|ogg)$/);
-                                                    return (
-                                                        <div 
-                                                            key={slide.id}
-                                                            className={`bg-slate-900 border rounded-2xl overflow-hidden flex flex-col group relative
-                                                                ${slide.isActive ? 'border-slate-800 hover:border-emerald-500/40' : 'border-slate-850/40 opacity-50'}`}
-                                                        >
-                                                            {/* Media preview */}
-                                                            <div className="aspect-[16/10] w-full bg-slate-950 relative overflow-hidden flex items-center justify-center border-b border-slate-850">
-                                                                {isVideo ? (
-                                                                    <div className="w-full h-full flex items-center justify-center text-xs text-sky-400 font-mono font-bold bg-sky-950/20">
-                                                                        [Video - MP4]
-                                                                    </div>
-                                                                ) : (
-                                                                    <img 
-                                                                        src={getMediaUrl(slide.imageUrl)} 
-                                                                        alt={slide.name} 
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                )}
-                                                                
-                                                                {/* Floating hover overlays for remote projection */}
-                                                                <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-1.5 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <span className="text-[10px] font-black tracking-widest text-slate-400 mb-1 uppercase">Proyectar</span>
-                                                                    <button 
-                                                                        onClick={() => projectMedia(slide, 2)}
-                                                                        className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-[10px] text-emerald-400 border border-slate-800 hover:border-emerald-800 rounded font-bold"
-                                                                    >
-                                                                        2 Minutos
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => projectMedia(slide, 5)}
-                                                                        className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-[10px] text-emerald-400 border border-slate-800 hover:border-emerald-800 rounded font-bold"
-                                                                    >
-                                                                        5 Minutos
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Info footer */}
-                                                            <div className="p-3 flex-1 flex flex-col justify-between">
-                                                                <div className="text-[11px] font-bold text-white truncate" title={slide.name}>
-                                                                    {slide.name}
-                                                                </div>
-
-                                                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-850/60">
-                                                                    <button
-                                                                        onClick={() => toggleSlideActive(slide)}
-                                                                        className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded
-                                                                            ${slide.isActive ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/60' : 'bg-slate-800 text-slate-400 border border-slate-750'}`}
-                                                                    >
-                                                                        {slide.isActive ? 'Activo' : 'Inactivo'}
-                                                                    </button>
-                                                                    
-                                                                    <button
-                                                                        onClick={() => deleteSlide(slide.id)}
-                                                                        className="p-1 hover:bg-slate-800 text-rose-500 rounded"
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })()}
-                                </>
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center">
-                                    <List className="w-12 h-12 text-slate-700 mb-2 animate-bounce" />
-                                    <span className="text-xs">Seleccione un grupo a la izquierda para administrar diapositivas</span>
-                                </div>
-                            )}
-
-                        </div>
-                    </div>
-
-                </div>
-            )}
-
-            {activeTab === 'roulette' && (
-                <div className="space-y-8 animate-in fade-in duration-300">
-                    {/* Ruleta de Premios Settings */}
-                    <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-yellow-400"></div>
-                        <div className="w-full flex items-center justify-between text-left pb-6 border-b border-slate-850">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl">
-                                    <Gamepad className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-bold text-base flex items-center gap-2">
-                                        Ruleta de Premios Interactiva
-                                    </h3>
-                                    <p className="text-slate-400 text-[11px] mt-0.5">
-                                        Administra los premios de lealtad, iconos y peso de probabilidad que se muestran al cliente.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                            <div className="mt-8 pt-6 border-t border-slate-850 animate-in slide-in-from-top-4 duration-300">
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-300">
-                    
-                    {/* LEFT COLUMN: Categories Editor */}
-                    <div className="lg:col-span-8 bg-slate-950/40 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden flex flex-col">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-yellow-400"></div>
-                        
-                        <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-850">
-                            <div>
-                                <h3 className="font-bold text-white text-base">Configuración de Ruleta</h3>
-                                <p className="text-slate-500 text-[11px] mt-0.5">
-                                    Defina los premios de lealtad, iconos/emojis y el peso de probabilidad de salida.
+                                <p className="text-[10px] text-gray-400 mt-4 leading-relaxed">
+                                    * El peso de probabilidad es relativo. Un peso de 10 comparado con uno de 1 significa que tiene 10 veces más alcance de salir sorteado en el sistema.
                                 </p>
                             </div>
-                            
-                            <div className="flex items-center gap-3">
-                                {/* Toggle active switch */}
-                                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-850 px-2.5 py-1.5 rounded-xl">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Estado:</span>
-                                    <button 
-                                        onClick={() => handleRouletteConfigChange('is_active', !rouletteConfig.is_active)}
-                                        className={`p-0.5 rounded-lg text-xs font-bold transition-all
-                                            ${rouletteConfig.is_active ? 'text-emerald-400' : 'text-slate-500'}`}
-                                    >
-                                        {rouletteConfig.is_active ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
-                        {/* Config sliders */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">Pagos Calificados Requeridos</label>
-                                <input 
-                                    type="number"
-                                    min="1"
-                                    value={rouletteConfig.visits_required || 1}
-                                    onChange={(e) => handleRouletteConfigChange('visits_required', parseInt(e.target.value) || 1)}
-                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                                />
-                                <span className="text-[10px] text-slate-500 mt-1 block">Cada cuántos pagos con Yape/Plin exitosos se proyecta la ruleta.</span>
-                            </div>
-                        </div>
+                        {/* RIGHT COLUMN: Simulator & Live Logs */}
+                        <div className="lg:col-span-4 space-y-6">
+                            {/* Card 3: Vista Previa de Ruleta */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col items-center">
+                                <h3 className="text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-gray-150 w-full text-center">Vista Previa de Ruleta</h3>
 
-                        {/* Table of categories */}
-                        <div className="flex-1 overflow-y-auto mb-6 max-h-[300px]">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr className="border-b border-slate-850 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                                        <th className="py-2.5 px-3">Premio / Categoría</th>
-                                        <th className="py-2.5 px-3 w-16 text-center">Icono</th>
-                                        <th className="py-2.5 px-3 w-40">Probabilidad (Peso)</th>
-                                        <th className="py-2.5 px-3 text-right">% Real</th>
-                                        <th className="py-2.5 px-3 w-12 text-right"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-850/60">
-                                    {rouletteConfig.categories?.map((cat, idx) => {
-                                        const percentage = ((cat.weight || 0) / totalWeights) * 100;
-                                        return (
-                                            <tr key={cat.id} className="hover:bg-slate-900/40">
-                                                <td className="py-2.5 px-3">
-                                                    <input 
-                                                        type="text"
-                                                        value={cat.name}
-                                                        onChange={(e) => handleCategoryFieldChange(idx, 'name', e.target.value)}
-                                                        className="w-full bg-slate-900 border border-slate-850 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold"
-                                                    />
-                                                </td>
-                                                <td className="py-2.5 px-3">
-                                                    <input 
-                                                        type="text"
-                                                        value={cat.icon}
-                                                        onChange={(e) => handleCategoryFieldChange(idx, 'icon', e.target.value)}
-                                                        className="w-full bg-slate-900 border border-slate-850 rounded-lg px-2 py-1.5 text-xs text-center text-white focus:outline-none focus:border-emerald-500 text-lg"
-                                                    />
-                                                </td>
-                                                <td className="py-2.5 px-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <input 
-                                                            type="range"
-                                                            min="1"
-                                                            max="100"
-                                                            value={cat.weight || 0}
-                                                            onChange={(e) => handleCategoryWeightChange(idx, e.target.value)}
-                                                            className="flex-1 accent-emerald-500"
+                                {rouletteConfig.categories?.length > 0 ? (
+                                    <div className="relative w-44 h-44 rounded-full border-4 border-gray-200 shadow-lg overflow-hidden flex items-center justify-center my-4">
+                                        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                            {(() => {
+                                                let currentAngle = 0;
+                                                // Palette layout matching Mak Suites preview
+                                                const colors = ["#047857", "#d97706", "#ffffff", "#065f46", "#f59e0b", "#f8fafc"];
+                                                return rouletteConfig.categories.map((cat, idx) => {
+                                                    const portion = (cat.weight || 0) / totalWeights;
+                                                    const angle = portion * 360;
+
+                                                    // SVG coordinate math
+                                                    const radStart = (currentAngle * Math.PI) / 180;
+                                                    const radEnd = ((currentAngle + angle) * Math.PI) / 180;
+
+                                                    const x1 = 50 + 50 * Math.cos(radStart);
+                                                    const y1 = 50 + 50 * Math.sin(radStart);
+                                                    const x2 = 50 + 50 * Math.cos(radEnd);
+                                                    const y2 = 50 + 50 * Math.sin(radEnd);
+
+                                                    const largeArcFlag = angle > 180 ? 1 : 0;
+                                                    const pathData = `M 50,50 L ${x1},${y1} A 50,50 0 ${largeArcFlag} 1 ${x2},${y2} Z`;
+
+                                                    currentAngle += angle;
+
+                                                    return (
+                                                        <path
+                                                            key={cat.id}
+                                                            d={pathData}
+                                                            fill={colors[idx % colors.length]}
+                                                            stroke="#cbd5e1"
+                                                            strokeWidth="0.5"
                                                         />
-                                                        <input 
-                                                            type="number"
-                                                            value={cat.weight || 0}
-                                                            onChange={(e) => handleCategoryWeightChange(idx, e.target.value)}
-                                                            className="w-12 bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-center text-xs focus:outline-none"
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td className="py-2.5 px-3 text-right font-mono font-bold text-white">
-                                                    {percentage.toFixed(1)}%
-                                                </td>
-                                                <td className="py-2.5 px-3 text-right">
-                                                    <button
-                                                        onClick={() => removeRouletteCategory(idx)}
-                                                        className="p-1 text-slate-500 hover:text-rose-500 rounded transition-all"
-                                                        title="Eliminar Premio"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                    );
+                                                });
+                                            })()}
+                                        </svg>
+                                        <div className="absolute w-8 h-8 rounded-full bg-white border border-gray-300 shadow-md flex items-center justify-center">
+                                            <div className="w-3.5 h-3.5 bg-blue-600 rounded-full animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-12 text-gray-400 text-xs text-center">
+                                        Agrega opciones para ver la ruleta
+                                    </div>
+                                )}
 
-                        <div className="flex justify-between items-center shrink-0 border-t border-slate-850 pt-4">
-                            <button
-                                onClick={addRouletteCategory}
-                                className="flex items-center gap-1 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white border border-slate-800 rounded-xl text-xs font-bold"
-                            >
-                                <Plus className="w-4 h-4 text-amber-400" /> Añadir Premio
-                            </button>
-                            <button
-                                onClick={saveRouletteConfig}
-                                className="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md"
-                            >
-                                <Save className="w-4 h-4" /> Guardar Configuración
-                            </button>
-                        </div>
+                                {/* Simulation controls */}
+                                <div className="w-full border-t border-gray-150 pt-4 mt-2 space-y-3">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Forzar Ganador Simulado</label>
+                                        <select
+                                            value={selectedWinnerId}
+                                            onChange={(e) => setSelectedWinnerId(e.target.value)}
+                                            className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-1"
+                                        >
+                                            <option value="random">Aleatorio (Pesos)</option>
+                                            {rouletteConfig.categories?.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                    </div>
-
-                    {/* RIGHT COLUMN: Wheel Simulator */}
-                    <div className="lg:col-span-4 space-y-6">
-                        
-                        {/* Wheel Preview SVG */}
-                        <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
-                            <h3 className="font-bold text-white text-sm mb-4">Vista Previa de Ruleta</h3>
-                            
-                            {rouletteConfig.categories?.length > 0 ? (
-                                <div className="relative w-48 h-48 rounded-full border-4 border-slate-700 shadow-2xl overflow-hidden flex items-center justify-center">
-                                    <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                                        {(() => {
-                                            let currentAngle = 0;
-                                            const colors = ["#064E3B", "#D97706", "#F8FAFC", "#065F46", "#F59E0B", "#F1F5F9"];
-                                            return rouletteConfig.categories.map((cat, idx) => {
-                                                const portion = (cat.weight || 0) / totalWeights;
-                                                const angle = portion * 360;
-                                                
-                                                // SVG Slice coordinate math
-                                                const radStart = (currentAngle * Math.PI) / 180;
-                                                const radEnd = ((currentAngle + angle) * Math.PI) / 180;
-                                                
-                                                const x1 = 50 + 50 * Math.cos(radStart);
-                                                const y1 = 50 + 50 * Math.sin(radStart);
-                                                const x2 = 50 + 50 * Math.cos(radEnd);
-                                                const y2 = 50 + 50 * Math.sin(radEnd);
-                                                
-                                                const largeArcFlag = angle > 180 ? 1 : 0;
-                                                const pathData = `M 50,50 L ${x1},${y1} A 50,50 0 ${largeArcFlag} 1 ${x2},${y2} Z`;
-                                                
-                                                currentAngle += angle;
-                                                
-                                                return (
-                                                    <path 
-                                                        key={cat.id} 
-                                                        d={pathData} 
-                                                        fill={colors[idx % colors.length]} 
-                                                        stroke="#1e293b" 
-                                                        strokeWidth="0.5" 
-                                                    />
-                                                );
-                                            });
-                                        })()}
-                                    </svg>
-                                    <div className="absolute w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-600 shadow-lg flex items-center justify-center">
-                                        <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={testProjectRoulette}
+                                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                                        >
+                                            <Play className="w-3.5 h-3.5 fill-white" /> Proyectar Giro
+                                        </button>
+                                        <button
+                                            onClick={stopProjectRoulette}
+                                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-xs font-bold transition-all"
+                                        >
+                                            <X className="w-3.5 h-3.5" /> Quitar Ruleta
+                                        </button>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="py-10 text-slate-500 text-xs text-center">
-                                    Agregue categorías para ver
-                                </div>
-                            )}
+                            </div>
 
-                            {/* Simulation triggers */}
-                            <div className="w-full border-t border-slate-850 pt-4 mt-4 space-y-3">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Forzar Ganador Simulado</label>
-                                    <select
-                                        value={selectedWinnerId}
-                                        onChange={(e) => setSelectedWinnerId(e.target.value)}
-                                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                                    >
-                                        <option value="random">Aleatorio (Pesos)</option>
-                                        {rouletteConfig.categories?.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
+                            {/* Card 4: Live logs */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col h-[200px]">
+                                <h3 className="text-sm font-bold text-gray-800 mb-3 pb-2 border-b border-gray-150">Historial de Giros en Vivo</h3>
+                                {rouletteLogs.length === 0 ? (
+                                    <div className="flex-1 flex items-center justify-center text-center py-6 text-gray-400 text-xs border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                                        Esperando ganadores en directo...
+                                    </div>
+                                ) : (
+                                    <div className="overflow-y-auto space-y-2 flex-1 pr-1 font-mono text-[11px]">
+                                        {rouletteLogs.map(log => (
+                                            <div key={log.id} className="p-2 bg-gray-50 border border-gray-150 rounded-lg flex justify-between items-start gap-2">
+                                                <div>
+                                                    <span className="text-green-700 font-bold">🏆 {log.customerName}</span>
+                                                    <div className="text-gray-800 font-bold text-xs mt-0.5">{log.prize}</div>
+                                                </div>
+                                                <span className="text-[10px] text-gray-400">{log.time}</span>
+                                            </div>
                                         ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={testProjectRoulette}
-                                        className="flex items-center justify-center gap-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black shadow-md shadow-amber-600/10 transition-all"
-                                    >
-                                        <Play className="w-3.5 h-3.5 fill-white" /> Proyectar Giro
-                                    </button>
-                                    <button
-                                        onClick={stopProjectRoulette}
-                                        className="flex items-center justify-center gap-1 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold transition-all"
-                                    >
-                                        <X className="w-3.5 h-3.5" /> Quitar Ruleta
-                                    </button>
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                        {/* Winner Notification Logs */}
-                        <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col h-[230px] relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-indigo-500"></div>
-                            <h3 className="font-bold text-white text-sm mb-3">Historial de Giros en Vivo</h3>
-                            
-                            {rouletteLogs.length === 0 ? (
-                                <div className="flex-1 flex items-center justify-center text-center py-6 text-slate-500 text-xs border border-dashed border-slate-850 rounded-2xl bg-slate-900/10">
-                                    Esperando ganadores en directo...
-                                </div>
-                            ) : (
-                                <div className="overflow-y-auto space-y-2 flex-1 pr-1 font-mono text-[11px]">
-                                    {rouletteLogs.map(log => (
-                                        <div key={log.id} className="p-2 bg-slate-900/60 border border-slate-850 rounded-xl flex justify-between items-start gap-2 animate-in fade-in slide-in-from-bottom duration-300">
-                                            <div>
-                                                <span className="text-emerald-400 font-bold">🏆 {log.customerName}</span>
-                                                <div className="text-white font-black text-xs mt-0.5">{log.prize}</div>
-                                            </div>
-                                            <span className="text-[10px] text-slate-500">{log.time}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
                     </div>
                 </div>
             )}
