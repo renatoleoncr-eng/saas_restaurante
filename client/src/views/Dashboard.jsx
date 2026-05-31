@@ -33,7 +33,7 @@ export default function Dashboard() {
     useEffect(() => {
         const restrictedViews = {
             waiter: ['drink_promos', 'qr_management'],
-            cashier: ['stock', 'accounts', 'drink_promos'], // Cashier already has reports in current logic
+            cashier: ['drink_promos'], 
             kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management']
         };
 
@@ -306,8 +306,8 @@ export default function Dashboard() {
                             </button>
                         )}
 
-                        {/* Inventory - Admin Only */}
-                        {['admin', 'waiter'].includes(user.role) && (
+                        {/* Inventory - Admin, Waiter, Cashier */}
+                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
                             <button
                                 onClick={() => { setCurrentView('stock'); if (window.innerWidth < 768) setIsCollapsed(true); }}
                                 title="Inventario"
@@ -318,8 +318,8 @@ export default function Dashboard() {
                             </button>
                         )}
 
-                        {/* Accounts - Admin Only */}
-                        {['admin', 'waiter'].includes(user.role) && (
+                        {/* Accounts - Admin, Waiter, Cashier */}
+                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
                             <button
                                 onClick={() => { setCurrentView('accounts'); if (window.innerWidth < 768) setIsCollapsed(true); }}
                                 title="Historial Cuentas"
