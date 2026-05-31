@@ -1347,21 +1347,7 @@ router.get('/reports/daily', async (req, res) => {
         // We can approximate by Sum(All Cash Sales) - Sum(All Cash Expenses).
         // For now, let's return the range balance.
 
-        // GLOBAL CASH CALCULATION (Expensive, but requested)
-        // Optimization: Maybe store running balance in a separate table later.
-        const allCashPayments = await Payment.findAll({
-            where: { method: 'efectivo' },
-            attributes: ['amount']
-        });
-        const totalCashIncome = allCashPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-        const allCashExpenses = await Expense.findAll({
-            where: { paymentMethod: 'efectivo' },
-            attributes: ['amount']
-        });
-        const totalCashOutcome = allCashExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-
-        const currentCashBalance = totalCashIncome - totalCashOutcome;
+        const currentCashBalance = 0; // Removido por desuso (la gestión de efectivo se realiza a nivel de Turno)
 
         res.json({
             date: start.toISOString().split('T')[0],
@@ -1369,7 +1355,7 @@ router.get('/reports/daily', async (req, res) => {
             totalSales,
             totalExpenses,
             balance: totalSales - totalExpenses,
-            currentCashBalance, // Global Cash
+            currentCashBalance, // Global Cash (Deprecated)
             totalPending,
             closedCount: closedCount,
             openCount: openAccounts.length,

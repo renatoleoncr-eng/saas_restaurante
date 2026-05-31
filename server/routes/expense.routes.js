@@ -36,23 +36,35 @@ router.post('/expenses', async (req, res) => {
 
         // Validation: Prevent negative cash
         if (paymentMethod === 'efectivo') {
-            const allCashPayments = await Payment.findAll({
-                where: { method: 'efectivo' },
-                attributes: ['amount']
-            });
-            const totalCashIncome = allCashPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-            const allCashExpenses = await Expense.findAll({
-                where: { paymentMethod: 'efectivo' },
-                attributes: ['amount']
-            });
-            const totalCashOutcome = allCashExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-
-            const currentCashBalance = totalCashIncome - totalCashOutcome;
-
-            if (parseFloat(amount) > currentCashBalance) {
+            if (!activeSession) {
                 return res.status(400).json({
-                    error: `Saldo insuficiente en caja. Efectivo disponible: S/ ${currentCashBalance.toFixed(2)}`
+                    error: 'No se pueden registrar egresos en efectivo si no hay un turno de caja abierto.'
+                });
+            }
+
+            const sessionPayments = await Payment.findAll({
+                where: { 
+                    method: 'efectivo',
+                    CashSessionId: activeSession.id
+                },
+                attributes: ['amount']
+            });
+            const sessionCashIncome = sessionPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+            const sessionExpenses = await Expense.findAll({
+                where: { 
+                    paymentMethod: 'efectivo',
+                    CashSessionId: activeSession.id
+                },
+                attributes: ['amount']
+            });
+            const sessionCashOutcome = sessionExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+
+            const sessionAvailableCash = parseFloat(activeSession.openingCash) + sessionCashIncome - sessionCashOutcome;
+
+            if (parseFloat(amount) > sessionAvailableCash) {
+                return res.status(400).json({
+                    error: `Saldo insuficiente en caja del turno activo. Efectivo disponible: S/ ${sessionAvailableCash.toFixed(2)}`
                 });
             }
         }

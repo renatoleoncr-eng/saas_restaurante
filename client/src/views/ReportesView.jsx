@@ -164,20 +164,9 @@ export default function ReportesView() {
             </div>
 
             {/* STATS CARDS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                {/* 1. EFECTIVO EN CAJA (REAL) - Now a main card */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500 relative overflow-hidden group">
-                    <div className="relative z-10">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Efectivo en Caja (Real)</div>
-                        <div className="text-3xl font-black text-gray-800 tracking-tight">{formatCurrency(report.currentCashBalance)}</div>
-                    </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-emerald-50 rounded-full text-emerald-600 group-hover:scale-110 transition-transform">
-                        <DollarSign size={24} strokeWidth={3} />
-                    </div>
-                </div>
-
-                {/* 2. INGRESOS */}
+                {/* 1. INGRESOS */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500 relative overflow-hidden group">
                     <div className="relative z-10">
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ingresos Totales</div>
@@ -188,7 +177,7 @@ export default function ReportesView() {
                     </div>
                 </div>
 
-                {/* 3. EGRESOS */}
+                {/* 2. EGRESOS */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-red-500 relative overflow-hidden group">
                     <div className="relative z-10">
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Egresos Totales</div>
@@ -199,7 +188,7 @@ export default function ReportesView() {
                     </div>
                 </div>
 
-                {/* 4. BALANCE */}
+                {/* 3. BALANCE */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500 relative overflow-hidden group">
                     <div className="relative z-10">
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Balance Periodo</div>
