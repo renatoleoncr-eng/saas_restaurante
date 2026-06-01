@@ -190,12 +190,21 @@ export default function SessionManagerModal({ onClose }) {
                                 </div>
                             </div>
 
-                            <button 
-                                onClick={() => setIsClosingMode(true)}
-                                className="w-full bg-red-100 hover:bg-red-200 text-red-700 font-bold py-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
-                            >
-                                <Lock size={20} /> Iniciar Cierre de Turno
-                            </button>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={onClose}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                                >
+                                    <Coffee size={20} /> Abrir Salón (Ir a las Mesas)
+                                </button>
+
+                                <button 
+                                    onClick={() => setIsClosingMode(true)}
+                                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Lock size={16} /> Iniciar Cierre de Turno
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         /* CLOSE SESSION VIEW */
