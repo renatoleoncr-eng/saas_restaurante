@@ -103,8 +103,8 @@ export default function SessionManagerModal({ onClose }) {
     );
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-0 sm:p-4">
+            <div className="bg-white w-full h-full sm:max-w-4xl sm:h-[95vh] sm:rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
                 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-center">
@@ -122,7 +122,7 @@ export default function SessionManagerModal({ onClose }) {
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto">
+                <div className="p-6 overflow-y-auto flex-1">
                     {!sessionData ? (
                         /* OPEN SESSION VIEW */
                         <div className="space-y-6 py-4">
@@ -220,76 +220,78 @@ export default function SessionManagerModal({ onClose }) {
                             </div>
 
                             <div className="border rounded-2xl overflow-hidden shadow-inner">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-100 text-gray-600">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left font-bold uppercase tracking-tighter text-[10px]">Método</th>
-                                            <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Esperado</th>
-                                            <th className="px-4 py-3 text-right w-32 font-bold uppercase tracking-tighter text-[10px]">Contado</th>
-                                            <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Diferencia</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {['efectivo', 'tarjeta', 'yape', 'transferencia'].map(m => {
-                                            const expected = sessionData.expected[m] || 0;
-                                            const countedStr = countedValues[m];
-                                            const counted = parseFloat(countedStr) || 0;
-                                            const diff = countedStr !== '' ? counted - expected : 0;
-                                            
-                                            return (
-                                                <React.Fragment key={m}>
-                                                <tr className={`hover:bg-gray-50/50 transition-colors ${expandedPaymentMethod === m ? 'bg-blue-50/50' : ''}`}>
-                                                    <td 
-                                                        className="px-4 py-4 capitalize font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none"
-                                                        onClick={() => setExpandedPaymentMethod(expandedPaymentMethod === m ? null : m)}
-                                                    >
-                                                        {expandedPaymentMethod === m ? <ChevronUp size={14} className="text-blue-500 shrink-0" /> : <ChevronDown size={14} className="text-gray-400 shrink-0" />}
-                                                        {m}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-right font-mono font-bold text-gray-600">S/ {expected.toFixed(2)}</td>
-                                                    <td className="px-4 py-2 text-right">
-                                                        <input 
-                                                            type="number"
-                                                            value={countedValues[m]}
-                                                            onChange={e => setCountedValues({...countedValues, [m]: e.target.value})}
-                                                            className="w-full border p-2 rounded-lg text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none"
-                                                            placeholder="0.00"
-                                                        />
-                                                    </td>
-                                                    <td className={`px-4 py-4 text-right font-bold ${countedStr === '' ? 'text-gray-300' : diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : 'text-blue-500'}`}>
-                                                        {countedStr !== '' ? (diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK') : '-'}
-                                                    </td>
-                                                </tr>
-                                                {/* Expanded Payments Breakdown */}
-                                                {expandedPaymentMethod === m && (
-                                                    <tr>
-                                                        <td colSpan="4" className="p-0 bg-gray-50 border-t border-gray-100">
-                                                            <div className="p-4 max-h-48 overflow-y-auto">
-                                                                <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex items-center gap-1">
-                                                                    <Receipt size={14} /> Transacciones en {m}
-                                                                </h4>
-                                                                {sessionData.payments?.filter(p => (p.method || 'efectivo').toLowerCase() === m).length > 0 ? (
-                                                                    <ul className="space-y-2">
-                                                                        {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
-                                                                            <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
-                                                                                <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
-                                                                                <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                                                                <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                ) : (
-                                                                    <div className="text-xs text-gray-400 italic">No hay transacciones reportadas.</div>
-                                                                )}
-                                                            </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[500px] text-sm">
+                                        <thead className="bg-gray-100 text-gray-600">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-bold uppercase tracking-tighter text-[10px]">Método</th>
+                                                <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Esperado</th>
+                                                <th className="px-4 py-3 text-right w-32 font-bold uppercase tracking-tighter text-[10px]">Contado</th>
+                                                <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Diferencia</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {['efectivo', 'tarjeta', 'yape', 'transferencia'].map(m => {
+                                                const expected = sessionData.expected[m] || 0;
+                                                const countedStr = countedValues[m];
+                                                const counted = parseFloat(countedStr) || 0;
+                                                const diff = countedStr !== '' ? counted - expected : 0;
+                                                
+                                                return (
+                                                    <React.Fragment key={m}>
+                                                    <tr className={`hover:bg-gray-50/50 transition-colors ${expandedPaymentMethod === m ? 'bg-blue-50/50' : ''}`}>
+                                                        <td 
+                                                            className="px-4 py-4 capitalize font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none"
+                                                            onClick={() => setExpandedPaymentMethod(expandedPaymentMethod === m ? null : m)}
+                                                        >
+                                                            {expandedPaymentMethod === m ? <ChevronUp size={14} className="text-blue-500 shrink-0" /> : <ChevronDown size={14} className="text-gray-400 shrink-0" />}
+                                                            {m}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right font-mono font-bold text-gray-600">S/ {expected.toFixed(2)}</td>
+                                                        <td className="px-4 py-2 text-right">
+                                                            <input 
+                                                                type="number"
+                                                                value={countedValues[m]}
+                                                                onChange={e => setCountedValues({...countedValues, [m]: e.target.value})}
+                                                                className="w-full border p-2 rounded-lg text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                placeholder="0.00"
+                                                            />
+                                                        </td>
+                                                        <td className={`px-4 py-4 text-right font-bold ${countedStr === '' ? 'text-gray-300' : diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : 'text-blue-500'}`}>
+                                                            {countedStr !== '' ? (diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK') : '-'}
                                                         </td>
                                                     </tr>
-                                                )}
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                    {/* Expanded Payments Breakdown */}
+                                                    {expandedPaymentMethod === m && (
+                                                        <tr>
+                                                            <td colSpan="4" className="p-0 bg-gray-50 border-t border-gray-100">
+                                                                <div className="p-4 max-h-48 overflow-y-auto">
+                                                                    <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex items-center gap-1">
+                                                                        <Receipt size={14} /> Transacciones en {m}
+                                                                    </h4>
+                                                                    {sessionData.payments?.filter(p => (p.method || 'efectivo').toLowerCase() === m).length > 0 ? (
+                                                                        <ul className="space-y-2">
+                                                                            {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
+                                                                                <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
+                                                                                    <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
+                                                                                    <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
+                                                                                    <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                                                </li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    ) : (
+                                                                        <div className="text-xs text-gray-400 italic">No hay transacciones reportadas.</div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             {/* Sales Summary Categories */}
