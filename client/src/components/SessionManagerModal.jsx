@@ -140,6 +140,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         type="number" 
                                         value={openingCash}
                                         onChange={e => setOpeningCash(e.target.value)}
+                                        onWheel={(e) => e.target.blur()}
                                         className="w-full pl-10 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all text-2xl font-bold"
                                         placeholder="0.00"
                                         autoFocus
@@ -252,6 +253,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                                 type="number"
                                                                 value={countedValues[m]}
                                                                 onChange={e => setCountedValues({...countedValues, [m]: e.target.value})}
+                                                                onWheel={(e) => e.target.blur()}
                                                                 className="w-full border p-2 rounded-lg text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                                                                 placeholder="0.00"
                                                             />
