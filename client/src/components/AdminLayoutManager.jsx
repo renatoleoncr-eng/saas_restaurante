@@ -296,6 +296,7 @@ export default function AdminLayoutManager() {
             }
             {showSessionModal && (
                 <SessionManagerModal
+                    initialIsClosingMode={!!activeSession}
                     onClose={() => {
                         setShowSessionModal(false);
                         checkActiveSession();

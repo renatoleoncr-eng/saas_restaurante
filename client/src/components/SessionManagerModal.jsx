@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee } from 'lucide-react';
 
-export default function SessionManagerModal({ onClose }) {
+export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
     const [loading, setLoading] = useState(true);
     const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals, payments, salesSummary }
     const [openingCash, setOpeningCash] = useState('');
     const [closingNotes, setClosingNotes] = useState('');
-    const [isClosingMode, setIsClosingMode] = useState(false);
+    const [isClosingMode, setIsClosingMode] = useState(initialIsClosingMode);
     const [expandedPaymentMethod, setExpandedPaymentMethod] = useState(null);
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [countedValues, setCountedValues] = useState({
@@ -190,30 +190,21 @@ export default function SessionManagerModal({ onClose }) {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-3">
-                                <button 
-                                    onClick={onClose}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
-                                >
-                                    <Coffee size={20} /> Abrir Salón (Ir a las Mesas)
-                                </button>
-
-                                <button 
-                                    onClick={() => setIsClosingMode(true)}
-                                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
-                                >
-                                    <Lock size={16} /> Iniciar Cierre de Turno
-                                </button>
-                            </div>
+                            <button 
+                                onClick={onClose}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                            >
+                                <Coffee size={20} /> Abrir Salón (Ir a las Mesas)
+                            </button>
                         </div>
                     ) : (
                         /* CLOSE SESSION VIEW */
                         <div className="space-y-6">
                             <div 
                                 className="flex items-center gap-2 text-gray-500 mb-2 cursor-pointer hover:text-gray-800 transition-colors w-max font-semibold text-sm bg-gray-100 px-3 py-1.5 rounded-lg" 
-                                onClick={() => setIsClosingMode(false)}
+                                onClick={onClose}
                             >
-                                <ArrowLeft size={16} /> Volver al resumen
+                                <ArrowLeft size={16} /> Volver al salón
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

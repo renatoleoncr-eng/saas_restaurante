@@ -168,6 +168,7 @@ export default function WaiterMap() {
 
             {showSessionModal && (
                 <SessionManagerModal
+                    initialIsClosingMode={!!activeSession}
                     onClose={() => {
                         setShowSessionModal(false);
                         checkActiveSession();
