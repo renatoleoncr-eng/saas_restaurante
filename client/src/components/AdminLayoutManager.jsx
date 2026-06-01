@@ -228,8 +228,8 @@ export default function AdminLayoutManager() {
                             {/* MOBILE: Tables as Rows (Vertical List) - Removed max-h to use page scroll */}
                             <div className="flex md:hidden flex-col gap-2 mb-4">
                                 {area.Tables && [...area.Tables].sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0)).map(table => {
-                                    const isReserved = reservations.some(r => r.TableId === table.id);
-                                    const status = isReserved ? 'reserved' : table.status;
+                                    const isReserved = false;
+                                    const status = table.status;
                                     return (
                                         <div
                                             key={table.id}
@@ -253,15 +253,6 @@ export default function AdminLayoutManager() {
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                {status === 'free' && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setReservationTable(table.id); }}
-                                                        className="text-blue-500 hover:bg-blue-50 p-2 rounded"
-                                                        title="Reservar"
-                                                    >
-                                                        <Calendar size={16} />
-                                                    </button>
-                                                )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleRenameTable(table); }}
                                                     className="text-purple-500 hover:text-purple-700 p-2 rounded hover:bg-purple-50"
@@ -288,8 +279,8 @@ export default function AdminLayoutManager() {
                             {/* DESKTOP: Tables as Chips (Grid/Flex) */}
                             <div className="hidden md:flex flex-wrap gap-3 mb-4">
                                 {area.Tables && [...area.Tables].sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0)).map(table => {
-                                    const isReserved = reservations.some(r => r.TableId === table.id);
-                                    const status = isReserved ? 'reserved' : table.status;
+                                    const isReserved = false;
+                                    const status = table.status;
                                     return (
                                         <div
                                             key={table.id}
@@ -304,15 +295,6 @@ export default function AdminLayoutManager() {
 
                                             {/* Action Buttons (Hover) */}
                                             <div className="absolute -top-2 -right-2 hidden group-hover:flex gap-1 justify-end z-10">
-                                                {status === 'free' && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setReservationTable(table.id); }}
-                                                        className="bg-blue-500 text-white rounded-full p-1 shadow-sm hover:bg-blue-600"
-                                                        title="Reservar"
-                                                    >
-                                                        <Calendar size={12} />
-                                                    </button>
-                                                )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleRenameTable(table); }}
                                                     className="bg-purple-500 text-white rounded-full p-1 shadow-sm hover:bg-purple-600"

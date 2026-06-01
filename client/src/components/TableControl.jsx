@@ -23,6 +23,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
     const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
     const [issueInvoice, setIssueInvoice] = useState(false);
     const [invoiceType, setInvoiceType] = useState('boleta');
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     // Client Editing State
     const [isEditingClient, setIsEditingClient] = useState(false);
@@ -1099,11 +1100,15 @@ export default function TableControl({ tableId, accountId, onClose }) {
             return;
         }
 
+        if (isProcessingPayment) return;
+        setIsProcessingPayment(true);
+
         if (issueInvoice) {
             if (invoiceType === 'factura') {
                 if (!clientForm.dni || clientForm.dni.length !== 11) {
                     alert('Para emitir una Factura es obligatorio ingresar un RUC válido de 11 dígitos. Por favor, ingréselo en el formulario.');
                     setIsConfirmingPayment(false);
+                    setIsProcessingPayment(false);
                     return;
                 }
             } else if (invoiceType === 'boleta') {
@@ -1111,6 +1116,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     const proceed = window.confirm('No ha ingresado un documento. La boleta se emitirá a "CLIENTES VARIOS". ¿Desea continuar o prefiere cancelar para ingresar los datos del cliente?');
                     if (!proceed) {
                         setIsConfirmingPayment(false);
+                        setIsProcessingPayment(false);
                         return;
                     }
                 }
@@ -1189,6 +1195,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
         } catch (err) {
             alert('Error cerrando cuenta: ' + (err.response?.data?.error || err.message));
             setIsConfirmingPayment(false); // Reset on error
+        } finally {
+            setIsProcessingPayment(false);
         }
     };
 
@@ -1416,7 +1424,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 if (localP) pName = localP.name;
                                             }
                                             return (
-                                                <div key={o.key} className="flex justify-between items-start text-sm">
+                                                <div key={o.key} className="flex justify-between items-center text-sm border-b border-dashed pb-2 last:border-b-0 last:pb-0">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-gray-700">
                                                             {o.quantity}x {pName}
@@ -1426,6 +1434,33 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                         </span>
                                                         {o.presentation && <span className="text-xs text-blue-500">({o.presentation})</span>}
                                                         {displayNotes && <span className="text-xs text-red-400 italic">"{displayNotes}"</span>}
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex items-center gap-2">
+                                                        {user.role === 'admin' && (
+                                                            deleteConfirmId === o.id ? (
+                                                                <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                                                                    <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
+                                                                    <button
+                                                                        onClick={() => handleDeleteOrder(o.id)}
+                                                                        className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                                                                    >Sí</button>
+                                                                    <button
+                                                                        onClick={() => setDeleteConfirmId(null)}
+                                                                        className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded hover:bg-gray-300 transition-colors"
+                                                                    >No</button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setDeleteConfirmId(o.id)}
+                                                                    className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
+                                                                    title="Eliminar Pedido (Admin)"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -2875,6 +2910,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 <div className="flex gap-3 mt-4">
                                     <button
                                         onClick={() => {
+                                            if (isProcessingPayment) return;
                                             if (isConfirmingPayment) {
                                                 setIsConfirmingPayment(false);
                                             } else {
@@ -2882,16 +2918,23 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 setIssueInvoice(false);
                                             }
                                         }}
-                                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+                                        disabled={isProcessingPayment}
+                                        className={`flex-1 py-3 text-gray-700 rounded-lg font-bold transition-colors ${isProcessingPayment ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'}`}
                                     >
                                         {isConfirmingPayment ? 'Mudar Método' : 'Cancelar'}
                                     </button>
                                     <button
                                         onClick={confirmPayment}
+                                        disabled={isProcessingPayment}
                                         className={`flex-1 py-3 text-white rounded-lg font-black shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center leading-tight
-                                        ${isConfirmingPayment ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
+                                        ${isProcessingPayment ? 'bg-gray-400 cursor-not-allowed' : isConfirmingPayment ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
                                     >
-                                        {isConfirmingPayment ? (
+                                        {isProcessingPayment ? (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="animate-spin text-white" size={18} />
+                                                <span>{issueInvoice ? 'Generando...' : 'Cobrando...'}</span>
+                                            </div>
+                                        ) : isConfirmingPayment ? (
                                             <>
                                                 <span className="text-xs opacity-90 uppercase">Confirmar</span>
                                                 <span>SI, COBRAR</span>

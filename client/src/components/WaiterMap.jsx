@@ -121,8 +121,8 @@ export default function WaiterMap() {
                         </h3>
                         <div className="flex flex-wrap gap-4">
                             {area.Tables.map(table => {
-                                const isReserved = reservations.some(r => r.TableId === table.id);
-                                const status = isReserved ? 'reserved' : table.status;
+                                const isReserved = false;
+                                const status = table.status;
 
                                 return (
                                     <button
@@ -142,24 +142,6 @@ export default function WaiterMap() {
                                         <span className="text-xs uppercase font-semibold mt-1">
                                             {status === 'free' ? 'Libre' : status === 'occupied' ? 'Ocupada' : 'Reservada'}
                                         </span>
-
-                                        {/* Reserve Button (Only if free) */}
-                                        {status === 'free' && (
-                                            <div
-                                                onClick={(e) => { e.stopPropagation(); setReservationTable(table.id); }}
-                                                className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full shadow border flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50"
-                                                title="Reservar"
-                                            >
-                                                <Calendar size={14} />
-                                            </div>
-                                        )}
-
-                                        {/* Show Reservation Time if Reserved */}
-                                        {isReserved && status === 'reserved' && (
-                                            <div className="absolute top-1 right-1">
-                                                <Calendar size={14} className="text-purple-600" />
-                                            </div>
-                                        )}
                                     </button>
                                 );
                             })}
