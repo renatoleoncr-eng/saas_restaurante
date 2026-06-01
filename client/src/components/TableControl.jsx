@@ -1385,8 +1385,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
     if (loading) return <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">Cargando...</div>;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 md:p-4 z-50">
-            <div className="bg-white w-full h-full md:h-[90vh] md:max-w-6xl rounded-none md:rounded-lg shadow-2xl flex flex-col md:flex-row overflow-hidden relative">
+        <div className="fixed inset-0 bg-black/50 flex items-stretch md:items-center justify-center p-0 md:p-4 z-50">
+            <div className="bg-white w-full h-[100dvh] md:h-[90vh] md:max-w-6xl rounded-none md:rounded-lg shadow-2xl flex flex-col md:flex-row overflow-hidden relative">
 
                 {/* --- MOBILE: CART VIEW OVERLAY --- */}
                 {showMobileCart && (
