@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { CashSession, Payment, Expense, User } = require('../models');
+const { CashSession, Payment, Expense, User, Account } = require('../models');
 const { Op } = require('sequelize');
 
 // GET /api/sessions/current - Get active session with calculated expected totals
@@ -132,6 +132,16 @@ router.post('/sessions/close', async (req, res) => {
         const session = await CashSession.findByPk(sessionId);
         if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
         if (session.status === 'closed') return res.status(400).json({ error: 'La sesión ya está cerrada' });
+
+        // Prevent closure if there are open accounts/tables
+        const openAccountsCount = await Account.count({
+            where: { status: 'open' }
+        });
+        if (openAccountsCount > 0) {
+            return res.status(400).json({ 
+                error: 'No se puede cerrar el turno porque hay mesas con cuentas abiertas. Debe cobrar o liberar todas las mesas antes de proceder.' 
+            });
+        }
 
         session.status = 'closed';
         session.closedAt = new Date();
