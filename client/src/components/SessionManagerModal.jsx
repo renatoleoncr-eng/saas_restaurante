@@ -176,21 +176,6 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 </div>
                             </div>
 
-                            <div className="bg-gray-900 rounded-xl p-5 text-white flex justify-between items-center shadow-xl">
-                                <div>
-                                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-widest">Total Esperado en Caja</span>
-                                    <span className="text-2xl font-bold">
-                                        S/ {Object.values(sessionData.expected).reduce((a, b) => a + b, 0).toFixed(2)}
-                                    </span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-widest">Gastos Caja</span>
-                                    <span className="text-lg font-bold text-red-400">
-                                        - S/ {(sessionData.expenseTotals.efectivo || 0).toFixed(2)}
-                                    </span>
-                                </div>
-                            </div>
-
                             <button 
                                 onClick={onClose}
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
