@@ -103,8 +103,7 @@ export default function SessionManagerModal({ onClose }) {
     );
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-0 sm:p-4">
-            <div className="bg-white w-full h-full sm:max-w-4xl sm:h-[95vh] sm:rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+        <div className="fixed inset-0 bg-white z-[100] flex flex-col w-full h-full overflow-hidden">
                 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-center">
@@ -385,7 +384,6 @@ export default function SessionManagerModal({ onClose }) {
                 <div className="bg-gray-50 p-4 border-t border-gray-100 text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">
                     Sistema de Gestión Mak Suites - Control de Auditoría
                 </div>
-            </div>
         </div>
     );
 }
