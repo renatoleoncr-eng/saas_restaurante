@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft } from 'lucide-react';
+import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee } from 'lucide-react';
 
 export default function SessionManagerModal({ onClose }) {
     const [loading, setLoading] = useState(true);
-    const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals }
+    const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals, payments, salesSummary }
     const [openingCash, setOpeningCash] = useState('');
     const [closingNotes, setClosingNotes] = useState('');
     const [isClosingMode, setIsClosingMode] = useState(false);
+    const [expandedPaymentMethod, setExpandedPaymentMethod] = useState(null);
+    const [expandedCategory, setExpandedCategory] = useState(null);
     const [countedValues, setCountedValues] = useState({
         efectivo: '',
         tarjeta: '',
@@ -235,8 +237,15 @@ export default function SessionManagerModal({ onClose }) {
                                             const diff = countedStr !== '' ? counted - expected : 0;
                                             
                                             return (
-                                                <tr key={m} className="hover:bg-gray-50/50 transition-colors">
-                                                    <td className="px-4 py-4 capitalize font-semibold text-gray-700">{m}</td>
+                                                <React.Fragment key={m}>
+                                                <tr className={`hover:bg-gray-50/50 transition-colors ${expandedPaymentMethod === m ? 'bg-blue-50/50' : ''}`}>
+                                                    <td 
+                                                        className="px-4 py-4 capitalize font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none"
+                                                        onClick={() => setExpandedPaymentMethod(expandedPaymentMethod === m ? null : m)}
+                                                    >
+                                                        {expandedPaymentMethod === m ? <ChevronUp size={14} className="text-blue-500 shrink-0" /> : <ChevronDown size={14} className="text-gray-400 shrink-0" />}
+                                                        {m}
+                                                    </td>
                                                     <td className="px-4 py-4 text-right font-mono font-bold text-gray-600">S/ {expected.toFixed(2)}</td>
                                                     <td className="px-4 py-2 text-right">
                                                         <input 
@@ -251,11 +260,87 @@ export default function SessionManagerModal({ onClose }) {
                                                         {countedStr !== '' ? (diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK') : '-'}
                                                     </td>
                                                 </tr>
+                                                {/* Expanded Payments Breakdown */}
+                                                {expandedPaymentMethod === m && (
+                                                    <tr>
+                                                        <td colSpan="4" className="p-0 bg-gray-50 border-t border-gray-100">
+                                                            <div className="p-4 max-h-48 overflow-y-auto">
+                                                                <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex items-center gap-1">
+                                                                    <Receipt size={14} /> Transacciones en {m}
+                                                                </h4>
+                                                                {sessionData.payments?.filter(p => (p.method || 'efectivo').toLowerCase() === m).length > 0 ? (
+                                                                    <ul className="space-y-2">
+                                                                        {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
+                                                                            <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
+                                                                                <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
+                                                                                <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                                                <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                ) : (
+                                                                    <div className="text-xs text-gray-400 italic">No hay transacciones reportadas.</div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                </React.Fragment>
                                             );
                                         })}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Sales Summary Categories */}
+                            {sessionData.salesSummary && (
+                                <div className="space-y-3">
+                                    <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                        <List size={16} /> Resumen de Ventas
+                                    </h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {Object.entries(sessionData.salesSummary).map(([catKey, catData]) => (
+                                            <div key={catKey} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                                                <div 
+                                                    className="p-3 cursor-pointer hover:bg-gray-50 flex flex-col items-center text-center transition-colors relative"
+                                                    onClick={() => setExpandedCategory(expandedCategory === catKey ? null : catKey)}
+                                                >
+                                                    <span className="uppercase text-[10px] font-bold text-gray-400 tracking-wider mb-1">{catKey}</span>
+                                                    <span className="text-lg font-bold text-gray-800">{catData.count} <span className="text-[10px] text-gray-400 font-normal">unid.</span></span>
+                                                    <span className="text-sm font-bold text-blue-600 mt-1">S/ {catData.total.toFixed(2)}</span>
+                                                    <div className="absolute top-2 right-2 text-gray-300">
+                                                        {expandedCategory === catKey ? <ChevronUp size={16} className="text-blue-500" /> : <ChevronDown size={16} />}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Expanded Category Items */}
+                                                {expandedCategory === catKey && (
+                                                    <div className="bg-gray-50 p-3 border-t border-gray-100 max-h-48 overflow-y-auto flex-1">
+                                                        {catData.items.length > 0 ? (
+                                                            <ul className="space-y-2">
+                                                                {catData.items.map((item, idx) => (
+                                                                    <li key={idx} className="flex justify-between items-start text-[11px] border-b border-gray-200/50 pb-2 last:border-0 last:pb-0">
+                                                                        <div className="flex flex-col flex-1 pr-2">
+                                                                            <span className="font-semibold text-gray-700 leading-tight">{item.name}</span>
+                                                                            {item.presentation && <span className="text-[9px] text-gray-500">{item.presentation}</span>}
+                                                                        </div>
+                                                                        <div className="flex flex-col items-end shrink-0">
+                                                                            <span className="font-bold text-gray-500">{item.quantity} x S/ {item.price.toFixed(2)}</span>
+                                                                            <span className="font-mono font-bold text-gray-800">S/ {item.total.toFixed(2)}</span>
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : (
+                                                            <div className="text-[10px] text-gray-400 italic text-center py-2">Sin ventas</div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Totals Summary */}
                             <div className="bg-gray-900 rounded-xl p-5 text-white flex justify-between items-center shadow-xl">

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { CashSession, Payment, Expense, User, Account } = require('../models');
+const { CashSession, Payment, Expense, User, Account, Order, Product, Table } = require('../models');
 const { Op } = require('sequelize');
 
 // GET /api/sessions/current - Get active session with calculated expected totals
@@ -19,7 +19,12 @@ router.get('/sessions/current', async (req, res) => {
 
         // Calculate expected totals
         const payments = await Payment.findAll({
-            where: { CashSessionId: activeSession.id }
+            where: { CashSessionId: activeSession.id },
+            include: [{
+                model: Account,
+                include: [{ model: Table }]
+            }],
+            order: [['createdAt', 'DESC']]
         });
 
         const expenses = await Expense.findAll({
@@ -65,11 +70,71 @@ router.get('/sessions/current', async (req, res) => {
             transferencia: paymentTotals.transferencia
         };
 
+        // --- NEW: Calculate Sales Summary ---
+        const accountIds = [...new Set(payments.map(p => p.AccountId).filter(id => id != null))];
+
+        let salesSummary = {
+            menus: { count: 0, total: 0, items: [] },
+            platos: { count: 0, total: 0, items: [] },
+            bebidas: { count: 0, total: 0, items: [] },
+            otros: { count: 0, total: 0, items: [] }
+        };
+
+        if (accountIds.length > 0) {
+            const orders = await Order.findAll({
+                where: {
+                    AccountId: { [Op.in]: accountIds },
+                    status: { [Op.notIn]: ['cancelled'] }
+                },
+                include: [{ model: Product }]
+            });
+
+            orders.forEach(order => {
+                if (!order.Product) return;
+                
+                const type = order.Product.type;
+                let category = 'otros';
+                
+                if (['menu', 'daily_entry', 'daily_main'].includes(type)) {
+                    category = 'menus';
+                } else if (type === 'dish') {
+                    category = 'platos';
+                } else if (type === 'drink') {
+                    category = 'bebidas';
+                }
+
+                let itemPrice = parseFloat(order.priceAtOrder || order.Product.price);
+                let itemTotal = itemPrice * order.quantity;
+
+                salesSummary[category].count += order.quantity;
+                salesSummary[category].total += itemTotal;
+                
+                const existingItem = salesSummary[category].items.find(
+                    i => i.name === order.Product.name && i.presentation === order.presentation
+                );
+                
+                if (existingItem) {
+                    existingItem.quantity += order.quantity;
+                    existingItem.total += itemTotal;
+                } else {
+                    salesSummary[category].items.push({
+                        name: order.Product.name,
+                        presentation: order.presentation,
+                        quantity: order.quantity,
+                        price: itemPrice,
+                        total: itemTotal
+                    });
+                }
+            });
+        }
+
         res.json({
             session: activeSession,
             expected,
             paymentTotals,
-            expenseTotals
+            expenseTotals,
+            payments,
+            salesSummary
         });
 
     } catch (error) {
