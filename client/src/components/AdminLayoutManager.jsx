@@ -225,8 +225,8 @@ export default function AdminLayoutManager() {
                                 </div>
                             </div>
 
-                            {/* MOBILE: Tables as Rows (Vertical List) - Removed max-h to use page scroll */}
-                            <div className="flex md:hidden flex-col gap-2 mb-4">
+                            {/* UNIFIED GRID VIEW: Tables as Chips (Mobile and Desktop) */}
+                            <div className="flex flex-wrap gap-4 mb-4 justify-start">
                                 {area.Tables && [...area.Tables].sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0)).map(table => {
                                     const isReserved = false;
                                     const status = table.status;
@@ -234,82 +234,36 @@ export default function AdminLayoutManager() {
                                         <div
                                             key={table.id}
                                             onClick={() => setSelectedTable(table.id)}
-                                            className={`border p-3 rounded shadow-sm flex justify-between items-center transition-colors cursor-pointer
-                                            ${status === 'free' ? 'bg-white hover:border-blue-300' :
-                                                    status === 'occupied' ? 'bg-red-50 border-red-200' :
-                                                        'bg-purple-50 border-purple-200'}`}
+                                            className={`w-24 h-24 rounded-xl flex flex-col items-center justify-center border-2 transition-all shadow-sm active:scale-95 relative cursor-pointer
+                                            ${status === 'free' ? "border-green-400 bg-green-50 text-green-800 hover:bg-green-100" :
+                                                status === 'occupied' ? "border-red-400 bg-red-50 text-red-800 hover:bg-red-100" :
+                                                status === 'reserved' ? "border-purple-400 bg-purple-50 text-purple-800 hover:bg-purple-100" :
+                                                "border-gray-300 bg-gray-100 text-gray-500"}`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 text-white rounded-full flex items-center justify-center font-bold
-                                                ${status === 'free' ? 'bg-blue-600' : status === 'occupied' ? 'bg-red-500' : 'bg-purple-500'}`}>
-                                                    {table.number}
-                                                </div>
-                                                <div className="text-sm">
-                                                    <div className="text-gray-900 font-medium">Mesa {table.number}</div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {status === 'free' ? 'Libre' : status === 'occupied' ? 'Ocupada' : 'Reservada'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
+                                            {/* Action Buttons overlay (Always visible for easy tapping on mobile, styled cleanly) */}
+                                            <div className="absolute top-1.5 left-1.5 right-1.5 flex justify-between items-center z-10">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleRenameTable(table); }}
-                                                    className="text-purple-500 hover:text-purple-700 p-2 rounded hover:bg-purple-50"
-                                                    title="Renombrar Mesa"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteTable(table.id); }}
-                                                    className="text-gray-400 hover:text-red-500 p-2 rounded hover:bg-red-50"
-                                                    title="Eliminar Mesa"
-                                                >
-                                                    <Trash size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                                {(!area.Tables || area.Tables.length === 0) && (
-                                    <div className="text-center text-gray-400 py-4 italic text-sm">Sin mesas</div>
-                                )}
-                            </div>
-
-                            {/* DESKTOP: Tables as Chips (Grid/Flex) */}
-                            <div className="hidden md:flex flex-wrap gap-3 mb-4">
-                                {area.Tables && [...area.Tables].sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0)).map(table => {
-                                    const isReserved = false;
-                                    const status = table.status;
-                                    return (
-                                        <div
-                                            key={table.id}
-                                            onClick={() => setSelectedTable(table.id)}
-                                            className={`border p-3 rounded shadow-sm text-center min-w-[80px] relative group hover:shadow-md transition cursor-pointer
-                                            ${status === 'free' ? 'bg-white' : status === 'occupied' ? 'bg-red-50 border-red-200' : 'bg-purple-50 border-purple-200'}`}
-                                        >
-                                            <span className="font-bold text-lg block">{table.number}</span>
-                                            <span className={`text-xs ${status === 'free' ? 'text-green-600' : status === 'occupied' ? 'text-red-600' : 'text-purple-600'}`}>
-                                                {status === 'free' ? 'Libre' : status === 'occupied' ? 'Ocu' : 'Res'}
-                                            </span>
-
-                                            {/* Action Buttons (Hover) */}
-                                            <div className="absolute -top-2 -right-2 hidden group-hover:flex gap-1 justify-end z-10">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleRenameTable(table); }}
-                                                    className="bg-purple-500 text-white rounded-full p-1 shadow-sm hover:bg-purple-600"
+                                                    className="p-1 bg-white/95 hover:bg-white text-purple-600 rounded-lg shadow-sm border border-purple-100 transition-colors"
                                                     title="Renombrar Mesa"
                                                 >
                                                     <Edit size={12} />
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteTable(table.id); }}
-                                                    className="bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600"
+                                                    className="p-1 bg-white/95 hover:bg-white text-red-500 rounded-lg shadow-sm border border-red-100 transition-colors"
                                                     title="Eliminar Mesa"
                                                 >
                                                     <Trash size={12} />
                                                 </button>
                                             </div>
+
+                                            <span className="text-2xl font-black mt-3">
+                                                {table.number}
+                                            </span>
+                                            <span className="text-[10px] uppercase font-bold tracking-wider mt-0.5 opacity-90">
+                                                {status === 'free' ? 'Libre' : status === 'occupied' ? 'Ocupada' : 'Reservada'}
+                                            </span>
                                         </div>
                                     )
                                 })}
