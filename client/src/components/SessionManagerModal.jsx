@@ -103,7 +103,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     );
 
     return (
-        <div className="fixed inset-0 bg-white z-[100] flex flex-col w-full h-full overflow-hidden">
+        <div className="fixed inset-0 bg-white z-[100] flex flex-col w-full h-dvh overflow-hidden">
                 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-center">
