@@ -149,11 +149,18 @@ setInterval(async () => {
 }, 60000);
 
 // Serve Frontend (Production)
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.static(path.join(__dirname, '../client/dist'), {
+    setHeaders: (res, filepath) => {
+        if (path.basename(filepath) === 'index.html') {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        }
+    }
+}));
 
 // Fallback for SPA
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return res.status(404).json({ message: 'API Not Found' });
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
