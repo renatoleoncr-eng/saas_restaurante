@@ -44,6 +44,7 @@ export default function Dashboard() {
     }, [currentView, user.role]);
 
     const [isCollapsed, setIsCollapsed] = useState(true);
+    const [isLocked, setIsLocked] = useState(false);
 
     // User Menu State
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -59,16 +60,22 @@ export default function Dashboard() {
         function handleClickOutside(event) {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setShowUserMenu(false);
+                const wrapper = document.getElementById('sidebar-wrapper');
+                if (wrapper && !wrapper.contains(event.target) && window.innerWidth >= 768 && !isLocked) {
+                    setIsCollapsed(true);
+                }
             }
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
                 setShowMobileUserMenu(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("touchstart", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("touchstart", handleClickOutside);
         };
-    }, []);
+    }, [isLocked]);
 
     // --- SWIPE GESTURE LOGIC START ---
     const [touchStart, setTouchStart] = useState(null);
@@ -192,14 +199,19 @@ export default function Dashboard() {
 
             {/* Sidebar & Toggle Button Wrapper */}
             <div
+                id="sidebar-wrapper"
                 className={`fixed md:relative top-0 left-0 z-30 transition-all duration-300 h-[100dvh] md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
-                onMouseEnter={() => { if (window.innerWidth >= 768) setIsCollapsed(false) }}
-                onMouseLeave={() => { if (window.innerWidth >= 768) setIsCollapsed(true) }}
+                onMouseEnter={() => { if (window.innerWidth >= 768 && !isLocked) setIsCollapsed(false) }}
+                onMouseLeave={() => { if (window.innerWidth >= 768 && !isLocked && !showUserMenu) setIsCollapsed(true) }}
             >
                 {/* Toggle Button */}
                 <button
                     id="sidebar-toggle"
-                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    onClick={() => {
+                        const nextCollapsed = !isCollapsed;
+                        setIsCollapsed(nextCollapsed);
+                        setIsLocked(!nextCollapsed);
+                    }}
                     className={`absolute transition-all duration-300 z-50 focus:outline-none bg-white border-2 border-gray-200 shadow-md rounded-full text-blue-600 hover:text-blue-800 hidden md:flex items-center justify-center
                         top-1/2 -translate-y-1/2
                         w-8 h-8 md:w-12 md:h-12 p-0
@@ -417,7 +429,7 @@ export default function Dashboard() {
             {/* Main Content - Added overflow-x-hidden */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Mobile Header Bar */}
-                <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-10">
+                <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-30">
                     <button
                         onClick={() => setIsCollapsed(false)}
                         className="p-1 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
@@ -437,7 +449,7 @@ export default function Dashboard() {
                     <div className="relative" ref={mobileMenuRef}>
                         <button
                             onClick={() => setShowMobileUserMenu(!showMobileUserMenu)}
-                            className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs select-none hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs select-none hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                         >
                             {user?.displayName?.charAt(0) || 'U'}
                         </button>
@@ -485,7 +497,7 @@ export default function Dashboard() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
+                <main className="flex-1 overflow-y-auto relative z-0 bg-gray-50 overflow-x-hidden overscroll-contain">
                     {renderContent()}
                 </main>
             </div>
