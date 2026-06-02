@@ -1436,8 +1436,13 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         const minStock = Math.min(totalEntriesStock, totalMainsStock);
 
+        const hasUnlimitedEntry = groupEntries.some(e => Number(e.stock || 0) >= 999);
+        const hasUnlimitedMain = groupMains.some(m => Number(m.stock || 0) >= 999);
+        const isUnlimited = hasUnlimitedEntry && hasUnlimitedMain;
+
         return {
             stock: minStock,
+            isUnlimited,
             details: `E:${totalEntriesStock}/S:${totalMainsStock}`
         };
     }; const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -1888,10 +1893,12 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
                                             let displayStock = getEffectiveStock(prod);
                                             let stockDetails = '';
+                                            let isMenuUnlimited = false;
                                             if (prod.type === 'menu') {
                                                 const stats = getMenuStockStats(prod);
                                                 displayStock = stats.stock;
                                                 stockDetails = stats.details;
+                                                isMenuUnlimited = stats.isUnlimited;
                                             }
 
                                             // Determine if out of stock specifically because of missing recipe setup
@@ -1930,7 +1937,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     )}
                                                     <div className="w-full">
                                                         <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && displayStock < 999)) && (!hasVariants || variantsList.length <= 1)) && (
+                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited)) && (!hasVariants || variantsList.length <= 1)) && (
                                                             <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
                                                                 {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
                                                             </div>
@@ -1990,10 +1997,12 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
                                             let displayStock = getEffectiveStock(prod);
                                             let stockDetails = '';
+                                            let isMenuUnlimited = false;
                                             if (prod.type === 'menu') {
                                                 const stats = getMenuStockStats(prod);
                                                 displayStock = stats.stock;
                                                 stockDetails = stats.details;
+                                                isMenuUnlimited = stats.isUnlimited;
                                             }
 
                                             // Determine if out of stock specifically because of missing recipe setup
@@ -2032,7 +2041,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     )}
                                                     <div className="w-full">
                                                         <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && displayStock < 999)) && (!hasVariants || variantsList.length <= 1)) && (
+                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited)) && (!hasVariants || variantsList.length <= 1)) && (
                                                             <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
                                                                 {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
                                                             </div>
