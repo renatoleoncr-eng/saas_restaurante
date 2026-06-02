@@ -180,14 +180,14 @@ export default function Dashboard() {
             {/* Sidebar Backdrop for Mobile */}
             {!isCollapsed && (
                 <div
-                    className="md:hidden fixed inset-0 bg-black/20 z-20"
+                    className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-20 transition-all duration-300"
                     onClick={() => setIsCollapsed(true)}
                 />
             )}
 
             {/* Sidebar & Toggle Button Wrapper */}
             <div
-                className={`relative z-30 transition-all duration-300 md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
+                className={`fixed md:relative top-0 left-0 z-30 transition-all duration-300 h-[100dvh] md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
                 onMouseEnter={() => { if (window.innerWidth >= 768) setIsCollapsed(false) }}
                 onMouseLeave={() => { if (window.innerWidth >= 768) setIsCollapsed(true) }}
             >

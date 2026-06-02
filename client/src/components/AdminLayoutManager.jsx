@@ -134,7 +134,7 @@ export default function AdminLayoutManager() {
                         }`}
                 >
                     <Calculator size={18} />
-                    {activeSession ? 'Turno Abierto' : 'Abrir Turno'}
+                    {activeSession ? 'Cerrar Turno' : 'Abrir Turno'}
                 </button>
             </div>
 
