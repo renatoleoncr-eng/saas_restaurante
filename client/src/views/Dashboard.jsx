@@ -15,7 +15,7 @@ import QrManagement from './QrManagement';
 import { 
     LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
     Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard,
-    Tv
+    Tv, Menu
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -195,7 +195,7 @@ export default function Dashboard() {
                 <button
                     id="sidebar-toggle"
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className={`absolute transition-all duration-300 z-50 focus:outline-none bg-white border-2 border-gray-200 shadow-md rounded-full text-blue-600 hover:text-blue-800 flex items-center justify-center
+                    className={`absolute transition-all duration-300 z-50 focus:outline-none bg-white border-2 border-gray-200 shadow-md rounded-full text-blue-600 hover:text-blue-800 hidden md:flex items-center justify-center
                         top-1/2 -translate-y-1/2
                         w-8 h-8 md:w-12 md:h-12 p-0
                         left-full -translate-x-1/2
@@ -410,9 +410,34 @@ export default function Dashboard() {
             </div>
 
             {/* Main Content - Added overflow-x-hidden */}
-            <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
-                {renderContent()}
-            </main>
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Mobile Header Bar */}
+                <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-10">
+                    <button
+                        onClick={() => setIsCollapsed(false)}
+                        className="p-1 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                        title="Abrir menú"
+                    >
+                        <Menu size={24} />
+                    </button>
+                    <span className="font-bold text-gray-800 capitalize text-sm">
+                        {currentView === 'main' ? 'Salón' :
+                         currentView === 'menu' ? 'Menú' :
+                         currentView === 'stock' ? 'Inventario' :
+                         currentView === 'reports' ? 'Caja / Reportes' :
+                         currentView === 'accounts' ? 'Historial Cuentas' :
+                         currentView === 'drink_promos' ? '2x1 Tragos' :
+                         currentView === 'qr_management' ? 'Pantalla Cliente' : 'Makala'}
+                    </span>
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs select-none">
+                        {user?.displayName?.charAt(0) || 'U'}
+                    </div>
+                </header>
+
+                <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
+                    {renderContent()}
+                </main>
+            </div>
 
             {/* MODALS */}
             {showUserManagement && <UserManagementModal onClose={() => setShowUserManagement(false)} />}
