@@ -138,71 +138,89 @@ function getActionLabel(action) {
     return ACTION_LABELS[action] || action;
 }
 
-function TableRow({ log }) {
-    const [expanded, setExpanded] = useState(false);
+function formatReference(log) {
     const details = parseDetails(log.details);
+    if (!details) return '-';
 
+    // Format specific actions first
+    switch (log.action) {
+        case 'LOGIN':
+            return details.ip ? `IP: ${details.ip}` : 'Sesión iniciada';
+        case 'OPEN_SHIFT':
+            return `Apertura de Caja con S/ ${parseFloat(details.openingCash || 0).toFixed(2)}`;
+        case 'CLOSE_SHIFT': {
+            const parts = [`Cierre Turno #${details.sessionId || log.entityId || ''}`];
+            if (details.closingNotes) {
+                parts.push(`Notas: "${details.closingNotes}"`);
+            }
+            return parts.join(' · ');
+        }
+        case 'CREATE_ORDER':
+        case 'CANCEL_ORDER': {
+            const parts = [];
+            if (details.tableId) parts.push(`Mesa ${details.tableId}`);
+            if (details.items) parts.push(String(details.items));
+            return parts.join(' · ') || 'Detalles de pedido';
+        }
+        case 'ADD_PAYMENT':
+            return `Abono de S/ ${parseFloat(details.amount || 0).toFixed(2)} (${details.paymentMethod || 'Efectivo'})`;
+        default:
+            break;
+    }
+
+    // Fallback for other actions: list relevant keys in a single readable line
+    const excludedKeys = ['userId', 'username', 'id', 'createdAt', 'updatedAt', 'entityId', 'sessionId'];
+    const parts = [];
+    
+    if (details.tableId) {
+        parts.push(`Mesa ${details.tableId}`);
+    }
+
+    Object.entries(details).forEach(([k, v]) => {
+        if (excludedKeys.includes(k) || k === 'tableId') return;
+        const label = DETAIL_KEY_LABELS[k] || k;
+        let displayVal = String(v);
+        if (typeof v === 'boolean') {
+            displayVal = v ? 'Sí' : 'No';
+        }
+        if (displayVal.startsWith('{') || displayVal.startsWith('[')) return;
+        parts.push(`${label}: ${displayVal}`);
+    });
+
+    return parts.join(' · ') || String(log.details || '-');
+}
+
+function TableRow({ log }) {
     return (
-        <>
-            <tr
-                className="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100"
-                onClick={() => setExpanded(prev => !prev)}
-            >
-                <td className="p-3 text-xs text-gray-500 whitespace-nowrap">
-                    {formatDate(log.createdAt)}
-                </td>
-                <td className="p-3 text-sm font-medium text-gray-800">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-[10px] font-bold text-indigo-700">
-                                {log.User ? (log.User.displayName || log.User.username || '?')[0].toUpperCase() : '-'}
-                            </span>
-                        </div>
-                        <span className="truncate max-w-[90px]">
-                            {log.User ? (log.User.displayName || log.User.username) : <span className="text-gray-400 font-semibold">N/A</span>}
+        <tr className="hover:bg-gray-50 transition-colors border-b border-gray-100">
+            <td className="p-3 text-xs text-gray-500 whitespace-nowrap">
+                {formatDate(log.createdAt)}
+            </td>
+            <td className="p-3 text-sm font-medium text-gray-800">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-indigo-700">
+                            {log.User ? (log.User.displayName || log.User.username || '?')[0].toUpperCase() : '-'}
                         </span>
                     </div>
-                </td>
-                <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getActionColor(log.action)}`}>
-                        {getActionLabel(log.action)}
+                    <span className="truncate max-w-[120px]">
+                        {log.User ? (log.User.displayName || log.User.username) : <span className="text-gray-400 font-semibold">N/A</span>}
                     </span>
-                </td>
-                <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
-                    {ENTITY_LABELS[log.entity] || log.entity}
-                    {log.entityId && <span className="text-xs text-gray-400 ml-1">#{log.entityId}</span>}
-                </td>
-                <td className="p-3 text-xs text-gray-500 hidden lg:table-cell truncate max-w-[200px]">
-                    {details?.tableId ? <span className="text-indigo-600 font-medium">Mesa {details.tableId}</span> : ''}
-                    {details?.items ? <span className="ml-1 text-gray-500">{String(details.items).slice(0, 50)}</span> : ''}
-                    {!details?.tableId && !details?.items && log.details ? <span>{String(log.details).slice(0, 60)}</span> : ''}
-                </td>
-                <td className="p-3 text-gray-400">
-                    {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </td>
-            </tr>
-            {expanded && details && (
-                <tr className="bg-indigo-50/40 border-b border-indigo-100">
-                    <td colSpan={6} className="px-4 py-3">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                            {Object.entries(details).map(([k, v]) => {
-                                const label = DETAIL_KEY_LABELS[k] || k;
-                                let displayVal = String(v);
-                                if (typeof v === 'boolean') {
-                                    displayVal = v ? 'Sí' : 'No';
-                                }
-                                return (
-                                    <div key={k} className="bg-white rounded border border-indigo-100 px-2 py-1">
-                                        <div className="text-[10px] text-indigo-400 font-semibold uppercase">{label}</div>
-                                        <div className="text-xs text-gray-700 font-medium truncate" title={displayVal}>{displayVal}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </td>
-                </tr>
-            )}
-        </>
+                </div>
+            </td>
+            <td className="p-3">
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getActionColor(log.action)}`}>
+                    {getActionLabel(log.action)}
+                </span>
+            </td>
+            <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
+                {ENTITY_LABELS[log.entity] || log.entity}
+                {log.entityId && <span className="text-xs text-gray-400 ml-1">#{log.entityId}</span>}
+            </td>
+            <td className="p-3 text-xs text-gray-600 font-medium max-w-[300px] sm:max-w-none truncate sm:whitespace-normal" title={formatReference(log)}>
+                {formatReference(log)}
+            </td>
+        </tr>
     );
 }
 
@@ -442,8 +460,7 @@ export default function AuditLogView() {
                                 <th className="text-left p-3 text-xs font-semibold text-gray-500">Usuario</th>
                                 <th className="text-left p-3 text-xs font-semibold text-gray-500">Acción</th>
                                 <th className="text-left p-3 text-xs font-semibold text-gray-500 hidden md:table-cell">Entidad</th>
-                                <th className="text-left p-3 text-xs font-semibold text-gray-500 hidden lg:table-cell">Referencia</th>
-                                <th className="p-3 w-8"></th>
+                                <th className="text-left p-3 text-xs font-semibold text-gray-500">Referencia</th>
                             </tr>
                         </thead>
                         <tbody>
