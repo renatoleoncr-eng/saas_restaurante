@@ -47,16 +47,21 @@ export default function Dashboard() {
 
     // User Menu State
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showMobileUserMenu, setShowMobileUserMenu] = useState(false);
     const [showUserManagement, setShowUserManagement] = useState(false);
     const [showPasswordChange, setShowPasswordChange] = useState(false);
     const [showBillingConfig, setShowBillingConfig] = useState(false);
     const menuRef = useRef(null);
+    const mobileMenuRef = useRef(null);
 
     // Close menu when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setShowUserMenu(false);
+            }
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+                setShowMobileUserMenu(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -429,8 +434,54 @@ export default function Dashboard() {
                          currentView === 'drink_promos' ? '2x1 Tragos' :
                          currentView === 'qr_management' ? 'Pantalla Cliente' : 'Makala'}
                     </span>
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs select-none">
-                        {user?.displayName?.charAt(0) || 'U'}
+                    <div className="relative" ref={mobileMenuRef}>
+                        <button
+                            onClick={() => setShowMobileUserMenu(!showMobileUserMenu)}
+                            className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs select-none hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {user?.displayName?.charAt(0) || 'U'}
+                        </button>
+                        {showMobileUserMenu && (
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={() => { setShowUserManagement(true); setShowMobileUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <Users size={16} /> Gestionar Usuarios
+                                    </button>
+                                )}
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={() => { setShowBillingConfig(true); setShowMobileUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <CreditCard size={16} /> Config. Facturación
+                                    </button>
+                                )}
+                                {['admin', 'cashier'].includes(user?.role) && (
+                                    <button
+                                        onClick={() => { setCurrentView('qr_management'); setShowMobileUserMenu(false); }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        <Tv size={16} /> Pantalla Cliente
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => { setShowPasswordChange(true); setShowMobileUserMenu(false); }}
+                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                    <Key size={16} /> Cambiar Contraseña
+                                </button>
+                                <div className="border-t my-1"></div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                    <LogOut size={16} /> Cerrar Sesión
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </header>
 

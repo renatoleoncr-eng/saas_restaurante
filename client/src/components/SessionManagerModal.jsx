@@ -10,12 +10,20 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     const [isClosingMode, setIsClosingMode] = useState(initialIsClosingMode);
     const [expandedPaymentMethod, setExpandedPaymentMethod] = useState(null);
     const [expandedCategory, setExpandedCategory] = useState(null);
+    const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
     const [countedValues, setCountedValues] = useState({
         efectivo: '',
         tarjeta: '',
         yape: '',
         transferencia: ''
     });
+
+    const displayNames = {
+        efectivo: 'Efectivo',
+        tarjeta: 'TC/TD',
+        yape: 'Yape',
+        transferencia: 'Transf'
+    };
 
     const fetchCurrentSession = async () => {
         try {
@@ -54,21 +62,11 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         }
     };
 
-    const handleCloseSession = async () => {
-        const diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
-        const diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
-        const diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
-        const diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+    const handleRequestCloseSession = () => {
+        setShowConfirmCloseModal(true);
+    };
 
-        const hasDifferences = diffEfectivo !== 0 || diffTarjeta !== 0 || diffYape !== 0 || diffTransferencia !== 0;
-
-        let confirmMessage = 'El cuadre de caja ha sido exitoso. ¿Seguro que desea cerrar el turno? Esta acción no se puede deshacer.';
-        if (hasDifferences) {
-            confirmMessage = 'El cuadre de caja no es exacto (existen diferencias). ¿Aún así desea continuar? Esta acción no se puede deshacer.';
-        }
-
-        if (!confirm(confirmMessage)) return;
-        
+    const handleConfirmCloseSession = async () => {
         try {
             const userString = localStorage.getItem('user');
             const user = userString ? JSON.parse(userString) : null;
@@ -90,6 +88,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                 closingDetails,
                 userId: user?.id
             });
+            setShowConfirmCloseModal(false);
             onClose();
         } catch (err) {
             alert(err.response?.data?.error || "Error al cerrar sesión");
@@ -106,12 +105,12 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         <div className="fixed inset-0 bg-white z-[100] flex flex-col w-full h-dvh overflow-hidden">
                 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-center">
+                <div className={`bg-gradient-to-r ${sessionData && !isClosingMode ? 'from-green-600 to-emerald-700' : 'from-blue-600 to-indigo-700'} p-4 md:p-6 text-white flex justify-between items-center shadow-md`}>
                     <div className="flex items-center gap-3">
-                        <Calculator className="text-blue-100" size={24} />
+                        <Calculator className={sessionData && !isClosingMode ? 'text-green-100' : 'text-blue-100'} size={24} />
                         <div>
-                            <h2 className="text-xl font-bold">Gestión de Turno y Caja</h2>
-                            <p className="text-blue-100 text-xs opacity-80">
+                            <h2 className="text-lg md:text-xl font-bold">Gestión de Turno y Caja</h2>
+                            <p className={`${sessionData && !isClosingMode ? 'text-green-100' : 'text-blue-100'} text-xs opacity-80`}>
                                 {sessionData ? `Sesión activa #${sessionData.session.id}` : 'No hay sesión activa'}
                             </p>
                         </div>
@@ -121,7 +120,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50/50">
                     {!sessionData ? (
                         /* OPEN SESSION VIEW */
                         <div className="space-y-6 py-4">
@@ -157,28 +156,28 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                         </div>
                     ) : !isClosingMode ? (
                         /* SHIFT SUMMARY VIEW */
-                        <div className="space-y-6">
-                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg flex gap-3">
-                                <CheckCircle className="text-blue-600 shrink-0" size={20} />
-                                <p className="text-blue-800 text-sm font-semibold">
+                        <div className="space-y-4 md:space-y-6">
+                            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg flex gap-3">
+                                <CheckCircle className="text-green-600 shrink-0" size={20} />
+                                <p className="text-green-800 text-sm font-semibold">
                                     El turno está actualmente abierto y operando.
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <div className="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100">
                                     <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Apertura</span>
-                                    <span className="text-xl font-bold text-gray-800">S/ {parseFloat(sessionData.session.openingCash).toFixed(2)}</span>
+                                    <span className="text-lg md:text-xl font-bold text-gray-800">S/ {parseFloat(sessionData.session.openingCash).toFixed(2)}</span>
                                 </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <div className="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100">
                                     <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Iniciado por</span>
-                                    <span className="text-sm font-bold text-gray-800">{sessionData.session.Opener?.displayName || sessionData.session.Opener?.username || 'Sistema'}</span>
+                                    <span className="text-sm font-bold text-gray-800 truncate block">{sessionData.session.Opener?.displayName || sessionData.session.Opener?.username || 'Sistema'}</span>
                                 </div>
                             </div>
 
                             <button 
                                 onClick={onClose}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-green-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
                             >
                                 <Coffee size={20} /> Abrir Salón (Ir a las Mesas)
                             </button>
@@ -204,15 +203,15 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 </div>
                             </div>
 
-                            <div className="border rounded-2xl overflow-hidden shadow-inner">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[500px] text-sm">
+                            <div className="border rounded-2xl overflow-hidden shadow-inner bg-white">
+                                <div className="overflow-x-auto no-scrollbar">
+                                    <table className="w-full text-sm table-fixed">
                                         <thead className="bg-gray-100 text-gray-600">
                                             <tr>
-                                                <th className="px-4 py-3 text-left font-bold uppercase tracking-tighter text-[10px]">Método</th>
-                                                <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Esperado</th>
-                                                <th className="px-4 py-3 text-right w-32 font-bold uppercase tracking-tighter text-[10px]">Contado</th>
-                                                <th className="px-4 py-3 text-right font-bold uppercase tracking-tighter text-[10px]">Diferencia</th>
+                                                <th className="w-[30%] px-2 py-2.5 md:px-4 md:py-3 text-left font-bold uppercase tracking-tighter text-[9px] md:text-[10px]">Método</th>
+                                                <th className="w-[23%] px-2 py-2.5 md:px-4 md:py-3 text-right font-bold uppercase tracking-tighter text-[9px] md:text-[10px]">Esperado</th>
+                                                <th className="w-[27%] px-2 py-2.5 md:px-4 md:py-3 text-right font-bold uppercase tracking-tighter text-[9px] md:text-[10px]">Contado</th>
+                                                <th className="w-[20%] px-2 py-2.5 md:px-4 md:py-3 text-right font-bold uppercase tracking-tighter text-[9px] md:text-[10px]">Diferencia</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -226,24 +225,24 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                     <React.Fragment key={m}>
                                                     <tr className={`hover:bg-gray-50/50 transition-colors ${expandedPaymentMethod === m ? 'bg-blue-50/50' : ''}`}>
                                                         <td 
-                                                            className="px-4 py-4 capitalize font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none"
+                                                            className="px-2 py-3 md:px-4 md:py-4 font-semibold text-gray-700 flex items-center gap-1 md:gap-2 cursor-pointer select-none text-xs md:text-sm truncate"
                                                             onClick={() => setExpandedPaymentMethod(expandedPaymentMethod === m ? null : m)}
                                                         >
-                                                            {expandedPaymentMethod === m ? <ChevronUp size={14} className="text-blue-500 shrink-0" /> : <ChevronDown size={14} className="text-gray-400 shrink-0" />}
-                                                            {m}
+                                                            {expandedPaymentMethod === m ? <ChevronUp size={12} className="text-blue-500 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
+                                                            {displayNames[m]}
                                                         </td>
-                                                        <td className="px-4 py-4 text-right font-mono font-bold text-gray-600">S/ {expected.toFixed(2)}</td>
-                                                        <td className="px-4 py-2 text-right">
+                                                        <td className="px-2 py-3 md:px-4 md:py-4 text-right font-mono font-bold text-gray-600 text-xs md:text-sm truncate">S/ {expected.toFixed(2)}</td>
+                                                        <td className="px-2 py-1.5 md:px-4 md:py-2 text-right">
                                                             <input 
                                                                 type="number"
                                                                 value={countedValues[m]}
                                                                 onChange={e => setCountedValues({...countedValues, [m]: e.target.value})}
                                                                 onWheel={(e) => e.target.blur()}
-                                                                className="w-full border p-2 rounded-lg text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                className="w-full border p-1 md:p-2 rounded-lg text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none text-xs md:text-sm"
                                                                 placeholder="0.00"
                                                             />
                                                         </td>
-                                                        <td className={`px-4 py-4 text-right font-bold ${countedStr === '' ? 'text-gray-300' : diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : 'text-blue-500'}`}>
+                                                        <td className={`px-2 py-3 md:px-4 md:py-4 text-right font-bold text-xs md:text-sm truncate ${countedStr === '' ? 'text-gray-300' : diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : 'text-blue-500'}`}>
                                                             {countedStr !== '' ? (diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK') : '-'}
                                                         </td>
                                                     </tr>
@@ -351,18 +350,18 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 <textarea 
                                     value={closingNotes}
                                     onChange={e => setClosingNotes(e.target.value)}
-                                    className="w-full border-2 border-gray-100 rounded-xl p-4 text-sm focus:border-blue-500 outline-none transition-all resize-none"
+                                    className="w-full border-2 border-gray-100 rounded-xl p-4 text-sm focus:border-red-500 outline-none transition-all resize-none"
                                     placeholder="Describa cualquier descuadre o detalle del turno..."
                                     rows={3}
                                 />
                             </div>
 
-                            <button 
-                                onClick={handleCloseSession}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 transform active:scale-95"
-                            >
-                                <Lock size={20} /> Confirmar Cierre de Turno y Caja
-                            </button>
+                             <button 
+                                 onClick={handleRequestCloseSession}
+                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                             >
+                                 <Lock size={20} /> Confirmar Cierre de Turno y Caja
+                             </button>
                         </div>
                     )}
                 </div>
@@ -371,6 +370,98 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                 <div className="bg-gray-50 p-4 border-t border-gray-100 text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">
                     Sistema de Gestión Mak Suites - Control de Auditoría
                 </div>
+
+                {/* CONFIRMATION CLOSE MODAL */}
+                {showConfirmCloseModal && (() => {
+                    const diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
+                    const diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
+                    const diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
+                    const diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+                    
+                    const hasDifferences = diffEfectivo !== 0 || diffTarjeta !== 0 || diffYape !== 0 || diffTransferencia !== 0;
+                    
+                    return (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                                {/* Alert Banner based on differences */}
+                                {hasDifferences ? (
+                                    <div className="bg-red-50 border-b border-red-100 p-6 flex flex-col items-center text-center">
+                                        <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-3">
+                                            <AlertCircle size={28} />
+                                        </div>
+                                        <h3 className="text-lg font-extrabold text-red-900">¡Descuadre en Caja Detectado!</h3>
+                                        <p className="text-xs text-red-700 mt-2">
+                                            Se han encontrado diferencias entre los montos esperados por el sistema y los montos físicos contados.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-green-50 border-b border-green-100 p-6 flex flex-col items-center text-center">
+                                        <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                                            <CheckCircle size={28} />
+                                        </div>
+                                        <h3 className="text-lg font-extrabold text-green-900">¡Caja Cuadrada Correctamente!</h3>
+                                        <p className="text-xs text-green-700 mt-2">
+                                            Los montos contados coinciden perfectamente con los montos esperados en el sistema.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Details Table */}
+                                <div className="p-6 space-y-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Detalles de Cuadre:</h4>
+                                    <div className="divide-y divide-gray-100 text-xs">
+                                        {['efectivo', 'tarjeta', 'yape', 'transferencia'].map(m => {
+                                            const expected = sessionData.expected[m] || 0;
+                                            const counted = parseFloat(countedValues[m]) || 0;
+                                            const diff = counted - expected;
+                                            
+                                            return (
+                                                <div key={m} className="py-2 flex justify-between items-center">
+                                                    <span className="font-semibold text-gray-700 capitalize">{displayNames[m]}</span>
+                                                    <div className="flex gap-4 font-mono">
+                                                        <span className="text-gray-400">Esp: S/ {expected.toFixed(2)}</span>
+                                                        <span className="text-gray-600 font-bold">Cont: S/ {counted.toFixed(2)}</span>
+                                                        {diff !== 0 ? (
+                                                            <span className={`font-bold ${diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                                {diff < 0 ? '-' : '+'}S/ {Math.abs(diff).toFixed(2)}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-green-600 font-bold">OK</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <p className="text-gray-500 text-[11px] leading-relaxed italic text-center mt-2">
+                                        ¿Está seguro de que desea proceder con el cierre del turno? Esta acción no se puede deshacer.
+                                    </p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="bg-gray-50 px-6 py-4 flex gap-3 border-t border-gray-100">
+                                    <button
+                                        onClick={() => setShowConfirmCloseModal(false)}
+                                        className="flex-1 bg-white hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl border transition-all text-xs"
+                                    >
+                                        Cancelar y Revisar
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmCloseSession}
+                                        className={`flex-1 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-1 ${
+                                            hasDifferences 
+                                                ? 'bg-red-600 hover:bg-red-700 hover:shadow-red-100' 
+                                                : 'bg-green-600 hover:bg-green-700 hover:shadow-green-100'
+                                        }`}
+                                    >
+                                        <Lock size={14} /> Confirmar Cierre
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
         </div>
     );
 }

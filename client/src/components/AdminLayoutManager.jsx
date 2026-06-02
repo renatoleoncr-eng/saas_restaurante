@@ -14,6 +14,7 @@ export default function AdminLayoutManager() {
     const [creatingTable, setCreatingTable] = useState({}); // { areaId: boolean }
     const [showSessionModal, setShowSessionModal] = useState(false);
     const [activeSession, setActiveSession] = useState(null);
+    const [isCreatingArea, setIsCreatingArea] = useState(false);
 
     // Mobile Tabs State
     const [activeAreaId, setActiveAreaId] = useState(null);
@@ -129,7 +130,7 @@ export default function AdminLayoutManager() {
                 <button
                     onClick={() => setShowSessionModal(true)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold shadow-sm transition-all transform active:scale-95 ${activeSession
-                        ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200'
+                        ? 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200'
                         : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
                         }`}
                 >
@@ -156,21 +157,48 @@ export default function AdminLayoutManager() {
             ) : (
                 <>
                     {/* Area Creation */}
-                    <div className="flex gap-2 mb-6">
-                <input
-                    type="text"
-                    value={newAreaName}
-                    onChange={e => setNewAreaName(e.target.value)}
-                    placeholder="Nombre Nueva Fila (ej. Terraza)"
-                    className="border p-2 rounded"
-                />
-                <button
-                    onClick={handleCreateArea}
-                    className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
-                >
-                    <Plus size={16} /> Crear Area
-                </button>
-            </div>
+                    <div className="mb-6">
+                        {!isCreatingArea ? (
+                            <button
+                                onClick={() => setIsCreatingArea(true)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all transform active:scale-95 text-sm"
+                            >
+                                <Plus size={16} /> Crear Área
+                            </button>
+                        ) : (
+                            <div className="flex flex-col sm:flex-row gap-2 bg-gray-50 border p-3 rounded-xl max-w-md animate-in fade-in duration-200">
+                                <input
+                                    type="text"
+                                    value={newAreaName}
+                                    onChange={e => setNewAreaName(e.target.value)}
+                                    placeholder="Nombre Nueva Fila (ej. Terraza)"
+                                    className="border px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                    autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            if (!newAreaName.trim()) return;
+                                            await handleCreateArea();
+                                            setIsCreatingArea(false);
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs"
+                                    >
+                                        Crear
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setNewAreaName('');
+                                            setIsCreatingArea(false);
+                                        }}
+                                        className="bg-white hover:bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-lg border text-xs"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
             {/* Areas List */}
 
