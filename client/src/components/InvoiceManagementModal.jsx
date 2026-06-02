@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     X, 
     FileText, 
@@ -823,7 +824,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     };
 
     if (isSuccess) {
-        return (
+        return createPortal(
             <div className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
                 <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-white">
                     <div className="p-8 text-center bg-slate-50/50 border-b border-slate-100">
@@ -864,11 +865,12 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white w-full md:max-w-[1400px] h-full md:h-[94vh] rounded-none md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 
@@ -1044,7 +1046,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     background: #cbd5e1;
                 }
             `}} />
-        </div>
+        </div>,
+        document.body
     );
 };
 
