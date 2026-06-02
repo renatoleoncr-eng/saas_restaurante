@@ -397,9 +397,8 @@ export default function DrinkPromotionsConfig() {
                         ) : (
                             <div className="flex items-center gap-3">
                                 <Wine size={18} className="text-purple-500" />
-                                <span className="font-bold text-gray-800 text-base">{promo.name}</span>
-                                <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                                    S/ {Number(parseFloat(promo.price).toFixed(2))}
+                                <span className="bg-purple-100 text-purple-700 text-xs font-extrabold px-3 py-1 rounded-full">
+                                    {promo.name}
                                 </span>
                             </div>
                         )}
