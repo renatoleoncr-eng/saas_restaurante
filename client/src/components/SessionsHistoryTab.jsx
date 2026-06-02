@@ -237,7 +237,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             amount: parseFloat(p.amount),
             method: p.method || 'efectivo',
             time: p.createdAt,
-            user: p.User?.displayName || p.User?.username || 'Sistema',
+            user: p.User ? (p.User.displayName || p.User.username) : 'N/A',
             reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
         }));
 
@@ -247,7 +247,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             amount: parseFloat(e.amount),
             method: e.paymentMethod || 'efectivo',
             time: e.date || e.createdAt,
-            user: e.User?.displayName || e.User?.username || 'Sistema',
+            user: e.User?.displayName || e.User?.username || 'N/A',
             reference: e.description || 'Gasto General'
         }));
 

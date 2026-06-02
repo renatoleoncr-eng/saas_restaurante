@@ -111,7 +111,7 @@ export default function ReportesView() {
                 description: `Abono Cuenta #${p.AccountId || '?'}`,
                 details: p.Account || {}, // Store full account obj
                 paymentDetails: p, // Store specific payment obj
-                user: p.User ? (p.User.displayName || p.User.username) : 'Sistema',
+                user: p.User ? (p.User.displayName || p.User.username) : 'N/A',
                 method: p.method
             };
         }),

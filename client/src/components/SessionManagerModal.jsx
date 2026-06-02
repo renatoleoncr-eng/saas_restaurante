@@ -35,7 +35,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             amount: parseFloat(p.amount),
             method: p.method || 'efectivo',
             time: p.createdAt,
-            user: p.User?.displayName || p.User?.username || 'Sistema',
+            user: p.User?.displayName || p.User?.username || 'N/A',
             reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
         }));
 
@@ -45,7 +45,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             amount: parseFloat(e.amount),
             method: e.paymentMethod || 'efectivo',
             time: e.date || e.createdAt,
-            user: e.User?.displayName || e.User?.username || 'Sistema',
+            user: e.User?.displayName || e.User?.username || 'N/A',
             reference: e.description || 'Gasto General'
         }));
 
@@ -362,9 +362,11 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                                                 <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
                                                                                     <span className="font-semibold text-gray-700">
                                                                                         Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
-                                                                                        <span className="text-[10px] text-gray-400 font-normal ml-1.5">
-                                                                                            ({p.User?.displayName || p.User?.username || 'Sistema'})
-                                                                                        </span>
+                                                                                        {p.User && (
+                                                                                            <span className="text-[10px] text-gray-400 font-normal ml-1.5">
+                                                                                                ({p.User.displayName || p.User.username})
+                                                                                            </span>
+                                                                                        )}
                                                                                     </span>
                                                                                     <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
                                                                                     <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -446,9 +448,11 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                                 <li key={p.id} className="flex justify-between items-center text-[10px] bg-white p-2 rounded border border-gray-100 shadow-sm">
                                                                     <span className="font-semibold text-gray-700">
                                                                         Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
-                                                                        <span className="text-[9px] text-gray-400 font-normal ml-1.5">
-                                                                            ({p.User?.displayName || p.User?.username || 'Sistema'})
-                                                                        </span>
+                                                                        {p.User && (
+                                                                            <span className="text-[9px] text-gray-400 font-normal ml-1.5">
+                                                                                ({p.User.displayName || p.User.username})
+                                                                            </span>
+                                                                        )}
                                                                     </span>
                                                                     <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
                                                                     <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>

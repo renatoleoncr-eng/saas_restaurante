@@ -67,6 +67,44 @@ const ACTION_LABELS = {
     DELETE_PROMO_ITEM:     'Eliminar Trago 2x1',
 };
 
+const ENTITY_LABELS = {
+    Account: 'Mesa / Cuenta',
+    Order: 'Pedido',
+    Payment: 'Pago',
+    CashSession: 'Turno / Caja',
+    Product: 'Producto',
+    User: 'Usuario',
+    Area: 'Área',
+    Table: 'Mesa',
+    DrinkPromotion: 'Promo 2x1',
+    DrinkPromotionItem: 'Bebida 2x1'
+};
+
+const DETAIL_KEY_LABELS = {
+    userId: 'ID Usuario',
+    tableId: 'Número de Mesa',
+    accountId: 'ID Cuenta',
+    productId: 'ID Producto',
+    openingCash: 'Efectivo Inicial',
+    closingNotes: 'Notas de Cierre',
+    amount: 'Monto',
+    quantity: 'Cantidad',
+    notes: 'Notas / Observaciones',
+    reason: 'Motivo',
+    paymentMethod: 'Método de Pago',
+    username: 'Usuario',
+    displayName: 'Nombre Completo',
+    role: 'Rol / Permisos',
+    ip: 'Dirección IP',
+    status: 'Estado',
+    total: 'Total',
+    customerName: 'Cliente',
+    clientDni: 'DNI / RUC',
+    clientAddress: 'Dirección',
+    accountType: 'Tipo de Cuenta',
+    category: 'Categoría'
+};
+
 const ENTITIES = [
     { value: '', label: 'Todas las entidades' },
     { value: 'Account', label: 'Cuentas (Mesas)' },
@@ -117,11 +155,11 @@ function TableRow({ log }) {
                     <div className="flex items-center gap-1.5">
                         <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                             <span className="text-[10px] font-bold text-indigo-700">
-                                {log.User ? (log.User.displayName || log.User.username || '?')[0].toUpperCase() : '?'}
+                                {log.User ? (log.User.displayName || log.User.username || '?')[0].toUpperCase() : '-'}
                             </span>
                         </div>
                         <span className="truncate max-w-[90px]">
-                            {log.User ? (log.User.displayName || log.User.username) : <span className="text-red-400 italic text-xs">Desconocido</span>}
+                            {log.User ? (log.User.displayName || log.User.username) : <span className="text-gray-400 font-semibold">N/A</span>}
                         </span>
                     </div>
                 </td>
@@ -131,7 +169,7 @@ function TableRow({ log }) {
                     </span>
                 </td>
                 <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
-                    {log.entity}
+                    {ENTITY_LABELS[log.entity] || log.entity}
                     {log.entityId && <span className="text-xs text-gray-400 ml-1">#{log.entityId}</span>}
                 </td>
                 <td className="p-3 text-xs text-gray-500 hidden lg:table-cell truncate max-w-[200px]">
@@ -147,12 +185,19 @@ function TableRow({ log }) {
                 <tr className="bg-indigo-50/40 border-b border-indigo-100">
                     <td colSpan={6} className="px-4 py-3">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                            {Object.entries(details).map(([k, v]) => (
-                                <div key={k} className="bg-white rounded border border-indigo-100 px-2 py-1">
-                                    <div className="text-[10px] text-indigo-400 font-semibold uppercase">{k}</div>
-                                    <div className="text-xs text-gray-700 font-medium truncate">{String(v)}</div>
-                                </div>
-                            ))}
+                            {Object.entries(details).map(([k, v]) => {
+                                const label = DETAIL_KEY_LABELS[k] || k;
+                                let displayVal = String(v);
+                                if (typeof v === 'boolean') {
+                                    displayVal = v ? 'Sí' : 'No';
+                                }
+                                return (
+                                    <div key={k} className="bg-white rounded border border-indigo-100 px-2 py-1">
+                                        <div className="text-[10px] text-indigo-400 font-semibold uppercase">{label}</div>
+                                        <div className="text-xs text-gray-700 font-medium truncate" title={displayVal}>{displayVal}</div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </td>
                 </tr>
