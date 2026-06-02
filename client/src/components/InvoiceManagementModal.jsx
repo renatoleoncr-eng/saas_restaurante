@@ -566,7 +566,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 {history.map((doc) => (
                     <button 
                         key={doc.id}
-                        className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-slate-200/30 transition-all group relative overflow-hidden active:scale-[0.98] flex items-center justify-between gap-4"
+                        className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-slate-200/30 transition-all group relative overflow-hidden active:scale-[0.98]"
                         onClick={() => {
                             if (isMobile) {
                                 setSelectedDocId(doc.id);
@@ -578,25 +578,29 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             }
                         }}
                     >
-                        <div className="flex items-center gap-3.5 min-w-0">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
-                                <Printer size={18} />
-                            </div>
-                            <div className="min-w-0 space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                                        {doc.tipoDocumento === '01' ? 'Factura' : 'Boleta'} {doc.serie}-{doc.correlativo}
-                                    </span>
-                                    {doc.status === 'anulado' && <span className="text-[9px] font-black text-rose-500 shrink-0">ANULADA</span>}
+                        <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex items-start gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
+                                    <Printer size={18} />
                                 </div>
-                                <div className="text-[11px] font-extrabold text-slate-500 truncate max-w-[140px] sm:max-w-[200px] uppercase tracking-tight">
-                                    {doc.clienteNombre || account.customerName || 'Varios'}
+                                <div className="min-w-0 space-y-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                            {doc.tipoDocumento === '01' ? 'Factura' : 'Boleta'} {doc.serie}-{doc.correlativo}
+                                        </span>
+                                        {doc.status === 'anulado' && <span className="text-[9px] font-black text-rose-500 shrink-0">ANULADA</span>}
+                                    </div>
+                                    <div className="text-[11px] font-extrabold text-slate-500 truncate max-w-[125px] lg:max-w-[200px] uppercase tracking-tight">
+                                        {doc.clienteNombre || account.customerName || 'Varios'}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="text-right shrink-0 space-y-0.5">
-                            <div className="text-sm font-black text-slate-800">S/ {parseFloat(doc.total).toFixed(2)}</div>
-                            <div className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">{new Date(doc.createdAt).toLocaleDateString()}</div>
+                            <div className="text-right shrink-0 space-y-1">
+                                <div className="text-sm font-black text-slate-800">S/ {parseFloat(doc.total).toFixed(2)}</div>
+                                <div className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+                                    {new Date(doc.createdAt).toLocaleDateString([], {day:'2-digit', month:'2-digit'})} {new Date(doc.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                </div>
+                            </div>
                         </div>
                     </button>
                 ))}
@@ -715,16 +719,16 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     )}
                     
                     {/* Header */}
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
                                     {isAnulado ? 'ANULADO' : 'EMITIDO'}
                                 </span>
                             </div>
-                            <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'}`}>
-                                {docLabel}
-                                <span className="ml-3 text-slate-300 font-medium tracking-normal text-lg">[{doc.serie}-{doc.correlativo}]</span>
+                            <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'} flex flex-wrap items-center gap-2`}>
+                                <span>{docLabel}</span>
+                                <span className="text-slate-400 font-medium tracking-normal text-base">[{doc.serie}-{doc.correlativo}]</span>
                             </h2>
                             {isAnulado && creditNoteId && (
                                 <div className="flex items-center gap-2 pt-1">
@@ -734,11 +738,11 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                 </div>
                             )}
                         </div>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL</span>
-                            <div className="text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
+                            <div className="text-3xl font-black text-slate-800 flex items-baseline sm:justify-end gap-1 tracking-tighter leading-none">
                                 <span className="text-sm font-medium text-slate-300">S/</span>
-                                {parseFloat(doc.total || 0).toFixed(2)}
+                                {parseFloat(doc.total).toFixed(2)}
                             </div>
                         </div>
                     </div>
@@ -998,7 +1002,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 {/* DESKTOP VIEW LAYOUT */}
                 <div className="hidden md:flex flex-1 flex-row bg-slate-50/5 overflow-hidden">
                     {/* SIDEBAR: Financials + Items + History */}
-                    <div className="w-[420px] min-w-[420px] basis-[420px] h-full border-r flex flex-col bg-white shrink-0 relative z-10">
+                    <div className="w-[340px] min-w-[340px] basis-[340px] lg:w-[420px] lg:min-w-[420px] lg:basis-[420px] h-full border-r flex flex-col bg-white shrink-0 relative z-10">
                         {renderSummaryBox()}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-2 space-y-8">
                             {renderItemsList()}
