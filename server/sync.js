@@ -94,6 +94,46 @@ async function runAutomaticFix() {
     }
 }
 
+async function createDbIndexes() {
+    console.log("--- CREATING DATABASE INDEXES FOR PERFORMANCE ---");
+    const isMySQL = sequelize.getDialect() === 'mysql';
+    
+    const indexes = [
+        { name: 'idx_productmovements_productid', table: 'ProductMovements', columns: 'ProductId' },
+        { name: 'idx_productmovements_createdat', table: 'ProductMovements', columns: 'createdAt' },
+        { name: 'idx_productmovements_variantid', table: 'ProductMovements', columns: 'ProductVariantId' },
+        { name: 'idx_ingredientmovements_ingredientid', table: 'IngredientMovements', columns: 'IngredientId' },
+        { name: 'idx_ingredientmovements_createdat', table: 'IngredientMovements', columns: 'createdAt' },
+        { name: 'idx_productvariants_productid', table: 'ProductVariants', columns: 'ProductId' },
+        { name: 'idx_recipes_productid', table: 'Recipes', columns: 'ProductId' },
+        { name: 'idx_recipes_ingredientid', table: 'Recipes', columns: 'IngredientId' },
+        { name: 'idx_orders_accountid', table: 'Orders', columns: 'AccountId' },
+        { name: 'idx_orders_productid', table: 'Orders', columns: 'ProductId' }
+    ];
+
+    for (const idx of indexes) {
+        try {
+            if (isMySQL) {
+                try {
+                    await sequelize.query(`ALTER TABLE \`${idx.table}\` ADD INDEX \`${idx.name}\` (\`${idx.columns}\`);`);
+                    console.log(`[Index] Created index ${idx.name} on ${idx.table} (MySQL)`);
+                } catch (mysqlErr) {
+                    if (mysqlErr.original && mysqlErr.original.errno === 1061) {
+                        // Index already exists, ignore
+                    } else {
+                        console.error(`[Index] Failed to create index ${idx.name} on ${idx.table} (MySQL):`, mysqlErr.message);
+                    }
+                }
+            } else {
+                await sequelize.query(`CREATE INDEX IF NOT EXISTS \`${idx.name}\` ON \`${idx.table}\` (\`${idx.columns}\`);`);
+                console.log(`[Index] Created/Verified index ${idx.name} on ${idx.table} (SQLite)`);
+            }
+        } catch (e) {
+            console.error(`[Index] General error creating index ${idx.name} on ${idx.table}:`, e.message);
+        }
+    }
+}
+
 const syncDB = async () => {
     try {
         await sequelize.authenticate();
@@ -125,6 +165,10 @@ const syncDB = async () => {
         await Promotion.sync();
         await Setting.sync();
         console.log("Specific models synced.");
+
+        // 4. Create Indexes for query performance
+        await createDbIndexes();
+        console.log("Database indexes verified/created.");
 
         // Init Config if not exists
         const config = await RestaurantConfig.findOne();
