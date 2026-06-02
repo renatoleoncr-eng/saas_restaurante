@@ -397,8 +397,10 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                         <List size={16} className="text-gray-500" />
                                         Resumen de Ventas por Categoría
                                     </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-                                        {Object.entries(salesSummary).map(([catKey, catData]) => {
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                                        {Object.entries(salesSummary)
+                                            .filter(([catKey, catData]) => catKey !== 'otros' || catData.count > 0)
+                                            .map(([catKey, catData]) => {
                                             const isCatExpanded = expandedCategory === catKey;
                                             
                                             let displayLabel = catKey;

@@ -364,13 +364,20 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         <List size={16} /> Resumen de Ventas
                                     </h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {Object.entries(sessionData.salesSummary).map(([catKey, catData]) => (
+                                        {Object.entries(sessionData.salesSummary)
+                                            .filter(([catKey, catData]) => catKey !== 'otros' || catData.count > 0)
+                                            .map(([catKey, catData]) => (
                                             <div key={catKey} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
                                                 <div 
                                                     className="p-3 cursor-pointer hover:bg-gray-50 flex flex-col items-center text-center transition-colors relative"
                                                     onClick={() => setExpandedCategory(expandedCategory === catKey ? null : catKey)}
                                                 >
-                                                    <span className="uppercase text-[10px] font-bold text-gray-400 tracking-wider mb-1">{catKey}</span>
+                                                    <span className="uppercase text-[10px] font-bold text-gray-400 tracking-wider mb-1">
+                                                        {catKey === 'menus' ? 'Menús' : 
+                                                         catKey === 'platos' ? 'Platos' : 
+                                                         catKey === 'bebidas' ? 'Bebidas' : 
+                                                         catKey}
+                                                    </span>
                                                     <span className="text-lg font-bold text-gray-800">{catData.count} <span className="text-[10px] text-gray-400 font-normal">unid.</span></span>
                                                     <span className="text-sm font-bold text-blue-600 mt-1">S/ {catData.total.toFixed(2)}</span>
                                                     <div className="absolute top-2 right-2 text-gray-300">
