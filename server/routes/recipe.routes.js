@@ -81,13 +81,9 @@ router.post('/ingredients/:id/movement', async (req, res) => {
         if (type === 'add') {
             newStock += moveAmount;
         } else if (type === 'remove') {
-            newStock -= moveAmount;
+            newStock = Math.max(0, previousStock - moveAmount);
         } else if (type === 'correction') {
-            newStock = moveAmount; // Absolute set? Usually correction implies diff, but let's assume UI handles calc or we use 'correction' as 'set'. 
-            // Better: 'correction' just sets it? 
-            // User requested: "+Agregar", "-Eliminar". 
-            // "Editar" is for name/units.
-            // Let's stick to add/remove for limits.
+            newStock = Math.max(0, moveAmount);
         }
 
         ingredient.stock = newStock;

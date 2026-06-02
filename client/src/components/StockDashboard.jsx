@@ -517,151 +517,157 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 <>
                     {/* General Create Form Modal (For standard products) */}
                     {creatingSection === 'general' && !readOnly && (
-                        <div className={`mb-6 p-4 rounded-lg border ${activeTab === 'menu_options' ? 'bg-purple-50 border-purple-200' : 'bg-blue-50 border-blue-200'}`}>
-
-                            <h3 className="font-bold mb-3 text-lg border-b pb-2">
-                                {editForm.id ? 'Editar Producto (Agrupado)' : (activeTab === 'menu_options' ? 'Nueva Opción de Menú' : 'Nuevo Producto')}
-                            </h3>
-
-                            <div className="flex flex-col gap-4">
-
-                                {/* ---------------- GROUPED FIELDS (PRODUCT LEVEL) ---------------- */}
-                                <div className="p-3 bg-white rounded border border-gray-200">
-                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Definiciones Agrupadas (Inmutables tras creación)</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="col-span-1 md:col-span-2">
-                                            <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Producto</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Ej. Coca Cola"
-                                                className={`w-full p-2 border rounded ${editForm.id ? 'bg-gray-100 text-gray-600' : 'bg-white'}`}
-                                                value={editForm.name}
-                                                onChange={e => !editForm.id && setEditForm({ ...editForm, name: e.target.value })}
-                                                disabled={!!editForm.id}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-1">Tipo</label>
-                                            <select
-                                                className={`w-full p-2 border rounded ${editForm.id ? 'bg-gray-100 text-gray-600' : 'bg-white'}`}
-                                                value={editForm.type}
-                                                onChange={e => !editForm.id && setEditForm({ ...editForm, type: e.target.value })}
-                                                disabled={!!editForm.id}
-                                            >
-                                                <option value="dish">Plato</option>
-                                                <option value="drink">Bebida</option>
-                                                {activeTab === 'menu_options' && <option value="menu">Menú</option>}
-                                                <option value="other">Otro</option>
-                                            </select>
-                                        </div>
-
-                                    </div>
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+                            {/* Backdrop click to close */}
+                            <div className="fixed inset-0" onClick={() => setCreatingSection(null)}></div>
+                            
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] z-10 relative">
+                                {/* Modal Header */}
+                                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                                    <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                                        <Package className="text-blue-600" />
+                                        {editForm.id ? 'Editar Producto' : 'Nuevo Producto'}
+                                    </h3>
+                                    <button onClick={() => setCreatingSection(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 hover:text-gray-700 transition-colors">
+                                        <X size={20} />
+                                    </button>
                                 </div>
 
-                                {/* ---------------- INDEPENDENT FIELDS (VARIANTS) ---------------- */}
-                                {activeTab !== 'menu_options' && (
-                                    <div className="p-3 bg-white rounded border border-gray-200">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Presentaciones / Variantes (Independientes)</h4>
-                                            <button
-                                                onClick={() => setEditForm({
-                                                    ...editForm,
-                                                    presentationsList: [...(editForm.presentationsList || []), { name: '', price: '0.00', stock: 0 }]
-                                                })}
-                                                className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100"
-                                            >
-                                                <Plus size={12} /> Agregar Variante
-                                            </button>
+                                {/* Modal Body (Scrollable) */}
+                                <div className="p-6 overflow-y-auto space-y-5 flex-1">
+                                    {/* ---------------- GROUPED FIELDS (PRODUCT LEVEL) ---------------- */}
+                                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas (Inmutables tras creación)</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Producto</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ej. Coca Cola"
+                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${editForm.id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`}
+                                                    value={editForm.name}
+                                                    onChange={e => !editForm.id && setEditForm({ ...editForm, name: e.target.value })}
+                                                    disabled={!!editForm.id}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">Tipo</label>
+                                                <select
+                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${editForm.id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`}
+                                                    value={editForm.type}
+                                                    onChange={e => !editForm.id && setEditForm({ ...editForm, type: e.target.value })}
+                                                    disabled={!!editForm.id}
+                                                >
+                                                    <option value="dish">Plato</option>
+                                                    <option value="drink">Bebida</option>
+                                                    {activeTab === 'menu_options' && <option value="menu">Menú</option>}
+                                                    <option value="other">Otro</option>
+                                                </select>
+                                            </div>
                                         </div>
+                                    </div>
 
-                                        <div className="grid grid-cols-12 gap-2 text-xs font-bold text-gray-400 mb-1 px-1">
-                                            <div className="col-span-5">Nombre Presentación</div>
-                                            <div className="col-span-3">Precio (S/)</div>
-                                            <div className="col-span-3">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
-                                            <div className="col-span-1"></div>
-                                        </div>
+                                    {/* ---------------- INDEPENDENT FIELDS (VARIANTS) ---------------- */}
+                                    {activeTab !== 'menu_options' && (
+                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Presentaciones / Variantes (Independientes)</h4>
+                                                <button
+                                                    onClick={() => setEditForm({
+                                                        ...editForm,
+                                                        presentationsList: [...(editForm.presentationsList || []), { name: '', price: '0.00', stock: 0 }]
+                                                    })}
+                                                    className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-md hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100 transition-colors"
+                                                >
+                                                    <Plus size={12} /> Agregar Variante
+                                                </button>
+                                            </div>
 
-                                        <div className="space-y-2">
-                                            {(editForm.presentationsList || []).map((p, idx) => (
-                                                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                                                    <div className="col-span-5">
-                                                        <input
-                                                            type="text"
-                                                            placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
-                                                            className="w-full p-2 border rounded font-medium"
-                                                            value={p.name}
-                                                            onChange={e => {
-                                                                const newList = [...editForm.presentationsList];
-                                                                newList[idx].name = e.target.value;
-                                                                setEditForm({ ...editForm, presentationsList: newList });
-                                                            }}
-                                                        />
-                                                    </div>
+                                            <div className="grid grid-cols-12 gap-2 text-xs font-bold text-gray-400 mb-2 px-1">
+                                                <div className="col-span-5">Nombre Presentación</div>
+                                                <div className="col-span-3">Precio (S/)</div>
+                                                <div className="col-span-3">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
+                                                <div className="col-span-1"></div>
+                                            </div>
 
-                                                    <div className="col-span-3">
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            placeholder="0.00"
-                                                            className="w-full p-2 border rounded"
-                                                            value={p.price}
-                                                            onChange={e => {
-                                                                const newList = [...editForm.presentationsList];
-                                                                newList[idx].price = e.target.value;
-                                                                setEditForm({ ...editForm, presentationsList: newList });
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-span-3">
-                                                        {editForm.isStockManaged ? (
-                                                            <div className="relative">
+                                            <div className="space-y-3">
+                                                {(editForm.presentationsList || []).map((p, idx) => (
+                                                    <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2.5">
+                                                        <div className="grid grid-cols-12 gap-2 items-center">
+                                                            <div className="col-span-5">
                                                                 <input
-                                                                    type="number"
-                                                                    placeholder="0"
-                                                                    // DISABLED if ID exists (Existing Variant)
-                                                                    disabled={!!p.id}
-                                                                    className={`w-full p-2 border rounded ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-                                                                    value={p.stock || ''}
+                                                                    type="text"
+                                                                    placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
+                                                                    className="w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                    value={p.name}
                                                                     onChange={e => {
-                                                                        if (!p.id) { // Only allow editing if it's a NEW variant
-                                                                            const newList = [...editForm.presentationsList];
-                                                                            newList[idx].stock = e.target.value;
-                                                                            setEditForm({ ...editForm, presentationsList: newList });
-                                                                        }
+                                                                        const newList = [...editForm.presentationsList];
+                                                                        newList[idx].name = e.target.value;
+                                                                        setEditForm({ ...editForm, presentationsList: newList });
                                                                     }}
                                                                 />
-                                                                {!!p.id && (
-                                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                                        <span className="text-gray-400 text-xs">🔒</span>
+                                                            </div>
+
+                                                            <div className="col-span-3">
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    placeholder="0.00"
+                                                                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                                                                    value={p.price}
+                                                                    onChange={e => {
+                                                                        const newList = [...editForm.presentationsList];
+                                                                        newList[idx].price = e.target.value;
+                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            <div className="col-span-3">
+                                                                {editForm.isStockManaged ? (
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type="number"
+                                                                            placeholder="0"
+                                                                            disabled={!!p.id}
+                                                                            className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
+                                                                            value={p.stock || ''}
+                                                                            onChange={e => {
+                                                                                if (!p.id) {
+                                                                                    const newList = [...editForm.presentationsList];
+                                                                                    newList[idx].stock = e.target.value;
+                                                                                    setEditForm({ ...editForm, presentationsList: newList });
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        {!!p.id && (
+                                                                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                                                <span className="text-gray-400 text-xs">🔒</span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-400 italic flex items-center h-full pl-2">N/A</span>
                                                                 )}
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-xs text-gray-400 italic flex items-center h-full pl-2">N/A</span>
-                                                        )}
-                                                    </div>
 
-                                                    <div className="col-span-1 flex justify-center">
-                                                        {/* Allow delete if > 1 or ensure logic handles 0? */}
-                                                        <button
-                                                            onClick={() => {
-                                                                // If it's an existing variant, maybe mark for deletion? 
-                                                                // For now just remove from list (Backend handles "not in list" logic eventually, or we need separate delete endpoint)
-                                                                // Current backend logic: checks list.
-                                                                const newList = editForm.presentationsList.filter((_, i) => i !== idx);
-                                                                setEditForm({ ...editForm, presentationsList: newList });
-                                                            }}
-                                                            className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"
-                                                            title="Eliminar Variante"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                    <div className="col-span-1 border-b border-l pb-2 pl-2">
+                                                            <div className="col-span-1 flex justify-center">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const newList = editForm.presentationsList.filter((_, i) => i !== idx);
+                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                    }}
+                                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
+                                                                    title="Eliminar Variante"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
                                                         {/* Happy Hour Row */}
-                                                        <div className="col-span-12 mt-2">
+                                                        <div className="border-t border-dashed border-gray-100 pt-2">
                                                             <div className="flex flex-wrap items-center gap-3">
                                                                 <label htmlFor={`hh_${idx}`} className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors">
                                                                     <input
@@ -693,7 +699,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                 type="number"
                                                                                 step="0.01"
                                                                                 placeholder="0.00"
-                                                                                className="w-16 p-0 border-none outline-none font-bold text-right text-yellow-700"
+                                                                                className="w-16 p-0 border-none outline-none font-bold text-right text-yellow-700 font-medium"
                                                                                 value={p.happyHourPrice || ''}
                                                                                 onChange={e => {
                                                                                     const newList = [...editForm.presentationsList];
@@ -733,15 +739,18 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
 
-                                <div className="flex gap-3 justify-end pt-2">
-                                    <button onClick={() => setCreatingSection(null)} className="text-gray-600 px-4 py-2 hover:bg-gray-100 rounded font-medium">Cancelar</button>
-                                    <button onClick={handleSaveProduct} className="bg-green-600 text-white px-6 py-2 rounded shadow hover:bg-green-700 font-bold">
+                                {/* Modal Footer */}
+                                <div className="p-4 bg-gray-50 border-t flex justify-end gap-3 z-10">
+                                    <button onClick={() => setCreatingSection(null)} className="text-gray-600 px-4 py-2 hover:bg-gray-200 rounded-md font-medium transition-colors">
+                                        Cancelar
+                                    </button>
+                                    <button onClick={handleSaveProduct} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow font-bold transition-colors">
                                         {editForm.id ? 'Actualizar Producto' : 'Crear Producto'}
                                     </button>
                                 </div>

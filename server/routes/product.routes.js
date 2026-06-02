@@ -75,8 +75,11 @@ router.post('/products', async (req, res) => {
 
         console.time('PRODUCT_CREATE_ENDPOINT');
         const product = await Product.create({
-            name, price, type, isStockManaged,
-            stock: stock || 0,
+            name,
+            price,
+            type,
+            isStockManaged,
+            stock: Math.max(0, stock || 0),
             category,
             linkedProductId: linkedProductId || null,
             requiresPreparation: finalRequiresPreparation,
@@ -93,7 +96,7 @@ router.post('/products', async (req, res) => {
                     ProductId: product.id,
                     name: p.name || p.size || 'Estándar',
                     price: p.price,
-                    stock: p.stock || 0,
+                    stock: Math.max(0, p.stock || 0),
                     happyHourPrice: p.happyHourPrice || null,
                     happyHourStart: p.happyHourStart || null,
                     happyHourEnd: p.happyHourEnd || null
@@ -220,7 +223,7 @@ router.put('/products/:id', async (req, res) => {
         await product.update({
             name,
             price,
-            stock: stock !== undefined ? stock : product.stock,
+            stock: stock !== undefined ? Math.max(0, stock) : product.stock,
             isStockManaged: isStockManaged !== undefined ? isStockManaged : product.isStockManaged,
             category,
             linkedProductId: linkedProductId || null,
@@ -250,7 +253,7 @@ router.put('/products/:id', async (req, res) => {
                         ProductId: id,
                         name: variantName,
                         price: p.price,
-                        stock: p.stock || 0,
+                        stock: Math.max(0, p.stock || 0),
                         happyHourPrice: p.happyHourPrice || null,
                         happyHourStart: p.happyHourStart || null,
                         happyHourEnd: p.happyHourEnd || null
@@ -347,8 +350,8 @@ router.post('/products/:id/movement', async (req, res) => {
 
             previousStock = parseFloat(variant.stock);
             if (type === 'add') newStock = previousStock + parseFloat(amount);
-            else if (type === 'remove') newStock = previousStock - parseFloat(amount);
-            else newStock = parseFloat(amount);
+            else if (type === 'remove') newStock = Math.max(0, previousStock - parseFloat(amount));
+            else newStock = Math.max(0, parseFloat(amount));
 
             variant.stock = newStock;
             await variant.save({ transaction: t });
@@ -363,8 +366,8 @@ router.post('/products/:id/movement', async (req, res) => {
 
             previousStock = parseFloat(product.stock);
             if (type === 'add') newStock = previousStock + parseFloat(amount);
-            else if (type === 'remove') newStock = previousStock - parseFloat(amount);
-            else newStock = parseFloat(amount);
+            else if (type === 'remove') newStock = Math.max(0, previousStock - parseFloat(amount));
+            else newStock = Math.max(0, parseFloat(amount));
 
             product.stock = newStock;
             await product.save({ transaction: t });

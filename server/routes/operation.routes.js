@@ -762,17 +762,23 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 if (recipe.Ingredient) {
                     const amount = parseFloat(recipe.quantity) * quantity;
 
-                    // ATOMIC UPDATE FOR INGREDIENT
+                    // ATOMIC UPDATE FOR INGREDIENT WITH PREVENTING NEGATIVE STOCK
+                    let previousStock;
                     if (isDeduction) {
-                        await recipe.Ingredient.decrement('stock', { by: amount, transaction });
+                        await recipe.Ingredient.reload({ transaction, lock: true });
+                        const currentStock = parseFloat(recipe.Ingredient.stock || 0);
+                        previousStock = currentStock;
+                        const newStockVal = Math.max(0, currentStock - amount);
+                        recipe.Ingredient.stock = newStockVal;
+                        await recipe.Ingredient.save({ transaction });
                     } else {
+                        previousStock = parseFloat(recipe.Ingredient.stock || 0);
                         await recipe.Ingredient.increment('stock', { by: amount, transaction });
                     }
 
                     // Refresh to get new value for logging
                     await recipe.Ingredient.reload({ transaction });
                     const newStock = parseFloat(recipe.Ingredient.stock);
-                    const previousStock = isDeduction ? newStock + amount : newStock - amount;
 
                     console.log(`[Stock] Updating Ingredient ${recipe.Ingredient.name}: ${previousStock} -> ${newStock} (${isDeduction ? '-' : '+'}${amount})`);
 
@@ -867,21 +873,23 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
             }
 
             // Capture previous stock mostly for logging (approximation) or perform read
-            const oldStock = Number(targetStockModel.stock); // This might be stale, but the movement record isn't critical for logic correctness, the DB value is.
-
-            // ATOMIC UPDATE
+            let previousStockCalc;
+            // ATOMIC UPDATE WITH PREVENTING NEGATIVE STOCK
             if (isDeduction) {
-                await targetStockModel.decrement('stock', { by: quantity, transaction });
+                await targetStockModel.reload({ transaction, lock: true });
+                const currentStock = Number(targetStockModel.stock || 0);
+                previousStockCalc = currentStock;
+                const newStockValueVal = Math.max(0, currentStock - quantity);
+                targetStockModel.stock = newStockValueVal;
+                await targetStockModel.save({ transaction });
             } else {
+                previousStockCalc = Number(targetStockModel.stock || 0);
                 await targetStockModel.increment('stock', { by: quantity, transaction });
             }
 
             // Reload to ensure we have fresh data for return/logging
             await targetStockModel.reload({ transaction });
             const newStockValue = Number(targetStockModel.stock);
-
-            // Back-calculate previous for the log (so the log is consistent with the atomic op)
-            const previousStockCalc = isDeduction ? newStockValue + quantity : newStockValue - quantity;
 
             console.log(`[Stock] Updated Stock for ${targetStockModel.name || 'Product'}: ${previousStockCalc} -> ${newStockValue}`);
 
