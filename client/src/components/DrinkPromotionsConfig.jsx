@@ -314,7 +314,7 @@ export default function DrinkPromotionsConfig() {
                 <div className="flex items-center gap-3">
                     <div className="bg-purple-100 p-2 rounded-xl"><Wine className="text-purple-600" size={22} /></div>
                     <div>
-                        <h1 className="text-xl font-bold text-gray-800">Promociones 2x1 Tragos</h1>
+                        <h1 className="text-xl font-bold text-gray-800">Promociones 2x1</h1>
                     </div>
                 </div>
                 <button

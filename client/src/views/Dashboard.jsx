@@ -315,11 +315,11 @@ export default function Dashboard() {
                         {user.role === 'admin' && (
                             <button
                                 onClick={() => { setCurrentView('drink_promos'); if (window.innerWidth < 768) setIsCollapsed(true); }}
-                                title="2x1 Tragos"
+                                title="Promociones 2x1"
                                 className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'drink_promos' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
                             >
                                 <Wine size={20} />
-                                {!isCollapsed && <span>2x1 Tragos</span>}
+                                {!isCollapsed && <span>Promociones 2x1</span>}
                             </button>
                         )}
 
@@ -443,7 +443,7 @@ export default function Dashboard() {
                          currentView === 'stock' ? 'Inventario' :
                          currentView === 'reports' ? 'Caja / Reportes' :
                          currentView === 'accounts' ? 'Historial Cuentas' :
-                         currentView === 'drink_promos' ? '2x1 Tragos' :
+                         currentView === 'drink_promos' ? 'Promociones 2x1' :
                          currentView === 'qr_management' ? 'Pantalla Cliente' : 'Makala'}
                     </span>
                     <div className="relative" ref={mobileMenuRef}>
