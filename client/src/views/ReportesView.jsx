@@ -152,7 +152,7 @@ export default function ReportesView() {
                     </div>
                 </div>
 
-                {user?.role === 'admin' && (
+                {['admin', 'waiter', 'cashier'].includes(user?.role) && (
                     <button
                         onClick={() => setShowExpenseModal(true)}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm shrink-0 transition-colors"
