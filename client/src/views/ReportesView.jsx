@@ -126,7 +126,7 @@ export default function ReportesView() {
             method: e.paymentMethod
         }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort desc
-
+    return (
         <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-8 animate-in fade-in">
             {/* FILTERS & HEADER */}
             <div className="flex flex-col sm:flex-row gap-2 w-full justify-between items-stretch sm:items-center">
