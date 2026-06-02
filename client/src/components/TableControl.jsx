@@ -2221,40 +2221,40 @@ export default function TableControl({ tableId, accountId, onClose }) {
                             };
 
                             return (
-                                <div className="border-t border-purple-100 pt-4 mt-2 flex items-center justify-between gap-3 bg-white z-20">
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full ring-1 ring-purple-100">
+                                <div className="border-t border-purple-100 pt-4 mt-2 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white z-20">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between md:justify-start gap-2 md:gap-6 min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="text-xs text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full ring-1 ring-purple-100 shrink-0">
                                                 {comboSelection.length}/2
                                             </span>
-                                            <span className="text-xs text-gray-500 truncate font-medium">
+                                            <span className="text-xs text-gray-700 truncate font-semibold md:max-w-xs">
                                                 {comboSelection.map(s => s.name).join(' + ')}
                                             </span>
                                         </div>
-                                        <div className="flex items-baseline gap-2">
+                                        <div className="flex items-baseline gap-2 shrink-0">
                                             <span className="text-purple-700 font-black text-2xl tracking-tight">
                                                 S/ {Number(displayPrice.toFixed(2))}
                                             </span>
-                                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{priceLabel}</span>
+                                            <span className="text-[9px] text-gray-400 uppercase font-bold tracking-widest leading-none">{priceLabel}</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
                                         <button
                                             onClick={() => setComboSelection([])}
-                                            className="px-4 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+                                            className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100 text-center"
                                         >
                                             Limpiar
                                         </button>
                                         <button
                                             onClick={handleAdd}
-                                            className={`px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2 
+                                            className={`flex-[2] md:flex-none px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 
                                             ${comboSelection.length === 2
                                                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-purple-200'
                                                     : 'bg-white border-2 border-purple-600 text-purple-700 hover:bg-purple-50 shadow-sm'}`}
                                         >
                                             {comboSelection.length === 2 ? (
                                                 <>
-                                                    <CheckCircle size={18} />
+                                                    <CheckCircle size={16} />
                                                     ¡Listo, agregar!
                                                 </>
                                             ) : (
