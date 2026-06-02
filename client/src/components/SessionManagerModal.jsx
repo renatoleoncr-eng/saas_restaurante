@@ -102,10 +102,11 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     );
 
     return (
-        <div className="fixed inset-0 bg-white z-[100] flex flex-col w-full h-dvh overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] animate-in zoom-in-95 duration-200">
                 
                 {/* Header */}
-                <div className={`bg-gradient-to-r ${sessionData && !isClosingMode ? 'from-green-600 to-emerald-700' : 'from-blue-600 to-indigo-700'} p-4 md:p-6 text-white flex justify-between items-center shadow-md`}>
+                <div className={`bg-gradient-to-r ${sessionData && !isClosingMode ? 'from-green-600 to-emerald-700' : 'from-blue-600 to-indigo-700'} p-4 md:p-5 text-white flex justify-between items-center shadow-md shrink-0`}>
                     <div className="flex items-center gap-3">
                         <Calculator className={sessionData && !isClosingMode ? 'text-green-100' : 'text-blue-100'} size={24} />
                         <div>
@@ -120,11 +121,11 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                     </button>
                 </div>
 
-                <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50/50">
+                <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50/50 no-scrollbar">
                     {!sessionData ? (
                         /* OPEN SESSION VIEW */
                         <div className="space-y-6 py-4">
-                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg flex gap-3">
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-xl flex gap-3 shadow-sm">
                                 <Unlock className="text-blue-600 shrink-0" size={20} />
                                 <p className="text-blue-800 text-sm">
                                     Para comenzar el turno, debe indicar con cuánto efectivo está iniciando la caja.
@@ -140,7 +141,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         value={openingCash}
                                         onChange={e => setOpeningCash(e.target.value)}
                                         onWheel={(e) => e.target.blur()}
-                                        className="w-full pl-10 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all text-2xl font-bold"
+                                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 transition-all text-xl font-bold bg-gray-50"
                                         placeholder="0.00"
                                         autoFocus
                                     />
@@ -149,7 +150,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                             <button 
                                 onClick={handleOpenSession}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-blue-200 hover:shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
                             >
                                 <CheckCircle size={20} /> Abrir Turno de Salón
                             </button>
@@ -177,7 +178,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                             <button 
                                 onClick={onClose}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-green-100 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-green-100 transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
                             >
                                 <Coffee size={20} /> Abrir Salón (Ir a las Mesas)
                             </button>
@@ -358,7 +359,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                              <button 
                                  onClick={handleRequestCloseSession}
-                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
                              >
                                  <Lock size={20} /> Confirmar Cierre de Turno y Caja
                              </button>
@@ -367,12 +368,13 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                 </div>
                 
                 {/* Footer info */}
-                <div className="bg-gray-50 p-4 border-t border-gray-100 text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">
+                <div className="bg-gray-50 p-3 border-t border-gray-100 text-[9px] text-gray-400 text-center uppercase tracking-widest font-bold shrink-0">
                     Sistema de Gestión Mak Suites - Control de Auditoría
                 </div>
+            </div>
 
-                {/* CONFIRMATION CLOSE MODAL */}
-                {showConfirmCloseModal && (() => {
+            {/* CONFIRMATION CLOSE MODAL */}
+            {showConfirmCloseModal && (() => {
                     const diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
                     const diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
                     const diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
