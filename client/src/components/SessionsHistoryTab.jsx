@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { 
     Calendar, ChevronDown, ChevronUp, DollarSign, FileText, User, 
@@ -256,7 +257,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
     const movements = getMovements();
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop click to close */}
             <div className="fixed inset-0" onClick={onClose}></div>
