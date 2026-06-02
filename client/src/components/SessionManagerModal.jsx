@@ -363,7 +363,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                     <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
                                         <List size={16} /> Resumen de Ventas
                                     </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-start">
                                         {Object.entries(sessionData.salesSummary)
                                             .filter(([catKey, catData]) => catKey !== 'otros' || catData.count > 0)
                                             .map(([catKey, catData]) => (
