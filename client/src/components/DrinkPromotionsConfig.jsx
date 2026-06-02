@@ -315,14 +315,13 @@ export default function DrinkPromotionsConfig() {
                     <div className="bg-purple-100 p-2 rounded-xl"><Wine className="text-purple-600" size={22} /></div>
                     <div>
                         <h1 className="text-xl font-bold text-gray-800">Promociones 2x1 Tragos</h1>
-                        <p className="text-sm text-gray-500">Cada categoría es un tipo de combo con su precio fijo</p>
                     </div>
                 </div>
                 <button
                     onClick={() => { setShowNewPromoForm(true); setAddingItemTo(null); setEditingPromo(null); }}
                     className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-sm text-sm"
                 >
-                    <Plus size={16} /> Nueva Categoría
+                    <Plus size={16} /> Categoría
                 </button>
             </div>
 

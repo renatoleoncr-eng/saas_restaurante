@@ -7,7 +7,7 @@ export default function MobileTabMenu({ tabs, activeTab, onTabChange }) {
     const activeTabLabel = tabs.find(t => t.id === activeTab)?.label || 'Menú';
 
     return (
-        <div className="md:hidden mb-4 relative z-50">
+        <div className="md:hidden mb-4 relative z-10">
             {/* BACKDROP */}
             {isOpen && (
                 <div

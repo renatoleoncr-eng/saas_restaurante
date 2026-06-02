@@ -192,7 +192,7 @@ export default function Dashboard() {
             {/* Sidebar Backdrop for Mobile */}
             {!isCollapsed && (
                 <div
-                    className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-20 transition-all duration-300"
+                    className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-30 transition-all duration-300"
                     onClick={() => setIsCollapsed(true)}
                 />
             )}
@@ -200,7 +200,7 @@ export default function Dashboard() {
             {/* Sidebar & Toggle Button Wrapper */}
             <div
                 id="sidebar-wrapper"
-                className={`fixed md:relative top-0 left-0 z-30 transition-all duration-300 h-[100dvh] md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
+                className={`fixed md:relative top-0 left-0 z-40 transition-all duration-300 h-[100dvh] md:h-full ${isCollapsed ? 'w-0' : 'w-64'}`}
                 onMouseEnter={() => { if (window.innerWidth >= 768 && !isLocked) setIsCollapsed(false) }}
                 onMouseLeave={() => { if (window.innerWidth >= 768 && !isLocked && !showUserMenu) setIsCollapsed(true) }}
             >
@@ -429,7 +429,7 @@ export default function Dashboard() {
             {/* Main Content - Added overflow-x-hidden */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Mobile Header Bar */}
-                <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-30">
+                <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-20">
                     <button
                         onClick={() => setIsCollapsed(false)}
                         className="p-1 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
@@ -497,7 +497,7 @@ export default function Dashboard() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto relative z-0 bg-gray-50 overflow-x-hidden overscroll-contain">
+                <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
                     {renderContent()}
                 </main>
             </div>
