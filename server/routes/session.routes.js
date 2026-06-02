@@ -21,15 +21,27 @@ router.get('/sessions/current', async (req, res) => {
         // Calculate expected totals
         const payments = await Payment.findAll({
             where: { CashSessionId: activeSession.id },
-            include: [{
-                model: Account,
-                include: [{ model: Table }]
-            }],
+            include: [
+                {
+                    model: Account,
+                    include: [{ model: Table }]
+                },
+                {
+                    model: User,
+                    attributes: ['id', 'username', 'displayName']
+                }
+            ],
             order: [['createdAt', 'DESC']]
         });
 
         const expenses = await Expense.findAll({
-            where: { CashSessionId: activeSession.id }
+            where: { CashSessionId: activeSession.id },
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'username', 'displayName']
+                }
+            ]
         });
 
         // Group payments by method
@@ -143,6 +155,7 @@ router.get('/sessions/current', async (req, res) => {
             paymentTotals,
             expenseTotals,
             payments,
+            expenses,
             salesSummary
         });
 
@@ -169,15 +182,27 @@ router.get('/sessions/:id/details', async (req, res) => {
         // Calculate expected totals
         const payments = await Payment.findAll({
             where: { CashSessionId: session.id },
-            include: [{
-                model: Account,
-                include: [{ model: Table }]
-            }],
+            include: [
+                {
+                    model: Account,
+                    include: [{ model: Table }]
+                },
+                {
+                    model: User,
+                    attributes: ['id', 'username', 'displayName']
+                }
+            ],
             order: [['createdAt', 'DESC']]
         });
 
         const expenses = await Expense.findAll({
-            where: { CashSessionId: session.id }
+            where: { CashSessionId: session.id },
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'username', 'displayName']
+                }
+            ]
         });
 
         // Group payments by method
@@ -290,6 +315,7 @@ router.get('/sessions/:id/details', async (req, res) => {
             paymentTotals,
             expenseTotals,
             payments,
+            expenses,
             salesSummary
         });
 

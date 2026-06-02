@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
     Calendar, ChevronDown, ChevronUp, DollarSign, FileText, User, 
     X, Calculator, AlertCircle, CheckCircle, List, Package, 
-    Coffee, Utensils, Sparkles, Clock 
+    Coffee, Utensils, Sparkles, Clock, Receipt 
 } from 'lucide-react';
 
 export default function SessionsHistoryTab() {
@@ -228,6 +228,34 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
         totalDiff += (cnt - exp);
     });
 
+    const getMovements = () => {
+        if (!details) return [];
+        
+        const paymentsList = (details.payments || []).map(p => ({
+            id: `pay-${p.id}`,
+            type: 'ingreso',
+            amount: parseFloat(p.amount),
+            method: p.method || 'efectivo',
+            time: p.createdAt,
+            user: p.User?.displayName || p.User?.username || 'Sistema',
+            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
+        }));
+
+        const expensesList = (details.expenses || []).map(e => ({
+            id: `exp-${e.id}`,
+            type: 'egreso',
+            amount: parseFloat(e.amount),
+            method: e.paymentMethod || 'efectivo',
+            time: e.date || e.createdAt,
+            user: e.User?.displayName || e.User?.username || 'Sistema',
+            reference: e.description || 'Gasto General'
+        }));
+
+        return [...paymentsList, ...expensesList].sort((a, b) => new Date(b.time) - new Date(a.time));
+    };
+
+    const movements = getMovements();
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop click to close */}
@@ -387,6 +415,75 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                             })}
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+
+                            {/* Movimientos de Caja Section */}
+                            <div className="bg-white border rounded-xl overflow-hidden shadow-xs">
+                                <div className="bg-gray-50 px-5 py-3 border-b flex items-center justify-between">
+                                    <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                        <Receipt size={16} className="text-gray-500" />
+                                        Movimientos de Caja
+                                    </h3>
+                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                        {movements.length} Transacciones
+                                    </span>
+                                </div>
+                                <div className="p-3 max-h-60 overflow-y-auto no-scrollbar">
+                                    {movements.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-gray-100 text-gray-400">
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Hora</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Mesa/Gasto</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Usuario</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Método</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px] text-right">Monto</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-50">
+                                                    {movements.map(m => (
+                                                        <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
+                                                            <td className="p-2 text-gray-400 font-mono">
+                                                                {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <div className="font-semibold text-gray-700 max-w-[150px] truncate" title={m.reference}>
+                                                                    {m.reference}
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 capitalize">
+                                                                    {m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-2 text-gray-500 font-medium truncate max-w-[100px]" title={m.user}>
+                                                                {m.user}
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold capitalize ${
+                                                                    m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                                                    m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                                    m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                                    'bg-amber-50 text-amber-700 border border-amber-100'
+                                                                }`}>
+                                                                    {m.method}
+                                                                </span>
+                                                            </td>
+                                                            <td className={`p-2 text-right font-mono font-bold ${
+                                                                m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
+                                                            }`}>
+                                                                {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6 text-gray-400 italic text-xs">
+                                            No hay movimientos registrados en este turno.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

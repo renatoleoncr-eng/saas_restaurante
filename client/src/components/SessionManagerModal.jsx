@@ -26,6 +26,34 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         transferencia: 'Transf'
     };
 
+    const getMovements = () => {
+        if (!sessionData) return [];
+        
+        const paymentsList = (sessionData.payments || []).map(p => ({
+            id: `pay-${p.id}`,
+            type: 'ingreso',
+            amount: parseFloat(p.amount),
+            method: p.method || 'efectivo',
+            time: p.createdAt,
+            user: p.User?.displayName || p.User?.username || 'Sistema',
+            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
+        }));
+
+        const expensesList = (sessionData.expenses || []).map(e => ({
+            id: `exp-${e.id}`,
+            type: 'egreso',
+            amount: parseFloat(e.amount),
+            method: e.paymentMethod || 'efectivo',
+            time: e.date || e.createdAt,
+            user: e.User?.displayName || e.User?.username || 'Sistema',
+            reference: e.description || 'Gasto General'
+        }));
+
+        return [...paymentsList, ...expensesList].sort((a, b) => new Date(b.time) - new Date(a.time));
+    };
+
+    const movements = getMovements();
+
     const fetchCurrentSession = async () => {
         try {
             setLoading(true);
@@ -178,6 +206,76 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 </div>
                             </div>
 
+                            {/* Movimientos de Caja Section */}
+                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">
+                                <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
+                                    <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                        <Receipt size={16} className="text-gray-500" />
+                                        Movimientos de Caja
+                                    </h3>
+                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                        {movements.length} Transacciones
+                                    </span>
+                                </div>
+                                
+                                <div className="p-2 max-h-60 overflow-y-auto no-scrollbar">
+                                    {movements.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-gray-100 text-gray-400">
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Hora</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Mesa/Gasto</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Usuario</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Método</th>
+                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px] text-right">Monto</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-50">
+                                                    {movements.map(m => (
+                                                        <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
+                                                            <td className="p-2 text-gray-400 font-mono">
+                                                                {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <div className="font-semibold text-gray-700 max-w-[120px] truncate" title={m.reference}>
+                                                                    {m.reference}
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 capitalize">
+                                                                    {m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-2 text-gray-500 font-medium truncate max-w-[80px]" title={m.user}>
+                                                                {m.user}
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold capitalize ${
+                                                                    m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                                                    m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                                    m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                                    'bg-amber-50 text-amber-700 border border-amber-100'
+                                                                }`}>
+                                                                    {m.method}
+                                                                </span>
+                                                            </td>
+                                                            <td className={`p-2 text-right font-mono font-bold ${
+                                                                m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
+                                                            }`}>
+                                                                {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6 text-gray-400 italic text-xs">
+                                            No hay movimientos registrados en este turno.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <button 
                                 onClick={onClose}
                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-green-100 transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
@@ -262,7 +360,12 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                                         <ul className="space-y-2">
                                                                             {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
                                                                                 <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
-                                                                                    <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
+                                                                                    <span className="font-semibold text-gray-700">
+                                                                                        Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
+                                                                                        <span className="text-[10px] text-gray-400 font-normal ml-1.5">
+                                                                                            ({p.User?.displayName || p.User?.username || 'Sistema'})
+                                                                                        </span>
+                                                                                    </span>
                                                                                     <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
                                                                                     <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                                                                 </li>
@@ -341,7 +444,12 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                         <ul className="space-y-1.5">
                                                             {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
                                                                 <li key={p.id} className="flex justify-between items-center text-[10px] bg-white p-2 rounded border border-gray-100 shadow-sm">
-                                                                    <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
+                                                                    <span className="font-semibold text-gray-700">
+                                                                        Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
+                                                                        <span className="text-[9px] text-gray-400 font-normal ml-1.5">
+                                                                            ({p.User?.displayName || p.User?.username || 'Sistema'})
+                                                                        </span>
+                                                                    </span>
                                                                     <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
                                                                     <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                                                 </li>
@@ -357,7 +465,77 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 })}
                             </div>
 
-                            {/* Sales Summary Categories */}
+                             {/* Movimientos de Caja Section */}
+                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">
+                                 <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
+                                     <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                         <Receipt size={16} className="text-gray-500" />
+                                         Movimientos de Caja
+                                     </h3>
+                                     <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                         {movements.length} Transacciones
+                                     </span>
+                                 </div>
+                                 
+                                 <div className="p-2 max-h-60 overflow-y-auto no-scrollbar">
+                                     {movements.length > 0 ? (
+                                         <div className="overflow-x-auto">
+                                             <table className="w-full text-xs text-left border-collapse">
+                                                 <thead>
+                                                     <tr className="border-b border-gray-100 text-gray-400">
+                                                         <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Hora</th>
+                                                         <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Mesa/Gasto</th>
+                                                         <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Usuario</th>
+                                                         <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Método</th>
+                                                         <th className="p-2 font-bold uppercase tracking-wider text-[9px] text-right">Monto</th>
+                                                     </tr>
+                                                 </thead>
+                                                 <tbody className="divide-y divide-gray-50">
+                                                     {movements.map(m => (
+                                                         <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
+                                                             <td className="p-2 text-gray-400 font-mono">
+                                                                 {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                             </td>
+                                                             <td className="p-2">
+                                                                 <div className="font-semibold text-gray-700 max-w-[120px] truncate" title={m.reference}>
+                                                                     {m.reference}
+                                                                 </div>
+                                                                 <div className="text-[10px] text-gray-400 capitalize">
+                                                                     {m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}
+                                                                 </div>
+                                                             </td>
+                                                             <td className="p-2 text-gray-500 font-medium truncate max-w-[80px]" title={m.user}>
+                                                                 {m.user}
+                                                             </td>
+                                                             <td className="p-2">
+                                                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold capitalize ${
+                                                                     m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                                                     m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                                     m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                                     'bg-amber-50 text-amber-700 border border-amber-100'
+                                                                 }`}>
+                                                                     {m.method}
+                                                                 </span>
+                                                             </td>
+                                                             <td className={`p-2 text-right font-mono font-bold ${
+                                                                 m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
+                                                             }`}>
+                                                                 {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
+                                                             </td>
+                                                         </tr>
+                                                     ))}
+                                                 </tbody>
+                                             </table>
+                                         </div>
+                                     ) : (
+                                         <div className="text-center py-6 text-gray-400 italic text-xs">
+                                             No hay movimientos registrados en este turno.
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
+
+                             {/* Sales Summary Categories */}
                             {sessionData.salesSummary && (
                                 <div className="space-y-3">
                                     <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">

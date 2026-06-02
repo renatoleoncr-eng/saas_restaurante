@@ -1139,6 +1139,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
             try {
                 const formData = new FormData();
                 formData.append('paymentMethod', 'consumo_interno');
+                if (user?.id) {
+                    formData.append('userId', user.id);
+                }
                 await axios.post(`/api/accounts/${account.id}/close`, formData);
                 onClose();
                 refreshData();
@@ -1230,6 +1233,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
             const formData = new FormData();
             formData.append('paymentMethod', paymentMethod);
+            if (user?.id) {
+                formData.append('userId', user.id);
+            }
             if (evidenceFiles && evidenceFiles.length > 0) {
                 for (let i = 0; i < evidenceFiles.length; i++) {
                     formData.append('evidence', evidenceFiles[i]);
