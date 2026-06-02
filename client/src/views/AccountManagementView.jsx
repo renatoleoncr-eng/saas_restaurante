@@ -261,7 +261,7 @@ export default function AccountManagementView() {
                     onClick={() => setActiveTab('cuentas')}
                     className={`pb-3 font-bold transition-colors relative ${activeTab === 'cuentas' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
                 >
-                    Cuentas de Mesa
+                    Cuentas
                     {activeTab === 'cuentas' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
                 </button>
                 <button 
@@ -282,8 +282,8 @@ export default function AccountManagementView() {
             ) : (
                 /* Table (Cuentas) */
                 <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-                    <div className="flex-1">
-                    <table className="w-full text-left border-collapse">
+                    <div className="flex-1 overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
                         <thead className="bg-gray-50 border-b sticky top-0 z-10">
                             <tr>
                                 <th className="p-4 font-bold text-gray-600 text-sm">Cuenta #</th>
