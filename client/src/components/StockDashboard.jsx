@@ -32,8 +32,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         if (isWaiter) return 'movements';
         return localStorage.getItem('stock_preparedTab') || 'stock';
     }); // 'stock' or 'movements'
+    const [freeTab, setFreeTab] = useState(() => {
+        if (isWaiter) return 'movements';
+        return localStorage.getItem('stock_freeTab') || 'stock';
+    }); // 'stock' or 'movements'
     const [movements, setMovements] = useState([]);
     const [sales, setSales] = useState([]);
+    const [ingredients, setIngredients] = useState([]);
     const [loadingMovements, setLoadingMovements] = useState(false);
     const [loadingSales, setLoadingSales] = useState(false);
 
@@ -44,6 +49,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     // Fetch data
     useEffect(() => {
         loadProducts();
+        loadIngredients();
     }, [refreshTrigger]);
 
     // Save active tabs to localStorage
@@ -61,27 +67,35 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         localStorage.setItem('stock_preparedTab', preparedTab);
     }, [preparedTab]);
 
+    useEffect(() => {
+        localStorage.setItem('stock_freeTab', freeTab);
+    }, [freeTab]);
+
     // Real-time listener
     useEffect(() => {
         if (!socket) return;
         const handleUpdate = () => {
             console.log("[StockDashboard] Real-time update received");
             loadProducts();
-            if (activeTab === 'finished' && finishedTab === 'movements') loadMovements('drink,other');
-            if (activeTab === 'prepared' && preparedTab === 'sales') loadSales('dish');
+            loadIngredients();
+            if (activeTab === 'finished' && finishedTab === 'movements') loadMovements('isStockManaged=true&excludeMenu=true');
+            if (activeTab === 'prepared' && preparedTab === 'movements') loadMovements('isStockManaged=false&requiresPreparation=true&excludeMenu=true');
+            if (activeTab === 'free' && freeTab === 'movements') loadMovements('isStockManaged=false&requiresPreparation=false&excludeMenu=true');
         };
 
         socket.on('product_updated', handleUpdate);
         return () => socket.off('product_updated', handleUpdate);
-    }, [socket, activeTab, finishedTab, preparedTab]);
+    }, [socket, activeTab, finishedTab, preparedTab, freeTab]);
 
     useEffect(() => {
         if (activeTab === 'finished' && finishedTab === 'movements') {
-            loadMovements('drink,other');
+            loadMovements('isStockManaged=true&excludeMenu=true');
         } else if (activeTab === 'prepared' && preparedTab === 'movements') {
-            loadMovements('dish');
+            loadMovements('isStockManaged=false&requiresPreparation=true&excludeMenu=true');
+        } else if (activeTab === 'free' && freeTab === 'movements') {
+            loadMovements('isStockManaged=false&requiresPreparation=false&excludeMenu=true');
         }
-    }, [activeTab, finishedTab, preparedTab]);
+    }, [activeTab, finishedTab, preparedTab, freeTab]);
 
     // Close modal when switching tabs
     useEffect(() => {
@@ -98,10 +112,19 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         }
     };
 
+    const loadIngredients = async () => {
+        try {
+            const res = await axios.get('/api/stock/ingredients');
+            setIngredients(res.data);
+        } catch (error) {
+            console.error("Error loading ingredients", error);
+        }
+    };
+
     const loadMovements = async (typeFilter) => {
         setLoadingMovements(true);
         try {
-            const url = typeFilter ? `/api/products/movements/all?type=${typeFilter}` : '/api/products/movements/all';
+            const url = typeFilter ? `/api/products/movements/all?${typeFilter}` : '/api/products/movements/all';
             const res = await axios.get(url);
             setMovements(res.data);
         } catch (error) {
@@ -342,6 +365,12 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         }
     };
 
+    // Counts
+    const countFinished = products.filter(p => p.isStockManaged && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length;
+    const countPrepared = products.filter(p => !p.isStockManaged && p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length;
+    const countFree = products.filter(p => !p.isStockManaged && !p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length;
+    const countIngredients = ingredients.length;
+
     return (
         <div className="flex flex-col gap-6 animate-in fade-in active">
             {/* RECIPE MODAL */}
@@ -360,10 +389,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     <div className="md:hidden w-full">
                         <MobileTabMenu
                             tabs={[
-                                { id: 'finished', label: 'Terminados', icon: Package },
-                                { id: 'prepared', label: 'Preparados', icon: ChefHat },
-                                { id: 'free', label: 'Libres', icon: Zap },
-                                { id: 'ingredients', label: 'Insumos', icon: Layers },
+                                { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                                { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
+                                { id: 'free', label: `Libres (${countFree})`, icon: Zap },
+                                { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
                             ]}
                             activeTab={activeTab}
                             onTabChange={setActiveTab}
@@ -372,20 +401,6 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 )}
 
                 <div className={`flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto ${activeTab === 'ingredients' ? 'hidden md:flex' : ''}`}>
-                    {activeTab !== 'ingredients' && (
-                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <Package className="text-blue-600 hidden md:block" /> Inventario ({
-                                products.filter(p => {
-                                    if (activeTab === 'finished') return p.isStockManaged;
-                                    if (activeTab === 'prepared') return !p.isStockManaged && p.requiresPreparation;
-                                    if (activeTab === 'free') return !p.isStockManaged && !p.requiresPreparation && !['daily_entry','daily_main','daily_option','menu'].includes(p.type);
-                                    if (activeTab === 'menu_options') return p.type === 'daily_entry' || p.type === 'daily_main';
-                                    return true;
-                                }).length
-                            })
-                        </h2>
-                    )}
-
                     {/* DESKTOP TABS */}
                     {mode !== 'menu_only' && (
                         <div className="hidden md:flex bg-gray-100 p-1 rounded-lg overflow-x-auto">
@@ -393,25 +408,25 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 onClick={() => setActiveTab('finished')}
                                 className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                             >
-                                Terminados
+                                Terminados ({countFinished})
                             </button>
                             <button
                                 onClick={() => setActiveTab('prepared')}
                                 className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                             >
-                                Preparados
+                                Preparados ({countPrepared})
                             </button>
                             <button
                                 onClick={() => setActiveTab('free')}
                                 className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                             >
-                                Libres
+                                Libres ({countFree})
                             </button>
                             <button
                                 onClick={() => setActiveTab('ingredients')}
                                 className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                             >
-                                Insumos
+                                Insumos ({countIngredients})
                             </button>
                         </div>
                     )}
@@ -1150,7 +1165,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         onClick={() => setFinishedTab('stock')}
                                         className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${finishedTab === 'stock' ? 'bg-white text-blue-700 shadow ring-1 ring-blue-100' : 'text-gray-500 hover:bg-gray-100'}`}
                                     >
-                                        <Package size={16} /> <span className="truncate">Stock Actual</span>
+                                        <Package size={16} /> <span className="truncate">Stock Actual ({products.filter(p => p.isStockManaged && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
                                     </button>
                                     <button
                                         onClick={() => setFinishedTab('movements')}
@@ -1167,7 +1182,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         onClick={() => setPreparedTab('stock')}
                                         className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${preparedTab === 'stock' ? 'bg-white text-orange-700 shadow ring-1 ring-orange-100' : 'text-gray-500 hover:bg-gray-100'}`}
                                     >
-                                        <ChefHat size={16} /> <span className="truncate">Platos</span>
+                                        <ChefHat size={16} /> <span className="truncate">Platos ({products.filter(p => !p.isStockManaged && p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
                                     </button>
                                     <button
                                         onClick={() => setPreparedTab('movements')}
@@ -1178,8 +1193,25 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 </div>
                             )}
 
-                            {(activeTab === 'finished' && finishedTab === 'movements') || (activeTab === 'prepared' && preparedTab === 'movements') ? (
-                                <div className="bg-white rounded-lg shadow overflow-visible animate-in fade-in">
+                            {activeTab === 'free' && (
+                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
+                                    <button
+                                        onClick={() => setFreeTab('stock')}
+                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${freeTab === 'stock' ? 'bg-white text-emerald-700 shadow ring-1 ring-emerald-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    >
+                                        <Zap size={16} /> <span className="truncate">Libres ({products.filter(p => !p.isStockManaged && !p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setFreeTab('movements')}
+                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${freeTab === 'movements' ? 'bg-white text-emerald-700 shadow ring-1 ring-emerald-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    >
+                                        <History size={16} /> <span className="truncate">Movimientos</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {(activeTab === 'finished' && finishedTab === 'movements') || (activeTab === 'prepared' && preparedTab === 'movements') || (activeTab === 'free' && freeTab === 'movements') ? (
+                                <div className="bg-white rounded-lg shadow overflow-x-auto animate-in fade-in">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 border-b text-xs uppercase text-gray-500 font-bold">
                                             <tr>
@@ -1273,7 +1305,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                 }
                                                 if (activeTab === 'prepared') {
                                                     if (preparedTab === 'movements') return false;
-                                                    return !product.isStockManaged && !excludedTypes.includes(product.type);
+                                                    return !product.isStockManaged && product.requiresPreparation && !excludedTypes.includes(product.type);
+                                                }
+                                                if (activeTab === 'free') {
+                                                    if (freeTab === 'movements') return false;
+                                                    return !product.isStockManaged && !product.requiresPreparation && !excludedTypes.includes(product.type);
                                                 }
                                                 return true;
                                             }).map(product => {
@@ -1519,7 +1555,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                  Or simply render standard cards.
                             */}
                             {
-                                ((activeTab === 'finished' && finishedTab === 'stock') || (activeTab === 'prepared' && preparedTab === 'stock') || activeTab === 'free') && (
+                                ((activeTab === 'finished' && finishedTab === 'stock') || (activeTab === 'prepared' && preparedTab === 'stock') || (activeTab === 'free' && freeTab === 'stock')) && (
                                     <div className="md:hidden grid grid-cols-1 gap-4">
                                         {products.filter(p => {
                                             const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];

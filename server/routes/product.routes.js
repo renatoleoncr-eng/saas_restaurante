@@ -412,19 +412,29 @@ router.get('/products/:id/movements', async (req, res) => {
 router.get('/products/movements/all', async (req, res) => {
     try {
         const { ProductMovement, Product, User } = getModels();
-        const { type } = req.query;
+        const { type, isStockManaged, requiresPreparation, excludeMenu } = req.query;
 
         const productWhere = {};
         if (type) {
             const types = type.split(',');
             productWhere.type = types;
         }
+        if (isStockManaged !== undefined) {
+            productWhere.isStockManaged = isStockManaged === 'true';
+        }
+        if (requiresPreparation !== undefined) {
+            productWhere.requiresPreparation = requiresPreparation === 'true';
+        }
+        if (excludeMenu === 'true') {
+            const { Op } = require('sequelize');
+            productWhere.type = { [Op.notIn]: ['daily_entry', 'daily_main', 'daily_option', 'menu'] };
+        }
 
         const movements = await ProductMovement.findAll({
             include: [
                 {
                     model: Product,
-                    attributes: ['name', 'type'],
+                    attributes: ['name', 'type', 'isStockManaged', 'requiresPreparation'],
                     where: Object.keys(productWhere).length > 0 ? productWhere : undefined,
                     paranoid: false
                 },

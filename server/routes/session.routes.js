@@ -78,6 +78,7 @@ router.get('/sessions/current', async (req, res) => {
             menus: { count: 0, total: 0, items: [] },
             platos: { count: 0, total: 0, items: [] },
             bebidas: { count: 0, total: 0, items: [] },
+            "2x1 / Promos": { count: 0, total: 0, items: [] },
             otros: { count: 0, total: 0, items: [] }
         };
 
@@ -91,27 +92,34 @@ router.get('/sessions/current', async (req, res) => {
             });
 
             orders.forEach(order => {
-                if (!order.Product) return;
-                
-                const type = order.Product.type;
                 let category = 'otros';
+                let itemName = '';
+                let itemPresentation = order.presentation;
                 
-                if (['menu', 'daily_entry', 'daily_main'].includes(type)) {
-                    category = 'menus';
-                } else if (type === 'dish') {
-                    category = 'platos';
-                } else if (type === 'drink') {
-                    category = 'bebidas';
+                if (order.Product) {
+                    itemName = order.Product.name;
+                    const type = order.Product.type;
+                    
+                    if (['menu', 'daily_entry', 'daily_main'].includes(type)) {
+                        category = 'menus';
+                    } else if (type === 'dish') {
+                        category = 'platos';
+                    } else if (type === 'drink') {
+                        category = 'bebidas';
+                    }
+                } else {
+                    category = '2x1 / Promos';
+                    itemName = order.notes || 'Promo/Combo';
                 }
 
-                let itemPrice = parseFloat(order.priceAtOrder || order.Product.price);
+                let itemPrice = parseFloat(order.priceAtOrder || (order.Product ? order.Product.price : 0));
                 let itemTotal = itemPrice * order.quantity;
 
                 salesSummary[category].count += order.quantity;
                 salesSummary[category].total += itemTotal;
                 
                 const existingItem = salesSummary[category].items.find(
-                    i => i.name === order.Product.name && i.presentation === order.presentation
+                    i => i.name === itemName && i.presentation === itemPresentation
                 );
                 
                 if (existingItem) {
@@ -119,8 +127,8 @@ router.get('/sessions/current', async (req, res) => {
                     existingItem.total += itemTotal;
                 } else {
                     salesSummary[category].items.push({
-                        name: order.Product.name,
-                        presentation: order.presentation,
+                        name: itemName,
+                        presentation: itemPresentation,
                         quantity: order.quantity,
                         price: itemPrice,
                         total: itemTotal
@@ -140,6 +148,153 @@ router.get('/sessions/current', async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching current session:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/sessions/:id/details - Get details for any session (current or historic)
+router.get('/sessions/:id/details', async (req, res) => {
+    try {
+        const session = await CashSession.findByPk(req.params.id, {
+            include: [
+                { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] },
+                { model: User, as: 'Closer', attributes: ['id', 'username', 'displayName'] }
+            ]
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: 'Sesión no encontrada' });
+        }
+
+        // Calculate expected totals
+        const payments = await Payment.findAll({
+            where: { CashSessionId: session.id },
+            include: [{
+                model: Account,
+                include: [{ model: Table }]
+            }],
+            order: [['createdAt', 'DESC']]
+        });
+
+        const expenses = await Expense.findAll({
+            where: { CashSessionId: session.id }
+        });
+
+        // Group payments by method
+        const paymentTotals = {
+            efectivo: 0,
+            tarjeta: 0,
+            yape: 0,
+            transferencia: 0
+        };
+
+        payments.forEach(p => {
+            const method = p.method ? p.method.toLowerCase() : 'efectivo';
+            if (paymentTotals[method] !== undefined) {
+                paymentTotals[method] += parseFloat(p.amount);
+            } else {
+                paymentTotals[method] = parseFloat(p.amount);
+            }
+        });
+
+        // Group expenses by method (to subtract from cash if needed)
+        const expenseTotals = {
+            efectivo: 0,
+            yape: 0,
+            transferencia: 0
+        };
+
+        expenses.forEach(e => {
+            const method = e.paymentMethod ? e.paymentMethod.toLowerCase() : 'efectivo';
+            if (expenseTotals[method] !== undefined) {
+                expenseTotals[method] += parseFloat(e.amount);
+            }
+        });
+
+        const expected = {
+            efectivo: parseFloat(session.openingCash) + paymentTotals.efectivo - expenseTotals.efectivo,
+            tarjeta: paymentTotals.tarjeta,
+            yape: paymentTotals.yape,
+            transferencia: paymentTotals.transferencia
+        };
+
+        // --- Calculate Sales Summary ---
+        const accountIds = [...new Set(payments.map(p => p.AccountId).filter(id => id != null))];
+
+        let salesSummary = {
+            menus: { count: 0, total: 0, items: [] },
+            platos: { count: 0, total: 0, items: [] },
+            bebidas: { count: 0, total: 0, items: [] },
+            "2x1 / Promos": { count: 0, total: 0, items: [] },
+            otros: { count: 0, total: 0, items: [] }
+        };
+
+        if (accountIds.length > 0) {
+            const orders = await Order.findAll({
+                where: {
+                    AccountId: { [Op.in]: accountIds },
+                    status: { [Op.notIn]: ['cancelled'] }
+                },
+                include: [{ model: Product }]
+            });
+
+            orders.forEach(order => {
+                let category = 'otros';
+                let itemName = '';
+                let itemPresentation = order.presentation;
+                
+                if (order.Product) {
+                    itemName = order.Product.name;
+                    const type = order.Product.type;
+                    
+                    if (['menu', 'daily_entry', 'daily_main'].includes(type)) {
+                        category = 'menus';
+                    } else if (type === 'dish') {
+                        category = 'platos';
+                    } else if (type === 'drink') {
+                        category = 'bebidas';
+                    }
+                } else {
+                    category = '2x1 / Promos';
+                    itemName = order.notes || 'Promo/Combo';
+                }
+
+                let itemPrice = parseFloat(order.priceAtOrder || (order.Product ? order.Product.price : 0));
+                let itemTotal = itemPrice * order.quantity;
+
+                salesSummary[category].count += order.quantity;
+                salesSummary[category].total += itemTotal;
+                
+                const existingItem = salesSummary[category].items.find(
+                    i => i.name === itemName && i.presentation === itemPresentation
+                );
+                
+                if (existingItem) {
+                    existingItem.quantity += order.quantity;
+                    existingItem.total += itemTotal;
+                } else {
+                    salesSummary[category].items.push({
+                        name: itemName,
+                        presentation: itemPresentation,
+                        quantity: order.quantity,
+                        price: itemPrice,
+                        total: itemTotal
+                    });
+                }
+            });
+        }
+
+        res.json({
+            session,
+            expected,
+            paymentTotals,
+            expenseTotals,
+            payments,
+            salesSummary
+        });
+
+    } catch (error) {
+        console.error("Error fetching session details:", error);
         res.status(500).json({ error: error.message });
     }
 });
