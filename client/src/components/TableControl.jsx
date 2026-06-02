@@ -2443,7 +2443,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                         <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-50/95 via-gray-50/70 to-transparent pointer-events-none flex flex-col gap-2">
                             <button
                                 onClick={handleClose}
-                                className="w-full py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 shadow-md hover:bg-gray-50 flex items-center justify-center gap-1.5 pointer-events-auto transition-transform active:scale-95 text-sm"
+                                className="w-full py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center justify-center gap-1.5 pointer-events-auto transition-transform active:scale-95 text-sm"
                             >
                                 <X size={16} />
                                 <span>Atrás</span>
