@@ -76,13 +76,6 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [activeTab, setActiveTab] = useState('emit');
     const [selectedDocId, setSelectedDocId] = useState(null);
 
-    // Auto-select history if there is no pending balance
-    useEffect(() => {
-        if (remainingBalance <= 0.01 && history.length > 0) {
-            setActiveTab('history');
-        }
-    }, [remainingBalance, history]);
-
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [lastIssuedUrl, setLastIssuedUrl] = useState(null);
@@ -250,6 +243,13 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const totalAlreadyBilled = useMemo(() => activeHistory.reduce((acc, doc) => acc + parseFloat(doc.total || 0), 0), [activeHistory]);
     const totalPossible = availableItems.reduce((acc, item) => acc + item.amount, 0);
     const remainingBalance = Math.max(0, totalPossible - totalAlreadyBilled);
+
+    // Auto-select history if there is no pending balance
+    useEffect(() => {
+        if (remainingBalance <= 0.01 && history.length > 0) {
+            setActiveTab('history');
+        }
+    }, [remainingBalance, history]);
 
     // Tax Breakdown Calculation (Wave 3 Match)
     const breakdown = useMemo(() => {
