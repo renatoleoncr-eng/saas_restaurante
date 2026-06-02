@@ -887,16 +887,11 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                         </div>
                         <div>
                             <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">Gestión de Comprobantes</h2>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Cuenta #{account.id}</span>
+                            <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                                <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-sm">Cuenta #{account.id}</span>
                                 {account.Table && (
-                                    <>
-                                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                                        <span className="text-[10px] font-black bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Mesa #{account.Table.number}</span>
-                                    </>
+                                    <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-sm">Mesa #{account.Table.number}</span>
                                 )}
-                                <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">{account.customerName}</span>
                             </div>
                         </div>
                     </div>
