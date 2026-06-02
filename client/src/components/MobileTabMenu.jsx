@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Menu, ChevronDown, ChevronUp } from 'lucide-react';
+import { List, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function MobileTabMenu({ tabs, activeTab, onTabChange }) {
     const [isOpen, setIsOpen] = useState(false);
 
-    const activeTabLabel = tabs.find(t => t.id === activeTab)?.label || 'Menú';
+    const activeTabObj = tabs.find(t => t.id === activeTab);
+    const activeTabLabel = activeTabObj?.label || 'Menú';
+    const ActiveIcon = activeTabObj?.icon || List;
 
     return (
         <div className="md:hidden mb-4 relative z-10">
@@ -21,7 +23,7 @@ export default function MobileTabMenu({ tabs, activeTab, onTabChange }) {
                 className="w-full bg-white border rounded-lg shadow-sm p-3 flex justify-between items-center text-gray-800 font-bold relative z-40"
             >
                 <div className="flex items-center gap-2">
-                    <Menu size={20} className="text-blue-600" />
+                    <ActiveIcon size={20} className="text-blue-600 shrink-0" />
                     <span>{activeTabLabel}</span>
                 </div>
                 {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -39,7 +41,7 @@ export default function MobileTabMenu({ tabs, activeTab, onTabChange }) {
                             className={`w-full text-left px-4 py-3 border-b last:border-0 flex items-center gap-3 transition-colors
                                 ${activeTab === tab.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
-                            {tab.icon && <tab.icon size={18} />}
+                            {tab.icon && <tab.icon size={18} className="shrink-0" />}
                             {tab.label}
                         </button>
                     ))}
