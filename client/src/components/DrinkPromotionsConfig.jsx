@@ -27,8 +27,8 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
     };
 
     return (
-        <tr className="bg-purple-50 border-y border-purple-100">
-            <td colSpan={5} className="p-3 md:p-4">
+        <tr className="bg-purple-50 border-y border-purple-100 block md:table-row">
+            <td colSpan={5} className="p-3 md:p-4 block md:table-cell">
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                     <div className="flex-1">
                         <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
@@ -133,8 +133,8 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
     });
 
     return (
-        <tr className="bg-blue-50 border-y border-blue-100">
-            <td colSpan={5} className="p-3 md:p-4">
+        <tr className="bg-blue-50 border-y border-blue-100 block md:table-row">
+            <td colSpan={5} className="p-3 md:p-4 block md:table-cell">
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                     <div className="flex-1">
                         <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
@@ -444,8 +444,8 @@ export default function DrinkPromotionsConfig() {
                     {/* Items table */}
                     {!collapsedPromoIds[promo.id] && (
                         <>
-                            <table className="w-full text-base md:text-sm table-fixed">
-                                <thead>
+                            <table className="w-full text-base md:text-sm block md:table">
+                                <thead className="hidden md:table-header-group">
                                     <tr className="text-xs md:text-xs text-gray-500 font-black uppercase tracking-wider border-b bg-gray-50/80">
                                         <th className="px-3 py-3 md:px-4 md:py-2.5 text-left">Nombre</th>
                                         <th className="px-3 py-3 md:px-4 md:py-2.5 text-left w-28 md:w-auto">Precio</th>
@@ -454,10 +454,10 @@ export default function DrinkPromotionsConfig() {
                                         <th className="px-3 py-3 md:px-4 md:py-2.5 text-right w-24 md:w-auto"></th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="block md:table-row-group">
                                     {(promo.DrinkPromotionItems || []).length === 0 && addingItemTo !== promo.id && (
-                                        <tr>
-                                            <td colSpan={5} className="px-4 py-4 text-center text-gray-400 italic text-sm">
+                                        <tr className="block md:table-row">
+                                            <td colSpan={5} className="px-4 py-4 text-center text-gray-400 italic text-sm block md:table-cell">
                                                 Sin tragos aún — presiona <strong>+</strong> para agregar
                                             </td>
                                         </tr>
@@ -473,43 +473,45 @@ export default function DrinkPromotionsConfig() {
                                                 onCancel={() => setEditingItem(null)}
                                             />
                                         ) : (
-                                            <tr key={item.id} className="border-b border-dashed hover:bg-gray-50/50 group transition-colors">
-                                                <td className="px-3 py-4 md:px-4 md:py-3 font-semibold text-gray-800">
-                                                    <div className="text-base md:text-sm font-bold text-gray-900 leading-snug">{item.name}</div>
-                                                    <div className="md:hidden mt-2 flex flex-wrap gap-1.5 items-center">
-                                                        <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
-                                                            {TYPE_LABEL[item.type] || item.type}
-                                                        </span>
-                                                        {item.type === 'finished' && (
-                                                            <span className="text-blue-600 text-[10px] md:text-[9px] font-bold">
-                                                                {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
+                                            <tr key={item.id} className="flex flex-col p-4 border-b border-dashed hover:bg-gray-50/50 group transition-colors relative md:table-row md:p-0 md:border-b-0">
+                                                <div className="flex justify-between items-start md:contents">
+                                                    <td className="px-0 py-0 md:px-4 md:py-3 font-semibold text-gray-800 block md:table-cell">
+                                                        <div className="text-base md:text-sm font-bold text-gray-900 leading-snug">{item.name}</div>
+                                                        <div className="md:hidden mt-2 flex flex-wrap gap-1.5 items-center">
+                                                            <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
+                                                                {TYPE_LABEL[item.type] || item.type}
                                                             </span>
-                                                        )}
-                                                        {item.type === 'prepared' && (
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="text-amber-600 text-[10px] md:text-[9px] font-bold">
-                                                                    {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                            {item.type === 'finished' && (
+                                                                <span className="text-blue-600 text-[10px] md:text-[9px] font-bold">
+                                                                    {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
                                                                 </span>
-                                                                {item.linkedProductId && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                            if (p) setRecipeProduct(p);
-                                                                        }}
-                                                                        className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
-                                                                        title="Ver Receta"
-                                                                    >
-                                                                        <ChefHat size={12} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-3 py-4 md:px-4 md:py-3 text-gray-950 font-mono font-black text-base md:text-sm">
-                                                    S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
-                                                </td>
+                                                            )}
+                                                            {item.type === 'prepared' && (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-amber-600 text-[10px] md:text-[9px] font-bold">
+                                                                        {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                                    </span>
+                                                                    {item.linkedProductId && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                                if (p) setRecipeProduct(p);
+                                                                            }}
+                                                                            className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                            title="Ver Receta"
+                                                                        >
+                                                                            <ChefHat size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-0 py-0 md:px-4 md:py-3 text-gray-950 font-mono font-black text-base md:text-sm block md:table-cell whitespace-nowrap pl-4 md:pl-0">
+                                                        S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
+                                                    </td>
+                                                </div>
                                                 <td className="hidden md:table-cell px-4 py-2.5">
                                                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
                                                         {TYPE_LABEL[item.type] || item.type}
@@ -528,9 +530,9 @@ export default function DrinkPromotionsConfig() {
                                                             {item.linkedProductId && (
                                                                 <button
                                                                     onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                            if (p) setRecipeProduct(p);
+                                                                        e.stopPropagation();
+                                                                        const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                        if (p) setRecipeProduct(p);
                                                                     }}
                                                                     className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
                                                                     title="Gestionar Receta"
@@ -543,7 +545,7 @@ export default function DrinkPromotionsConfig() {
                                                         <span className="text-gray-400 text-xs italic">—</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-4 md:px-4 md:py-3">
+                                                <td className="px-0 py-0 md:px-4 md:py-3 block md:table-cell mt-3 md:mt-0">
                                                     <div className="flex items-center gap-2 justify-end">
                                                         <button onClick={() => { setEditingItem({ ...item }); setAddingItemTo(null); }}
                                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
