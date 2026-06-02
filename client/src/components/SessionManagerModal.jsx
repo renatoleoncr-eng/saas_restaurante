@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee } from 'lucide-react';
+import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee, MinusCircle } from 'lucide-react';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
     const [loading, setLoading] = useState(true);
@@ -12,6 +12,13 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     const [expandedPaymentMethod, setExpandedPaymentMethod] = useState(null);
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
+
+    // Expense Modal states
+    const [showExpenseModal, setShowExpenseModal] = useState(false);
+    const [expenseForm, setExpenseForm] = useState({
+        description: '', amount: '', paymentMethod: 'efectivo', category: 'Insumos', notes: ''
+    });
+
     const [countedValues, setCountedValues] = useState({
         efectivo: '',
         tarjeta: '',
@@ -124,6 +131,24 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         }
     };
 
+    const handleAddExpense = async (e) => {
+        e.preventDefault();
+        try {
+            const userString = localStorage.getItem('user');
+            const user = userString ? JSON.parse(userString) : null;
+            await axios.post('/api/expenses', {
+                ...expenseForm,
+                userId: user?.id,
+                date: new Date().toISOString().split('T')[0]
+            });
+            setShowExpenseModal(false);
+            setExpenseForm({ description: '', amount: '', paymentMethod: 'efectivo', category: 'Insumos', notes: '' });
+            fetchCurrentSession();
+        } catch (err) {
+            alert(err.response?.data?.error || "Error al registrar egreso");
+        }
+    };
+
     if (loading) return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
             <div className="bg-white p-6 rounded-xl shadow-2xl animate-pulse text-gray-700 font-bold">Cargando datos de caja...</div>
@@ -209,13 +234,21 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                             {/* Movimientos de Caja Section */}
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">
                                 <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-                                    <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
-                                        <Receipt size={16} className="text-gray-500" />
-                                        Movimientos de Caja
-                                    </h3>
-                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
-                                        {movements.length} Transacciones
-                                    </span>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                        <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                            <Receipt size={16} className="text-gray-500" />
+                                            Movimientos
+                                        </h3>
+                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold w-fit">
+                                            {movements.length} Transacciones
+                                        </span>
+                                    </div>
+                                    <button 
+                                        onClick={() => setShowExpenseModal(true)}
+                                        className="text-[11px] bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
+                                    >
+                                        + Registrar Egreso
+                                    </button>
                                 </div>
                                 
                                 <div className="p-2 max-h-60 overflow-y-auto no-scrollbar">
@@ -634,9 +667,78 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                              >
                                  <Lock size={20} /> Confirmar Cierre de Turno y Caja
                              </button>
+                             <button 
+                                 onClick={() => setShowExpenseModal(true)}
+                                 className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-amber-200 transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
+                             >
+                                 <MinusCircle size={20} /> Registrar Egreso / Gasto
+                             </button>
                         </div>
-                    )}
+                    </div>
                 </div>
+            )}
+
+            {/* EXPENSE MODAL */}
+            {showExpenseModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gray-50 p-4 border-b flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800 text-lg">Registrar Egreso / Gasto</h3>
+                            <button onClick={() => setShowExpenseModal(false)} className="text-gray-400 hover:bg-gray-200 p-1.5 rounded-lg"><X size={20}/></button>
+                        </div>
+                        <form onSubmit={handleAddExpense} className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Monto (S/)</label>
+                                <input 
+                                    type="number" step="0.01" required 
+                                    value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                                    className="w-full border-2 border-gray-200 rounded-xl p-3 text-lg font-bold focus:border-blue-500 outline-none"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Concepto / Motivo</label>
+                                <input 
+                                    type="text" required 
+                                    value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
+                                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none text-sm"
+                                    placeholder="Ej. Compra de hielo, Pago proveedor..."
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Categoría</label>
+                                    <select 
+                                        value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
+                                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none text-sm bg-white"
+                                    >
+                                        <option>Insumos</option>
+                                        <option>Personal</option>
+                                        <option>Servicios</option>
+                                        <option>Movilidad</option>
+                                        <option>Otros</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pago de</label>
+                                    <select 
+                                        value={expenseForm.paymentMethod} onChange={e => setExpenseForm({...expenseForm, paymentMethod: e.target.value})}
+                                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none text-sm bg-white"
+                                    >
+                                        <option value="efectivo">Caja Efectivo</option>
+                                        <option value="yape">Yape/Plin</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="transferencia">Bancos</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl mt-2 transition-colors">
+                                Guardar Egreso
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
                 
                 {/* Footer info */}
                 <div className="bg-gray-50 p-3 border-t border-gray-100 text-[9px] text-gray-400 text-center uppercase tracking-widest font-bold shrink-0">
