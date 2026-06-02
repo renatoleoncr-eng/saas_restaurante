@@ -127,28 +127,27 @@ export default function ReportesView() {
         }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort desc
 
-    return (
-        <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in">
+        <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-8 animate-in fade-in">
             {/* FILTERS & HEADER */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="w-full md:w-auto bg-white p-3 rounded-xl shadow-sm border flex flex-col md:flex-row gap-3 md:items-center">
-                    <div className="flex flex-col w-full md:w-auto">
-                        <span className="text-xs font-bold text-gray-500 uppercase">Desde</span>
+            <div className="flex flex-col sm:flex-row gap-2 w-full justify-between items-stretch sm:items-center">
+                <div className="flex flex-1 items-center gap-2 bg-white p-2 rounded-xl shadow-sm border">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight shrink-0">De</span>
                         <input
                             type="date"
                             value={dateRange.startDate}
                             onChange={e => setDateRange({ ...dateRange, startDate: e.target.value })}
-                            className="border rounded-lg p-2 text-sm font-medium w-full"
+                            className="border-none bg-transparent p-0 text-xs font-bold text-gray-700 focus:ring-0 w-full"
                         />
                     </div>
-                    <div className="hidden md:block text-gray-300">|</div>
-                    <div className="flex flex-col w-full md:w-auto">
-                        <span className="text-xs font-bold text-gray-500 uppercase">Hasta</span>
+                    <div className="text-gray-300 select-none font-light shrink-0">→</div>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight shrink-0">A</span>
                         <input
                             type="date"
                             value={dateRange.endDate}
                             onChange={e => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="border rounded-lg p-2 text-sm font-medium w-full"
+                            className="border-none bg-transparent p-0 text-xs font-bold text-gray-700 focus:ring-0 w-full"
                         />
                     </div>
                 </div>
@@ -156,56 +155,68 @@ export default function ReportesView() {
                 {user?.role === 'admin' && (
                     <button
                         onClick={() => setShowExpenseModal(true)}
-                        className="w-full md:w-auto bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow hover:bg-red-700 transition-colors flex items-center justify-center gap-2 order-last md:order-none"
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm shrink-0 transition-colors"
                     >
-                        <ArrowDownLeft size={20} /> Registrar Egreso
+                        <ArrowDownLeft size={16} /> Egreso
                     </button>
                 )}
             </div>
 
             {/* STATS CARDS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
                 {/* 1. INGRESOS */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500 relative overflow-hidden group">
+                <div className="bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-green-500 relative overflow-hidden group">
                     <div className="relative z-10">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ingresos Totales</div>
-                        <div className="text-3xl font-black text-green-600 tracking-tight">{formatCurrency(report.totalSales)}</div>
+                        <div className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate">
+                            <span className="hidden sm:inline">Ingresos Totales</span>
+                            <span className="sm:hidden">Ingresos</span>
+                        </div>
+                        <div className="text-xs sm:text-sm md:text-3xl font-black text-green-600 tracking-tight truncate">
+                            {formatCurrency(report.totalSales)}
+                        </div>
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-green-50 rounded-full text-green-500 group-hover:scale-110 transition-transform">
+                    <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-green-50 rounded-full text-green-500 group-hover:scale-110 transition-transform">
                         <ArrowUpRight size={24} strokeWidth={3} />
                     </div>
                 </div>
 
                 {/* 2. EGRESOS */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-red-500 relative overflow-hidden group">
+                <div className="bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-red-500 relative overflow-hidden group">
                     <div className="relative z-10">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Egresos Totales</div>
-                        <div className="text-3xl font-black text-red-600 tracking-tight">{formatCurrency(report.totalExpenses)}</div>
+                        <div className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate">
+                            <span className="hidden sm:inline">Egresos Totales</span>
+                            <span className="sm:hidden">Egresos</span>
+                        </div>
+                        <div className="text-xs sm:text-sm md:text-3xl font-black text-red-600 tracking-tight truncate">
+                            {formatCurrency(report.totalExpenses)}
+                        </div>
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-red-50 rounded-full text-red-500 group-hover:scale-110 transition-transform">
+                    <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-red-50 rounded-full text-red-500 group-hover:scale-110 transition-transform">
                         <ArrowDownLeft size={24} strokeWidth={3} />
                     </div>
                 </div>
 
                 {/* 3. BALANCE */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500 relative overflow-hidden group">
+                <div className="bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-blue-500 relative overflow-hidden group">
                     <div className="relative z-10">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Balance Periodo</div>
-                        <div className={`text - 3xl font - black tracking - tight ${report.balance >= 0 ? 'text-blue-600' : 'text-red-600'} `}>
+                        <div className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate">
+                            <span className="hidden sm:inline">Balance Periodo</span>
+                            <span className="sm:hidden">Balance</span>
+                        </div>
+                        <div className={`text-xs sm:text-sm md:text-3xl font-black tracking-tight truncate ${report.balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                             {formatCurrency(report.balance)}
                         </div>
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-blue-50 rounded-full text-blue-500 group-hover:scale-110 transition-transform">
+                    <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-blue-50 rounded-full text-blue-500 group-hover:scale-110 transition-transform">
                         <TrendingUp size={24} strokeWidth={3} />
                     </div>
                 </div>
             </div>
 
-
-            {/* TRANSACTIONS TABLE */}
+            {/* TRANSACTIONS TABLE & FEED */}
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left min-w-[800px]">
                         <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b">
                             <tr>
@@ -221,14 +232,14 @@ export default function ReportesView() {
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-sm">
                             {transactions.length === 0 ? (
-                                <tr><td colSpan="7" className="px-6 py-8 text-center text-gray-400">No hay movimientos en este periodo.</td></tr>
+                                <tr><td colSpan="8" className="px-6 py-8 text-center text-gray-400">No hay movimientos en este periodo.</td></tr>
                             ) : (
                                 transactions.map(t => (
-                                    <tr key={`${t.type} -${t.id} `} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={`${t.type}-${t.id}`} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{formatDate(t.date)}</td>
                                         <td className="px-6 py-4 font-medium text-gray-700">{t.user}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`px - 2 py - 1 rounded text - xs font - bold ${t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} `}>
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {t.type === 'income' ? 'Venta' : 'Egreso'}
                                             </span>
                                         </td>
@@ -241,12 +252,12 @@ export default function ReportesView() {
                                                 <span className="text-gray-400">-</span>
                                             )}
                                         </td>
-                                        <td className={`px - 6 py - 4 font - bold ${t.type === 'income' ? 'text-gray-800' : 'text-red-600'} `}>
+                                        <td className={`px-6 py-4 font-bold ${t.type === 'income' ? 'text-gray-800' : 'text-red-600'}`}>
                                             {formatCurrency(t.amount)}
                                         </td>
                                         <td className="px-6 py-4 text-gray-600 capitalize">{t.method}</td>
                                         <td className="px-6 py-4 text-gray-500 max-w-xs truncate" title={t.description}>
-                                            {t.type === 'income' ? `${t.description} - ${t.details?.customerName || 'Cliente'} ` : t.description}
+                                            {t.type === 'income' ? `${t.description} - ${t.details?.customerName || 'Cliente'}` : t.description}
                                         </td>
                                         {user?.role === 'admin' && (
                                             <td className="px-6 py-4 text-right">
@@ -264,6 +275,61 @@ export default function ReportesView() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Feed View */}
+                <div className="md:hidden divide-y divide-gray-100">
+                    {transactions.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400 text-sm">No hay movimientos en este periodo.</div>
+                    ) : (
+                        transactions.map(t => {
+                            const isIncome = t.type === 'income';
+                            return (
+                                <div key={`${t.type}-${t.id}`} className="p-4 flex items-center justify-between hover:bg-gray-50 active:bg-gray-100 transition-colors gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`p-2.5 rounded-full shrink-0 ${isIncome ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                            {isIncome ? <ArrowUpRight size={18} strokeWidth={2.5} /> : <ArrowDownLeft size={18} strokeWidth={2.5} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="font-bold text-gray-800 text-sm truncate">
+                                                {isIncome ? (
+                                                    <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline text-left font-bold">
+                                                        Mesa {t.details?.Table?.number || '?'} • #{t.details?.id || t.id}
+                                                    </button>
+                                                ) : (
+                                                    t.description
+                                                )}
+                                            </div>
+                                            <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
+                                                <span>{new Date(t.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span>•</span>
+                                                <span className="truncate">{t.user}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="text-right">
+                                            <div className={`font-black text-sm ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                                                {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 capitalize font-medium mt-0.5">
+                                                {t.method}
+                                            </div>
+                                        </div>
+                                        {user?.role === 'admin' && (
+                                            <button
+                                                onClick={() => handleDeleteTransaction(t)}
+                                                className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                                title="Eliminar movimiento"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 
