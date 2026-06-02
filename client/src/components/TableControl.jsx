@@ -1812,13 +1812,6 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     </button>
                                 )}
                             </div>
-                            <button 
-                                onClick={handleClose} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold md:hidden"
-                            >
-                                <X size={16} />
-                                <span>Atrás</span>
-                            </button>
                         </div>
 
                         {/* Search Bar */}
@@ -1878,7 +1871,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     />
 
                     {/* Main Content Area — Flex column to support sticky footer */}
-                    <div className="flex-1 flex flex-col min-h-0 p-3 pb-24 md:pb-4 overflow-hidden">
+                    <div className="flex-1 flex flex-col min-h-0 p-3 pb-36 md:pb-4 overflow-hidden">
 
                         {/* Scrollable Content Wrapper */}
                         <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
@@ -1949,7 +1942,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 {variantsList.map((variant, idx) => {
                                                                     const isHH = variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd);
                                                                     return (
-                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
+                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-sm sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
                                                                             {isHH && <Clock size={14} />}
                                                                             S/ {Number(parseFloat(isHH ? variant.happyHourPrice : variant.price).toFixed(1))}
                                                                         </div>
@@ -2051,7 +2044,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 {variantsList.map((variant, idx) => {
                                                                     const isHH = variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd);
                                                                     return (
-                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
+                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-sm sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
                                                                             {isHH && <Clock size={14} />}
                                                                             S/ {Number(parseFloat(isHH ? variant.happyHourPrice : variant.price).toFixed(1))}
                                                                         </div>
@@ -2447,7 +2440,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
                     {/* MOBILE FLOATING FOOTER (Only if not showing cart) */}
                     {!showMobileCart && (
-                        <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-transparent pointer-events-none">
+                        <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-50/95 via-gray-50/70 to-transparent pointer-events-none flex flex-col gap-2">
+                            <button
+                                onClick={handleClose}
+                                className="w-full py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 shadow-md hover:bg-gray-50 flex items-center justify-center gap-1.5 pointer-events-auto transition-transform active:scale-95 text-sm"
+                            >
+                                <X size={16} />
+                                <span>Atrás</span>
+                            </button>
                             <button
                                 onClick={() => setShowMobileCart(true)}
                                 className={`w-full py-3 rounded-xl font-bold text-white shadow-lg flex justify-between px-6 pointer-events-auto transition-transform active:scale-95 ${cart.length > 0 ? 'bg-blue-600' : 'bg-gray-800'}`}
