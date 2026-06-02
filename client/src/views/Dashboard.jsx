@@ -172,7 +172,7 @@ export default function Dashboard() {
 
     return (
         <div
-            className="flex h-screen bg-gray-100 overflow-hidden relative"
+            className="flex h-[100dvh] bg-gray-100 overflow-hidden relative"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -410,7 +410,7 @@ export default function Dashboard() {
             </div>
 
             {/* Main Content - Added overflow-x-hidden */}
-            <main className="flex-1 overflow-auto relative bg-gray-50 overflow-x-hidden">
+            <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
                 {renderContent()}
             </main>
 

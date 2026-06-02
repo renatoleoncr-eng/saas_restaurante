@@ -2,9 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
     background-color: #f3f4f6;
-    /* Gray 100 */
 }
 
 /* Hide number input arrows (spinners) */
