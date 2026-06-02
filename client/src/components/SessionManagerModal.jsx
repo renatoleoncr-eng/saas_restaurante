@@ -674,10 +674,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                  <MinusCircle size={20} /> Registrar Egreso / Gasto
                              </button>
                         </div>
-                    </div>
+                    )}
                 </div>
-            )}
-
             {/* EXPENSE MODAL */}
             {showExpenseModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
