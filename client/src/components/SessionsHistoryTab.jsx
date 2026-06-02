@@ -237,7 +237,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             amount: parseFloat(p.amount),
             method: p.method || 'efectivo',
             time: p.createdAt,
-            user: p.User ? (p.User.displayName || p.User.username) : 'N/A',
+            user: p.User ? (p.User.displayName || p.User.username) : '-',
             reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
         }));
 
@@ -247,7 +247,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             amount: parseFloat(e.amount),
             method: e.paymentMethod || 'efectivo',
             time: e.date || e.createdAt,
-            user: e.User?.displayName || e.User?.username || 'N/A',
+            user: e.User?.displayName || e.User?.username || '-',
             reference: e.description || 'Gasto General'
         }));
 
@@ -329,34 +329,34 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                             </div>
 
                             {/* Cash Balance Cards Summary */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="bg-white p-4.5 rounded-xl border shadow-xs flex flex-col justify-between">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Esperado</span>
-                                    <span className="text-xl sm:text-2xl font-extrabold text-gray-800 mt-1">S/ {totalExpected.toFixed(2)}</span>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                                <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Esperado</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {totalExpected.toFixed(2)}</span>
                                 </div>
-                                <div className="bg-white p-4.5 rounded-xl border shadow-xs flex flex-col justify-between">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Contado</span>
-                                    <span className="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1">S/ {totalCounted.toFixed(2)}</span>
+                                <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Contado</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-gray-900 mt-1">S/ {totalCounted.toFixed(2)}</span>
                                 </div>
-                                <div className={`p-4.5 rounded-xl border shadow-xs flex flex-col justify-between ${
+                                <div className={`p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between ${
                                     totalDiff === 0 
                                         ? 'bg-green-50 border-green-200' 
                                         : totalDiff < 0 
                                             ? 'bg-rose-50 border-rose-200' 
                                             : 'bg-amber-50 border-amber-200'
                                 }`}>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                                    <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider block leading-tight ${
                                         totalDiff === 0 ? 'text-green-700' : totalDiff < 0 ? 'text-rose-700' : 'text-amber-700'
                                     }`}>
-                                        Diferencia Total
+                                        Diferencia
                                     </span>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className={`text-xl sm:text-2xl font-extrabold ${
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-1 gap-1 sm:gap-0">
+                                        <span className={`text-sm sm:text-xl font-extrabold ${
                                             totalDiff === 0 ? 'text-green-700' : totalDiff < 0 ? 'text-rose-700' : 'text-amber-700'
                                         }`}>
                                             {totalDiff !== 0 ? `S/ ${totalDiff.toFixed(2)}` : 'S/ 0.00'}
                                         </span>
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                        <span className={`text-[8px] sm:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider w-fit ${
                                             totalDiff === 0 
                                                 ? 'bg-green-200 text-green-800' 
                                                 : totalDiff < 0 
@@ -378,13 +378,13 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                     </h3>
                                 </div>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-xs md:text-sm">
                                         <thead>
                                             <tr className="bg-gray-50/50 text-gray-500 border-b">
-                                                <th className="px-5 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">Método</th>
-                                                <th className="px-5 py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Esperado</th>
-                                                <th className="px-5 py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Contado</th>
-                                                <th className="px-5 py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Diferencia</th>
+                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">Método</th>
+                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Esperado</th>
+                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Contado</th>
+                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Diferencia</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -395,17 +395,17 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 
                                                 return (
                                                     <tr key={m} className="hover:bg-gray-50/30 transition-colors">
-                                                        <td className="px-5 py-3 capitalize font-semibold text-gray-700 flex items-center gap-2">
-                                                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                                        <td className="px-3 md:px-5 py-3 capitalize font-semibold text-gray-700 flex items-center gap-2">
+                                                            <span className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 ${
                                                                 m === 'efectivo' ? 'bg-emerald-500' :
                                                                 m === 'tarjeta' ? 'bg-blue-500' :
                                                                 m === 'yape' ? 'bg-purple-500' : 'bg-orange-500'
                                                             }`}></span>
                                                             {m}
                                                         </td>
-                                                        <td className="px-5 py-3 text-right font-mono text-gray-600">S/ {exp.toFixed(2)}</td>
-                                                        <td className="px-5 py-3 text-right font-mono font-bold text-gray-800">S/ {cnt.toFixed(2)}</td>
-                                                        <td className={`px-5 py-3 text-right font-bold font-mono ${
+                                                        <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs">S/ {exp.toFixed(2)}</td>
+                                                        <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs">S/ {cnt.toFixed(2)}</td>
+                                                        <td className={`px-3 md:px-5 py-3 text-right font-bold font-mono text-xs ${
                                                             diff < 0 ? 'text-rose-600' : diff > 0 ? 'text-emerald-600' : 'text-blue-500'
                                                         }`}>
                                                             {diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK'}
