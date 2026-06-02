@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { CashSession, Payment, Expense, User, Account, Order, Product, Table } = require('../models');
 const { Op } = require('sequelize');
+const { logAction } = require('../utils/audit');
 
 // GET /api/sessions/current - Get active session with calculated expected totals
 router.get('/sessions/current', async (req, res) => {
@@ -161,6 +162,9 @@ router.post('/sessions/open', async (req, res) => {
             openedAt: new Date()
         });
 
+        // Audit log
+        await logAction(req, 'OPEN_SHIFT', 'CashSession', newSession.id, { userId, openingCash: openingCash || 0 });
+
         res.json(newSession);
     } catch (error) {
         console.error("Error opening session:", error);
@@ -215,6 +219,9 @@ router.post('/sessions/close', async (req, res) => {
         session.closingDetails = typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails);
 
         await session.save();
+
+        // Audit log
+        await logAction(req, 'CLOSE_SHIFT', 'CashSession', session.id, { userId, closingNotes, sessionId });
 
         res.json({ success: true, session });
     } catch (error) {

@@ -3,6 +3,7 @@ const router = express.Router();
 // Local require helper to avoid circular dependencies
 const getModels = () => require('../models');
 const { getHotelDayRange } = require('../utils/dateUtils');
+const { logAction } = require('../utils/audit');
 
 // --- ACCOUNTS ---
 
@@ -35,6 +36,10 @@ router.post('/accounts/open', async (req, res) => {
         if (io) {
             io.emit('table_updated', { tableId: table.id, status: 'occupied' });
         }
+
+        // Audit log
+        req.body.userId = userId || null;
+        await logAction(req, 'OPEN_ACCOUNT', 'Account', account.id, { tableId, userId, accountType: accountType || 'standard', customerName: account.customerName });
 
         res.json(account);
     } catch (err) {
@@ -429,6 +434,10 @@ router.post('/accounts/:id/cancel', async (req, res) => {
             io.emit('new_order', { accountId: id, tableId: account.TableId, type: 'cancel' });
             io.emit('table_updated', { tableId: account.TableId, status: 'free' });
         }
+
+        // Audit log
+        const cancelUserId = req.body.userId || null;
+        await logAction(req, 'CANCEL_ACCOUNT', 'Account', id, { userId: cancelUserId, tableId: account.TableId, ordersCount: account.Orders ? account.Orders.length : 0 });
 
         res.json({ success: true, account });
     } catch (err) {
@@ -1170,6 +1179,12 @@ router.post('/orders', async (req, res) => {
 
         await t.commit();
 
+        // Audit log – log after commit so entityId is valid
+        try {
+            const productSummary = products.map(p => `${p.productName || p.productId} x${p.quantity}`).join(', ');
+            await logAction(req, 'CREATE_ORDER', 'Account', accountId, { userId, tableId: account.TableId, items: productSummary, ordersCreated: createdOrders.length });
+        } catch (_) { /* Audit failure should not affect order response */ }
+
         // Notify Kitchen (Socket.io)
         const io = req.app.get('io');
         io.emit('new_order', { accountId, tableId: account.TableId });
@@ -1216,10 +1231,14 @@ router.delete('/orders/:id', async (req, res) => {
         account.total = Math.max(0, parseFloat(account.total) - totalDeduction);
         await account.save();
 
-        // 3. Respond FAST so UI stops loading
+        // 3. Audit log
+        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+        await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: order.quantity, accountId: order.AccountId, tableId: account.TableId });
+
+        // 4. Respond FAST so UI stops loading
         res.json({ success: true, message: 'Pedido eliminado. Restaurando stock en segundo plano...' });
 
-        // 4. Background: Restore Stock & Notify
+        // 5. Background: Restore Stock & Notify
         (async () => {
             try {
                 await restoreOrderStock(order);

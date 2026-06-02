@@ -113,7 +113,9 @@ async function createDbIndexes() {
         { name: 'idx_accounts_status', table: 'Accounts', columns: 'status' },
         { name: 'idx_payments_createdat', table: 'Payments', columns: 'createdAt' },
         { name: 'idx_payments_accountid', table: 'Payments', columns: 'AccountId' },
-        { name: 'idx_expenses_date', table: 'Expenses', columns: 'date' }
+        { name: 'idx_expenses_date', table: 'Expenses', columns: 'date' },
+        { name: 'idx_auditlogs_createdat', table: 'AuditLogs', columns: 'createdAt' },
+        { name: 'idx_auditlogs_userid', table: 'AuditLogs', columns: 'UserId' }
     ];
 
     for (const idx of indexes) {

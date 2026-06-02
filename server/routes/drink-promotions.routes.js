@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { logAction } = require('../utils/audit');
 
 const getModels = () => require('../models');
 
@@ -40,6 +41,7 @@ router.post('/drink-promotions', async (req, res) => {
 
         const promo = await DrinkPromotion.create({ name, price, active });
         console.log("[DrinkPromotions] Promo created:", promo.id);
+        await logAction(req, 'CREATE_PROMO_CATEGORY', 'DrinkPromotion', promo.id, { name, price, userId: req.body.userId || null });
         res.status(201).json(promo);
     } catch (err) {
         console.error("[DrinkPromotions] POST Error:", err);
@@ -90,6 +92,7 @@ router.delete('/drink-promotions/:id', async (req, res) => {
         }
 
         await promo.destroy();
+        await logAction(req, 'DELETE_PROMO_CATEGORY', 'DrinkPromotion', req.params.id, { name: promo.name, userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
         console.error("[DrinkPromotions] DELETE Error:", err);
@@ -123,6 +126,7 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
             linkedProductId,
             DrinkPromotionId: promo.id
         });
+        await logAction(req, 'CREATE_PROMO_ITEM', 'DrinkPromotionItem', item.id, { name, promoName: promo.name, DrinkPromotionId: promo.id, userId: req.body.userId || null });
         res.status(201).json(item);
     } catch (err) {
         console.error("[DrinkPromotions] Item POST Error:", err);
@@ -168,6 +172,7 @@ router.delete('/drink-promotions/items/:itemId', async (req, res) => {
         const item = await DrinkPromotionItem.findByPk(req.params.itemId);
         if (!item) return res.status(404).json({ error: 'Item no encontrado' });
         await item.destroy();
+        await logAction(req, 'DELETE_PROMO_ITEM', 'DrinkPromotionItem', req.params.itemId, { name: item.name, DrinkPromotionId: item.DrinkPromotionId, userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
         console.error("[DrinkPromotions] Item DELETE Error:", err);

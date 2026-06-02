@@ -271,8 +271,8 @@ router.put('/products/:id', async (req, res) => {
             }
         }
 
-        // await logAction(req, 'UPDATE_PRODUCT', 'Product', id, { changes: req.body });
         await t.commit();
+        await logAction(req, 'UPDATE_PRODUCT', 'Product', id, { userId: req.body.userId || null, name: req.body.name });
 
         const updatedProduct = await Product.findByPk(id, {
             include: [{ model: ProductVariant }, { model: Recipe, include: [Ingredient] }]

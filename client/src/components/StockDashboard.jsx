@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap } from 'lucide-react';
 import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
@@ -185,9 +185,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             defaults.presentationsList = [{ name: 'Estándar', price: '0.00', stock: 0 }];
         } else if (activeTab === 'prepared') {
             defaults.isStockManaged = false;
-            defaults.requiresPreparation = false; // Default to Libre for Phase 1
+            defaults.requiresPreparation = true; // Prepared = has recipe/preparation
             defaults.type = 'dish';
-            defaults.presentationsList = [{ name: 'Estándar', price: '0.00' }]; // Add default variant
+            defaults.presentationsList = [{ name: 'Estándar', price: '0.00' }];
+        } else if (activeTab === 'free') {
+            defaults.isStockManaged = false;
+            defaults.requiresPreparation = false; // Free = no stock, no preparation
+            defaults.type = 'dish';
+            defaults.presentationsList = [{ name: 'Estándar', price: '0.00' }];
         } else if (activeTab === 'menu_options') {
             // Should not happen via generic button, but fallback
             defaults.isStockManaged = false;
@@ -357,6 +362,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                             tabs={[
                                 { id: 'finished', label: 'Terminados', icon: Package },
                                 { id: 'prepared', label: 'Preparados', icon: ChefHat },
+                                { id: 'free', label: 'Libres', icon: Zap },
                                 { id: 'ingredients', label: 'Insumos', icon: Layers },
                             ]}
                             activeTab={activeTab}
@@ -371,7 +377,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                             <Package className="text-blue-600 hidden md:block" /> Inventario ({
                                 products.filter(p => {
                                     if (activeTab === 'finished') return p.isStockManaged;
-                                    if (activeTab === 'prepared') return !p.isStockManaged && p.type === 'dish';
+                                    if (activeTab === 'prepared') return !p.isStockManaged && p.requiresPreparation;
+                                    if (activeTab === 'free') return !p.isStockManaged && !p.requiresPreparation && !['daily_entry','daily_main','daily_option','menu'].includes(p.type);
                                     if (activeTab === 'menu_options') return p.type === 'daily_entry' || p.type === 'daily_main';
                                     return true;
                                 }).length
@@ -392,7 +399,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 onClick={() => setActiveTab('prepared')}
                                 className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                             >
-                                Preparados (Carta)
+                                Preparados
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('free')}
+                                className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                Libres
                             </button>
                             <button
                                 onClick={() => setActiveTab('ingredients')}
@@ -409,10 +422,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         onClick={() => handleCreate()}
                         className={`w-full md:w-auto px-4 py-3 md:py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors
                             ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
-                                'bg-blue-600 hover:bg-blue-700'}`}
+                                activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                    'bg-blue-600 hover:bg-blue-700'}`}
                     >
                         <Plus size={18} />
-                        {activeTab === 'prepared' ? 'Nuevo Plato' : 'Nuevo Producto'}
+                        {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
                     </button>
                 )}
             </div>
@@ -1496,12 +1510,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                  Or simply render standard cards.
                             */}
                             {
-                                ((activeTab === 'finished' && finishedTab === 'stock') || (activeTab === 'prepared' && preparedTab === 'stock')) && (
+                                ((activeTab === 'finished' && finishedTab === 'stock') || (activeTab === 'prepared' && preparedTab === 'stock') || activeTab === 'free') && (
                                     <div className="md:hidden grid grid-cols-1 gap-4">
                                         {products.filter(p => {
                                             const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
                                             if (activeTab === 'finished') return p.isStockManaged && !excludedTypes.includes(p.type);
-                                            if (activeTab === 'prepared') return !p.isStockManaged && !excludedTypes.includes(p.type);
+                                            if (activeTab === 'prepared') return !p.isStockManaged && p.requiresPreparation && !excludedTypes.includes(p.type);
+                                            if (activeTab === 'free') return !p.isStockManaged && !p.requiresPreparation && !excludedTypes.includes(p.type);
                                             if (activeTab === 'menu_options') return ['daily_entry', 'daily_main', 'daily_option'].includes(p.type);
                                             return true;
                                         }).map(product => (

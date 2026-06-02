@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { logAction } = require('../utils/audit');
 
 // Local require helper to avoid circular dependencies
 const getModels = () => require('../models');
@@ -45,6 +46,7 @@ router.post('/areas', async (req, res) => {
         const { Area } = getModels();
         const { name, sortOrder } = req.body;
         const area = await Area.create({ name, sortOrder });
+        await logAction(req, 'CREATE_AREA', 'Area', area.id, { name, userId: req.body.userId || null });
         res.json(area);
     } catch (err) {
         console.error("Error in POST /areas:", err);
@@ -71,7 +73,9 @@ router.delete('/areas/:id', async (req, res) => {
     try {
         const { Area } = getModels();
         const { id } = req.params;
+        const area = await Area.findByPk(id);
         await Area.destroy({ where: { id } });
+        await logAction(req, 'DELETE_AREA', 'Area', id, { name: area?.name, userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
         console.error("Error in DELETE /areas:", err);
@@ -122,6 +126,7 @@ router.post('/tables', async (req, res) => {
         }
 
         const table = await Table.create({ number: String(number), AreaId, x, y });
+        await logAction(req, 'CREATE_TABLE', 'Table', table.id, { number: String(number), AreaId, userId: req.body.userId || null });
         res.json(table);
     } catch (err) {
         console.error("Error in POST /tables:", err);
@@ -183,6 +188,7 @@ router.delete('/tables/:id', async (req, res) => {
         }
 
         await Table.destroy({ where: { id } });
+        await logAction(req, 'DELETE_TABLE', 'Table', id, { userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
         console.error("Error in DELETE /tables:", err);
