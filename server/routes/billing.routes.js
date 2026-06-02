@@ -122,6 +122,21 @@ router.post('/billing/invoices', async (req, res) => {
         const { tipo, clienteDocumento, clienteNombre, clienteDireccion, items, userId, accountId } = req.body;
         if (!tipo || !items?.length) return res.status(400).json({ error: 'tipo e items son requeridos' });
         
+        // Validar RUC para Facturas (Exactamente 11 dígitos numéricos que comiencen con 10, 15, 17, 20)
+        if (tipo === 'factura') {
+            if (!clienteDocumento) {
+                return res.status(400).json({ error: 'El número de RUC es requerido para emitir una factura.' });
+            }
+            const cleanDoc = clienteDocumento.trim();
+            if (cleanDoc.length !== 11 || !/^\d+$/.test(cleanDoc)) {
+                return res.status(400).json({ error: 'El RUC debe tener exactamente 11 dígitos numéricos.' });
+            }
+            const prefix = cleanDoc.substring(0, 2);
+            if (!['10', '15', '17', '20'].includes(prefix)) {
+                return res.status(400).json({ error: 'El RUC ingresado no es válido (debe empezar con 10, 15, 17 o 20).' });
+            }
+        }
+
         // Validar que el RUC del receptor no sea igual al RUC de la empresa emisora para Facturas
         if (tipo === 'factura' && clienteDocumento && config.ruc && clienteDocumento.trim() === config.ruc.trim()) {
             return res.status(400).json({ error: 'El RUC del receptor no puede ser igual al RUC de la empresa emisora.' });
@@ -198,12 +213,21 @@ router.post('/billing/invoices', async (req, res) => {
             legends: isExonerado ? [{ code: '1000', value: 'OP. EXONERADA' }] : []
         };
 
+        // Validar que el usuario exista para evitar errores de llave foránea (FK)
+        let validatedUserId = null;
+        if (userId) {
+            const userExists = await User.findByPk(userId);
+            if (userExists) {
+                validatedUserId = userId;
+            }
+        }
+
         // Crear registro local
         const invoice = await Invoice.create({
             tipo, serie, correlativo, clienteDocumento, clienteNombre, clienteDireccion,
             subtotal: finalTotalBase, igv: finalTotalIgv, total: finalTotalPay,
             items: JSON.stringify(items),
-            UserId: userId,
+            UserId: validatedUserId,
             AccountId: accountId || null
         });
 

@@ -667,6 +667,21 @@ const BillingConfigModal = ({ onClose }) => {
             alert('El número de documento y el nombre son obligatorios');
             return;
         }
+
+        // Validar RUC para Facturas
+        if (newInvoice.tipo === 'factura') {
+            const cleanDoc = (newInvoice.clienteDocumento || '').trim();
+            if (cleanDoc.length !== 11 || !/^\d+$/.test(cleanDoc)) {
+                alert('El RUC debe tener exactamente 11 dígitos numéricos.');
+                return;
+            }
+            const prefix = cleanDoc.substring(0, 2);
+            if (!['10', '15', '17', '20'].includes(prefix)) {
+                alert('El RUC ingresado no es válido (debe empezar con 10, 15, 17 o 20).');
+                return;
+            }
+        }
+
         if (!newInvoice.items.some(i => i.description && parseFloat(i.amount) > 0)) {
             alert('Debe agregar al menos un ítem con descripción y monto');
             return;
