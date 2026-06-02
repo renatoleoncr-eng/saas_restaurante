@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, Edit2, Save, X, Wine, ChefHat } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Wine, ChefHat, ChevronDown, ChevronUp } from 'lucide-react';
 import RecipeModal from './RecipeModal';
 
 const TYPE_LABEL = { free: 'Libre', finished: 'Terminado', prepared: 'Preparado (Carta)' };
@@ -228,6 +228,13 @@ export default function DrinkPromotionsConfig() {
     // Recipe modal state
     const [recipeProduct, setRecipeProduct] = useState(null);
 
+    // Collapsed promotions list
+    const [collapsedPromoIds, setCollapsedPromoIds] = useState({});
+
+    const togglePromoCollapse = (promoId) => {
+        setCollapsedPromoIds(prev => ({ ...prev, [promoId]: !prev[promoId] }));
+    };
+
     useEffect(() => {
         loadData();
     }, []);
@@ -395,8 +402,17 @@ export default function DrinkPromotionsConfig() {
                                     className="bg-gray-200 text-gray-600 p-1.5 rounded-lg hover:bg-gray-300"><X size={14} /></button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <Wine size={18} className="text-purple-500" />
+                            <div 
+                                className="flex items-center gap-2.5 cursor-pointer select-none hover:opacity-85 transition-opacity"
+                                onClick={() => togglePromoCollapse(promo.id)}
+                                title={collapsedPromoIds[promo.id] ? "Expandir" : "Contraer"}
+                            >
+                                {collapsedPromoIds[promo.id] ? (
+                                    <ChevronDown size={18} className="text-purple-500 shrink-0" />
+                                ) : (
+                                    <ChevronUp size={18} className="text-purple-500 shrink-0" />
+                                )}
+                                <Wine size={18} className="text-purple-500 shrink-0" />
                                 <span className="bg-purple-100 text-purple-700 text-sm font-black px-4 py-1.5 rounded-full shadow-sm">
                                     {promo.name}
                                 </span>
@@ -426,141 +442,145 @@ export default function DrinkPromotionsConfig() {
                     </div>
 
                     {/* Items table */}
-                    <table className="w-full text-base md:text-sm table-fixed">
-                        <thead>
-                            <tr className="text-xs md:text-xs text-gray-500 font-black uppercase tracking-wider border-b bg-gray-50/80">
-                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-left">Nombre</th>
-                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-left w-28 md:w-auto">Precio</th>
-                                <th className="hidden md:table-cell px-4 py-2.5 text-left">Tipo</th>
-                                <th className="hidden md:table-cell px-4 py-2.5 text-left">Vinculado a</th>
-                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-right w-24 md:w-auto"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(promo.DrinkPromotionItems || []).length === 0 && addingItemTo !== promo.id && (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-4 text-center text-gray-400 italic text-sm">
-                                        Sin tragos aún — presiona <strong>+</strong> para agregar
-                                    </td>
-                                </tr>
-                            )}
+                    {!collapsedPromoIds[promo.id] && (
+                        <>
+                            <table className="w-full text-base md:text-sm table-fixed">
+                                <thead>
+                                    <tr className="text-xs md:text-xs text-gray-500 font-black uppercase tracking-wider border-b bg-gray-50/80">
+                                        <th className="px-3 py-3 md:px-4 md:py-2.5 text-left">Nombre</th>
+                                        <th className="px-3 py-3 md:px-4 md:py-2.5 text-left w-28 md:w-auto">Precio</th>
+                                        <th className="hidden md:table-cell px-4 py-2.5 text-left">Tipo</th>
+                                        <th className="hidden md:table-cell px-4 py-2.5 text-left">Vinculado a</th>
+                                        <th className="px-3 py-3 md:px-4 md:py-2.5 text-right w-24 md:w-auto"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(promo.DrinkPromotionItems || []).length === 0 && addingItemTo !== promo.id && (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-4 text-center text-gray-400 italic text-sm">
+                                                Sin tragos aún — presiona <strong>+</strong> para agregar
+                                            </td>
+                                        </tr>
+                                    )}
 
-                            {(promo.DrinkPromotionItems || []).map(item => (
-                                editingItem?.id === item.id ? (
-                                    <EditItemRow
-                                        key={item.id}
-                                        item={editingItem}
-                                        allProducts={allProducts}
-                                        onSave={saveEditItem}
-                                        onCancel={() => setEditingItem(null)}
-                                    />
-                                ) : (
-                                    <tr key={item.id} className="border-b border-dashed hover:bg-gray-50/50 group transition-colors">
-                                        <td className="px-3 py-4 md:px-4 md:py-3 font-semibold text-gray-800">
-                                            <div className="text-base md:text-sm font-bold text-gray-900 leading-snug">{item.name}</div>
-                                            <div className="md:hidden mt-2 flex flex-wrap gap-1.5 items-center">
-                                                <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
-                                                    {TYPE_LABEL[item.type] || item.type}
-                                                </span>
-                                                {item.type === 'finished' && (
-                                                    <span className="text-blue-600 text-[10px] md:text-[9px] font-bold">
-                                                        {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
-                                                    </span>
-                                                )}
-                                                {item.type === 'prepared' && (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-amber-600 text-[10px] md:text-[9px] font-bold">
-                                                            {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                    {(promo.DrinkPromotionItems || []).map(item => (
+                                        editingItem?.id === item.id ? (
+                                            <EditItemRow
+                                                key={item.id}
+                                                item={editingItem}
+                                                allProducts={allProducts}
+                                                onSave={saveEditItem}
+                                                onCancel={() => setEditingItem(null)}
+                                            />
+                                        ) : (
+                                            <tr key={item.id} className="border-b border-dashed hover:bg-gray-50/50 group transition-colors">
+                                                <td className="px-3 py-4 md:px-4 md:py-3 font-semibold text-gray-800">
+                                                    <div className="text-base md:text-sm font-bold text-gray-900 leading-snug">{item.name}</div>
+                                                    <div className="md:hidden mt-2 flex flex-wrap gap-1.5 items-center">
+                                                        <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
+                                                            {TYPE_LABEL[item.type] || item.type}
                                                         </span>
-                                                        {item.linkedProductId && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                    if (p) setRecipeProduct(p);
-                                                                }}
-                                                                className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
-                                                                title="Ver Receta"
-                                                            >
-                                                                <ChefHat size={12} />
-                                                            </button>
+                                                        {item.type === 'finished' && (
+                                                            <span className="text-blue-600 text-[10px] md:text-[9px] font-bold">
+                                                                {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
+                                                            </span>
+                                                        )}
+                                                        {item.type === 'prepared' && (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-amber-600 text-[10px] md:text-[9px] font-bold">
+                                                                    {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                                </span>
+                                                                {item.linkedProductId && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                            if (p) setRecipeProduct(p);
+                                                                        }}
+                                                                        className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                        title="Ver Receta"
+                                                                    >
+                                                                        <ChefHat size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-4 md:px-4 md:py-3 text-gray-950 font-mono font-black text-base md:text-sm">
-                                            S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
-                                        </td>
-                                        <td className="hidden md:table-cell px-4 py-2.5">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
-                                                {TYPE_LABEL[item.type] || item.type}
-                                            </span>
-                                        </td>
-                                        <td className="hidden md:table-cell px-4 py-2.5">
-                                            {item.type === 'finished' ? (
-                                                <span className="text-blue-600 text-xs font-medium">
-                                                    {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
-                                                </span>
-                                            ) : item.type === 'prepared' ? (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-amber-600 text-xs font-medium">
-                                                        {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                </td>
+                                                <td className="px-3 py-4 md:px-4 md:py-3 text-gray-950 font-mono font-black text-base md:text-sm">
+                                                    S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
+                                                </td>
+                                                <td className="hidden md:table-cell px-4 py-2.5">
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
+                                                        {TYPE_LABEL[item.type] || item.type}
                                                     </span>
-                                                    {item.linkedProductId && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                    if (p) setRecipeProduct(p);
-                                                            }}
-                                                            className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
-                                                            title="Gestionar Receta"
-                                                        >
-                                                            <ChefHat size={12} />
-                                                        </button>
+                                                </td>
+                                                <td className="hidden md:table-cell px-4 py-2.5">
+                                                    {item.type === 'finished' ? (
+                                                        <span className="text-blue-600 text-xs font-medium">
+                                                            {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
+                                                        </span>
+                                                    ) : item.type === 'prepared' ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-amber-600 text-xs font-medium">
+                                                                {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                            </span>
+                                                            {item.linkedProductId && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                            if (p) setRecipeProduct(p);
+                                                                    }}
+                                                                    className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                    title="Gestionar Receta"
+                                                                >
+                                                                    <ChefHat size={12} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-xs italic">—</span>
                                                     )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400 text-xs italic">—</span>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-4 md:px-4 md:py-3">
-                                            <div className="flex items-center gap-2 justify-end">
-                                                <button onClick={() => { setEditingItem({ ...item }); setAddingItemTo(null); }}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button onClick={() => deleteItem(item.id)}
-                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Eliminar">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            ))}
+                                                </td>
+                                                <td className="px-3 py-4 md:px-4 md:py-3">
+                                                    <div className="flex items-center gap-2 justify-end">
+                                                        <button onClick={() => { setEditingItem({ ...item }); setAddingItemTo(null); }}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button onClick={() => deleteItem(item.id)}
+                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Eliminar">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    ))}
 
-                            {/* Inline add-item row */}
-                            {addingItemTo === promo.id && (
-                                <NewItemRow
-                                    promoId={promo.id}
-                                    allProducts={allProducts}
-                                    onSave={createItem}
-                                    onCancel={() => setAddingItemTo(null)}
-                                />
+                                    {/* Inline add-item row */}
+                                    {addingItemTo === promo.id && (
+                                        <NewItemRow
+                                            promoId={promo.id}
+                                            allProducts={allProducts}
+                                            onSave={createItem}
+                                            onCancel={() => setAddingItemTo(null)}
+                                        />
+                                    )}
+                                </tbody>
+                            </table>
+
+                            {/* Footer quick-add link (secondary affordance) */}
+                            {addingItemTo !== promo.id && (
+                                <button
+                                    onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
+                                    className="w-full py-3.5 text-sm font-extrabold text-purple-600 hover:bg-purple-50 flex items-center justify-center gap-1 transition-colors border-t border-dashed border-purple-100"
+                                >
+                                    <Plus size={16} /> Agregar trago a esta categoría
+                                </button>
                             )}
-                        </tbody>
-                    </table>
-
-                    {/* Footer quick-add link (secondary affordance) */}
-                    {addingItemTo !== promo.id && (
-                        <button
-                            onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
-                            className="w-full py-3.5 text-sm font-extrabold text-purple-600 hover:bg-purple-50 flex items-center justify-center gap-1 transition-colors border-t border-dashed border-purple-100"
-                        >
-                            <Plus size={16} /> Agregar trago a esta categoría
-                        </button>
+                        </>
                     )}
                 </div>
             ))}
