@@ -1451,7 +1451,67 @@ export default function TableControl({ tableId, accountId, onClose }) {
             isUnlimited,
             details: `E:${totalEntriesStock}/S:${totalMainsStock}`
         };
-    }; const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    };
+
+    const renderStockOrLibreBadge = (prod, displayStock, isOutOfStock, isMissingRecipe, isMenuUnlimited, hasVariants, variantsList, stockDetails) => {
+        if (isMissingRecipe) {
+            return (
+                <span className="inline-block bg-orange-50 text-orange-700 border border-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                    Receta
+                </span>
+            );
+        }
+
+        if (hasVariants && variantsList.length > 1) {
+            const allOut = variantsList.every(v => v.stock !== undefined && v.stock <= 0);
+            if (allOut) {
+                return (
+                    <span className="inline-block bg-red-50 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                        Agotado
+                    </span>
+                );
+            }
+            if (prod.isStockManaged || prod.requiresPreparation || prod.type === 'menu') {
+                return (
+                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                        Con Stock
+                    </span>
+                );
+            } else {
+                return (
+                    <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                        Libre
+                    </span>
+                );
+            }
+        }
+
+        const isManaged = prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited);
+        if (!isManaged) {
+            return (
+                <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                    Libre
+                </span>
+            );
+        }
+
+        if (isOutOfStock) {
+            return (
+                <span className="inline-block bg-red-50 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                    Agotado {stockDetails ? `(${stockDetails})` : ''}
+                </span>
+            );
+        }
+
+        const stockQty = (hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock;
+        return (
+            <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
+                Stock: {stockQty}
+            </span>
+        );
+    };
+
+    const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const accountTotal = account ? parseFloat(account.total) : 0;
 
     if (loading) {
@@ -1804,7 +1864,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 {/* LEFT: Product Grid */}
                 <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-hidden relative">
                     {/* Header */}
-                    <div className="p-4 bg-white shadow-sm z-10">
+                    <div className="px-2.5 py-3.5 sm:p-4 bg-white shadow-sm z-10">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-3">
                                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -1882,14 +1942,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     />
 
                     {/* Main Content Area — Flex column to support sticky footer */}
-                    <div className="flex-1 flex flex-col min-h-0 p-3 pb-36 md:pb-4 overflow-hidden">
+                    <div className="flex-1 flex flex-col min-h-0 px-1.5 py-3 sm:px-4 sm:py-4 pb-36 md:pb-4 overflow-hidden">
 
                         {/* Scrollable Content Wrapper */}
                         <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
 
                             {/* SEARCH RESULTS (Standard categories) */}
                             {searchTerm && selectedCategory !== 'combo' && (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 animate-in fade-in slide-in-from-top-2">
                                     {products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
                                         <div className="col-span-full text-center text-gray-400 py-20 italic">
                                             No se encontraron productos para "{searchTerm}".
@@ -1934,7 +1994,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     key={`${prod.id}-${displayStock}`}
                                                     disabled={isOutOfStock}
                                                     onClick={() => handleProductClick(prod)}
-                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between min-h-[11rem] h-auto pb-4 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
+                                                    className={`bg-white p-2.5 sm:p-3 rounded-lg border shadow-sm text-center flex flex-col items-center justify-between min-h-[10.5rem] h-auto pb-3.5 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
                                                 >
                                                     {cartQty > 0 && (
                                                         <div className="absolute top-2 right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
@@ -1942,12 +2002,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                         </div>
                                                     )}
                                                     <div className="w-full">
-                                                        <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited)) && (!hasVariants || variantsList.length <= 1)) && (
-                                                            <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
-                                                                {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
-                                                            </div>
-                                                        )}
+                                                        <div className="font-bold text-gray-800 text-[13px] sm:text-sm leading-tight line-clamp-3 px-1">{prod.name}</div>
+                                                        {renderStockOrLibreBadge(prod, displayStock, isOutOfStock, isMissingRecipe, isMenuUnlimited, hasVariants, variantsList, stockDetails)}
                                                     </div>
                                                     <div className="w-full flex justify-center mt-4 pb-2">
                                                         {hasVariants && variantsList.length > 1 ? (
@@ -1983,7 +2039,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
                             {/* VIEW: PRODUCTS (Standard grid) */}
                             {viewMode === 'products' && !searchTerm && (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                                     {(products.filter(p => {
                                         if (selectedCategory === 'menu') {
                                             return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name);
@@ -2038,7 +2094,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     key={`${prod.id}-${displayStock}`}
                                                     disabled={isOutOfStock}
                                                     onClick={() => handleProductClick(prod)}
-                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between min-h-[10rem] h-auto pb-4 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
+                                                    className={`bg-white p-2.5 sm:p-3 rounded-lg border shadow-sm text-center flex flex-col items-center justify-between min-h-[9.5rem] h-auto pb-3.5 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
                                                 >
                                                     {cartQty > 0 && (
                                                         <div className="absolute top-2 right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
@@ -2046,12 +2102,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                         </div>
                                                     )}
                                                     <div className="w-full">
-                                                        <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited)) && (!hasVariants || variantsList.length <= 1)) && (
-                                                            <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
-                                                                {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
-                                                            </div>
-                                                        )}
+                                                        <div className="font-bold text-gray-800 text-[13px] sm:text-sm leading-tight line-clamp-3 px-1">{prod.name}</div>
+                                                        {renderStockOrLibreBadge(prod, displayStock, isOutOfStock, isMissingRecipe, isMenuUnlimited, hasVariants, variantsList, stockDetails)}
                                                     </div>
                                                     <div className="w-full flex justify-center mt-4 pb-2">
                                                         {hasVariants && variantsList.length > 1 ? (

@@ -1732,10 +1732,20 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         <span>S/ {Number(parseFloat(product.price).toFixed(1))}</span>
                                                     </div>
                                                     {!readOnly && !product.isStockManaged && (
-                                                        <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1 text-xs"><ChefHat size={12} /> Receta</button>
+                                                        <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
                                                     )}
-                                                    {product.isStockManaged && (
-                                                        <div className="mt-2 text-sm font-bold text-blue-600">Stock: {product.stock}</div>
+                                                    {product.isStockManaged ? (
+                                                        <div className="mt-2.5">
+                                                            <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                Stock: {product.stock}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-2.5">
+                                                            <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                Libre
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                                 {!readOnly && (

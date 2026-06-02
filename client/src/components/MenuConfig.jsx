@@ -527,29 +527,25 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
                                         </option>
                                     ))}
                                 </select>
-                                <div className="flex flex-col justify-center items-center w-28 shrink-0 bg-gray-50 border border-gray-200 rounded p-2">
+                                <div className="flex justify-center items-center w-24 shrink-0 h-[38px]">
                                     {item.linkId ? (
-                                        <div className="text-center w-full font-bold">
-                                            {(() => {
-                                                const max = getTheoreticalMaxStock(item.linkId);
-                                                if (max !== null) {
-                                                    return (
-                                                        <div className="flex flex-col items-center justify-center text-blue-700">
-                                                            <span className="text-[10px] text-gray-500 uppercase leading-none mb-1">Stock Disponible</span>
-                                                            <span className="text-lg leading-none">{max}</span>
-                                                        </div>
-                                                    );
-                                                }
+                                        (() => {
+                                            const max = getTheoreticalMaxStock(item.linkId);
+                                            if (max !== null) {
                                                 return (
-                                                    <div className="flex flex-col items-center justify-center text-green-600 pt-1">
-                                                        <span className="text-xs uppercase font-extrabold leading-tight">Producto</span>
-                                                        <span className="text-xs uppercase font-extrabold leading-tight">Libre</span>
-                                                    </div>
+                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                                        Stock: {max}
+                                                    </span>
                                                 );
-                                            })()}
-                                        </div>
+                                            }
+                                            return (
+                                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                                    Libre
+                                                </span>
+                                            );
+                                        })()
                                     ) : (
-                                        <span className="text-gray-400 text-xs">-</span>
+                                        <span className="text-gray-400 text-xs font-bold">-</span>
                                     )}
                                 </div>
                                 <button
