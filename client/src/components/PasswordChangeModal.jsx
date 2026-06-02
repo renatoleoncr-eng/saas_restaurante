@@ -8,6 +8,7 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [newPin, setNewPin] = useState(targetUser.pin || '');
     const [error, setError] = useState('');
 
     const isSelf = user.id === targetUser.id;
@@ -17,22 +18,30 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
         e.preventDefault();
         setError('');
 
-        if (newPassword !== confirmPassword) {
-            setError('Las nuevas contraseñas no coinciden');
+        if (newPassword || confirmPassword) {
+            if (newPassword !== confirmPassword) {
+                setError('Las nuevas contraseñas no coinciden');
+                return;
+            }
+        }
+
+        if (!newPassword && newPin === (targetUser.pin || '')) {
+            setError('Debe ingresar una nueva contraseña o un nuevo PIN para guardar cambios');
             return;
         }
 
         try {
             await axios.put(`/api/users/${targetUser.id}/password`, {
                 currentPassword, // Backend will ignore if admin
-                newPassword,
+                newPassword: newPassword || undefined,
+                newPin: newPin || null,
                 requesterRole: user.role,
                 requesterId: user.id
             });
-            alert('Contraseña actualizada correctamente');
+            alert('Credenciales actualizadas correctamente');
             onClose();
         } catch (err) {
-            setError(err.response?.data?.error || 'Error al cambiar contraseña');
+            setError(err.response?.data?.error || 'Error al guardar cambios');
         }
     };
 
@@ -68,13 +77,12 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                     )}
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña (Dejar en blanco si no desea cambiarla)</label>
                         <input
                             type="password"
                             className="w-full border rounded p-2"
                             value={newPassword}
                             onChange={e => setNewPassword(e.target.value)}
-                            required
                         />
                     </div>
 
@@ -85,7 +93,22 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                             className="w-full border rounded p-2"
                             value={confirmPassword}
                             onChange={e => setConfirmPassword(e.target.value)}
-                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">PIN de Mozo (4 dígitos, opcional)</label>
+                        <input
+                            type="text"
+                            maxLength={4}
+                            pattern="\d*"
+                            placeholder="Ej: 1234"
+                            className="w-full border rounded p-2"
+                            value={newPin}
+                            onChange={e => {
+                                const val = e.target.value.replace(/\D/g, ''); // only digits
+                                setNewPin(val);
+                            }}
                         />
                     </div>
 

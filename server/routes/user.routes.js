@@ -90,10 +90,10 @@ router.delete('/users/:id', async (req, res) => {
     }
 });
 
-// CHANGE PASSWORD (Admin or Self)
+// CHANGE PASSWORD & PIN (Admin or Self)
 router.put('/users/:id/password', async (req, res) => {
     try {
-        const { currentPassword, newPassword, requesterRole, requesterId } = req.body;
+        const { currentPassword, newPassword, newPin, requesterRole, requesterId } = req.body;
         const targetUserId = parseInt(req.params.id);
 
         const user = await User.findByPk(targetUserId);
@@ -111,16 +111,29 @@ router.put('/users/:id/password', async (req, res) => {
         }
 
         if (isSelf && !isAdmin) {
-            // For self-udpate, verify current password
+            // For self-update, verify current password
             if (user.password !== currentPassword) {
                 return res.status(400).json({ error: 'Contraseña actual incorrecta' });
             }
         }
 
-        user.password = newPassword;
+        // Check duplicate PIN if provided and changed
+        if (newPin && newPin !== user.pin) {
+            const existingPin = await User.findOne({ where: { pin: newPin } });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+        }
+
+        if (newPassword) {
+            user.password = newPassword;
+        }
+
+        if (newPin !== undefined) {
+            user.pin = newPin || null;
+        }
+
         await user.save();
 
-        res.json({ message: 'Contraseña actualizada' });
+        res.json({ message: 'Credenciales actualizadas correctamente' });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
