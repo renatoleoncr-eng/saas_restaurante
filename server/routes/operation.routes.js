@@ -1276,18 +1276,22 @@ router.put('/orders/:id/decrement', async (req, res) => {
         });
 
         if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
-        if (order.quantity <= 1) {
-            return res.status(400).json({ error: 'La cantidad mínima es 1. Use DELETE para eliminar el pedido.' });
-        }
 
         const account = await Account.findByPk(order.AccountId);
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         const orderPrice = parseFloat(order.priceAtOrder || 0);
 
-        // 1. Decrement quantity
-        order.quantity = order.quantity - 1;
-        await order.save();
+        const isDeletion = order.quantity <= 1;
+
+        if (isDeletion) {
+            // 1. Delete Order logic
+            await order.destroy();
+        } else {
+            // 1. Decrement quantity
+            order.quantity = order.quantity - 1;
+            await order.save();
+        }
 
         // 2. Recalculate Account Total safely
         account.total = Math.max(0, parseFloat(account.total) - orderPrice);
@@ -1295,10 +1299,22 @@ router.put('/orders/:id/decrement', async (req, res) => {
 
         // 3. Audit log
         const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
-        await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: 1, accountId: order.AccountId, tableId: account.TableId, comment: "Reducción de cantidad por 1" });
+        await logAction(req, 'CANCEL_ORDER', 'Order', id, { 
+            userId: cancelOrderUserId, 
+            productId: order.ProductId, 
+            productName: order.Product?.name, 
+            quantity: 1, 
+            accountId: order.AccountId, 
+            tableId: account.TableId, 
+            comment: isDeletion ? "Eliminación por decremento a 0" : "Reducción de cantidad por 1" 
+        });
 
         // 4. Respond FAST
-        res.json({ success: true, message: 'Cantidad reducida. Restaurando stock en segundo plano...', quantity: order.quantity });
+        res.json({ 
+            success: true, 
+            message: isDeletion ? 'Pedido eliminado por decremento.' : 'Cantidad reducida. Restaurando stock en segundo plano...', 
+            quantity: isDeletion ? 0 : order.quantity 
+        });
 
         // 5. Background: Restore Stock & Notify
         (async () => {
