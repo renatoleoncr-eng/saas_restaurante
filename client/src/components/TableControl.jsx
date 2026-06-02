@@ -1930,7 +1930,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     )}
                                                     <div className="w-full">
                                                         <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || prod.type === 'menu') && (!hasVariants || variantsList.length <= 1)) && (
+                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && displayStock < 999)) && (!hasVariants || variantsList.length <= 1)) && (
                                                             <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
                                                                 {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
                                                             </div>
@@ -2032,7 +2032,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     )}
                                                     <div className="w-full">
                                                         <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prod.name}</div>
-                                                        {((prod.isStockManaged || prod.requiresPreparation || prod.type === 'menu') && (!hasVariants || variantsList.length <= 1)) && (
+                                                        {((prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && displayStock < 999)) && (!hasVariants || variantsList.length <= 1)) && (
                                                             <div className={`text-xs mt-1 ${isMissingRecipe ? 'text-orange-500 font-bold' : 'text-gray-400'}`}>
                                                                 {isMissingRecipe ? 'Conf. Receta' : (isOutOfStock ? `Agotado ${stockDetails ? `(${stockDetails})` : ''}` : `Stock: ${(hasVariants && variantsList.length === 1 && variantsList[0].stock !== undefined) ? variantsList[0].stock : displayStock}`)}
                                                             </div>

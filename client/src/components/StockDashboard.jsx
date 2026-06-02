@@ -1006,18 +1006,18 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         })}
                                                     </select>
                                                 ) : (
-                                                    <div className="flex flex-1 gap-2">
+                                                    <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre de la Entrada"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none"
+                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none w-full"
                                                             value={editForm.name || ''}
                                                             onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                                             autoFocus
                                                             onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
                                                         />
-                                                        <div className="flex flex-col gap-2 flex-1">
-                                                            <div className="flex flex-wrap items-center gap-3">
-                                                                <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-purple-500 w-32">
+                                                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-purple-500 w-32 shrink-0">
                                                                     <span className="text-gray-500 text-sm">S/</span>
                                                                     <input
                                                                         type="number"
@@ -1035,7 +1035,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     />
                                                                 </div>
 
-                                                                <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                                                <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors shrink-0">
                                                                     <input type="checkbox" checked={editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined} onChange={e => {
                                                                         if (e.target.checked) setEditForm({ ...editForm, happyHourPrice: editForm.price || '', happyHourStart: '10:00', happyHourEnd: '17:00' });
                                                                         else setEditForm({ ...editForm, happyHourPrice: null, happyHourStart: null, happyHourEnd: null });
@@ -1043,17 +1043,17 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 </label>
 
                                                                 {(editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined) && (
-                                                                    <div className="flex items-center justify-start gap-2 text-xs">
+                                                                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Precio S/</span>
-                                                                            <input type="number" step="0.01" className="w-14 p-0 border-none outline-none font-bold text-right text-yellow-700" value={editForm.happyHourPrice || ''} onChange={e => setEditForm({ ...editForm, happyHourPrice: e.target.value })} />
+                                                                            <span className="text-gray-400 font-bold">Precio S/</span>
+                                                                            <input type="number" step="0.01" className="w-12 p-0 border-none outline-none font-bold text-right text-yellow-700" value={editForm.happyHourPrice || ''} onChange={e => setEditForm({ ...editForm, happyHourPrice: e.target.value })} />
                                                                         </div>
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Inicio</span>
+                                                                            <span className="text-gray-400 font-bold">Inicio</span>
                                                                             <input type="time" className="w-16 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent" value={editForm.happyHourStart || ''} onChange={e => setEditForm({ ...editForm, happyHourStart: e.target.value })} />
                                                                         </div>
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Fin</span>
+                                                                            <span className="text-gray-400 font-bold">Fin</span>
                                                                             <input type="time" className="w-16 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent" value={editForm.happyHourEnd || ''} onChange={e => setEditForm({ ...editForm, happyHourEnd: e.target.value })} />
                                                                         </div>
                                                                     </div>
@@ -1063,35 +1063,33 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex gap-4">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${editForm.isStockManaged ? 'bg-blue-100 border-blue-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={editForm.isStockManaged}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: true, requiresPreparation: false, stock: editForm.stock || 0 })}
-                                                                className="accent-blue-600"
-                                                            /> Terminado
-                                                        </label>
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${!editForm.isStockManaged && editForm.requiresPreparation ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={!editForm.isStockManaged && editForm.requiresPreparation}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: true, stock: 0 })}
-                                                                className="accent-green-600"
-                                                            /> Preparado
-                                                        </label>
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${!editForm.isStockManaged && !editForm.requiresPreparation ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={!editForm.isStockManaged && !editForm.requiresPreparation}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: false, stock: 0 })}
-                                                                className="accent-orange-600"
-                                                            /> Libre
-                                                        </label>
-                                                    </div>
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-t border-dashed border-purple-200/50 pt-2">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${editForm.isStockManaged ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={editForm.isStockManaged}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: true, requiresPreparation: false, stock: editForm.stock || 0 })}
+                                                            className="accent-blue-600"
+                                                        /> Terminado
+                                                    </label>
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${!editForm.isStockManaged && editForm.requiresPreparation ? 'bg-green-100 border-green-300 text-green-800' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={!editForm.isStockManaged && editForm.requiresPreparation}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: true, stock: 0 })}
+                                                            className="accent-green-600"
+                                                        /> Preparado
+                                                    </label>
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${!editForm.isStockManaged && !editForm.requiresPreparation ? 'bg-orange-100 border-orange-350 text-orange-850' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={!editForm.isStockManaged && !editForm.requiresPreparation}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: false, stock: 0 })}
+                                                            className="accent-orange-600"
+                                                        /> Libre
+                                                    </label>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setCreatingSection(null)} className="text-gray-500 hover:bg-gray-200 p-2 rounded"><X size={18} /></button>
-                                                    <button onClick={() => handleSaveProduct(false)} className="bg-purple-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-purple-700">Guardar</button>
+                                                <div className="flex gap-2 justify-end">
+                                                    <button onClick={() => setCreatingSection(null)} className="text-gray-500 hover:bg-gray-200 px-3 py-1.5 rounded text-sm font-medium">Cancelar</button>
+                                                    <button onClick={() => handleSaveProduct(false)} className="bg-purple-600 text-white px-5 py-1.5 rounded-lg font-bold text-sm hover:bg-purple-700 shadow-md transition-all active:scale-95">Guardar</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -1196,18 +1194,18 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         })}
                                                     </select>
                                                 ) : (
-                                                    <div className="flex flex-1 gap-2">
+                                                    <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre del Segundo"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none"
+                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none w-full"
                                                             value={editForm.name || ''}
                                                             onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                                             autoFocus
                                                             onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
                                                         />
-                                                        <div className="flex flex-col gap-2 flex-1">
-                                                            <div className="flex flex-wrap items-center gap-3">
-                                                                <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-pink-500 w-32">
+                                                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-pink-500 w-32 shrink-0">
                                                                     <span className="text-gray-500 text-sm">S/</span>
                                                                     <input
                                                                         type="number"
@@ -1225,7 +1223,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     />
                                                                 </div>
 
-                                                                <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                                                <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors shrink-0">
                                                                     <input type="checkbox" checked={editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined} onChange={e => {
                                                                         if (e.target.checked) setEditForm({ ...editForm, happyHourPrice: editForm.price || '', happyHourStart: '10:00', happyHourEnd: '17:00' });
                                                                         else setEditForm({ ...editForm, happyHourPrice: null, happyHourStart: null, happyHourEnd: null });
@@ -1233,17 +1231,17 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 </label>
 
                                                                 {(editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined) && (
-                                                                    <div className="flex items-center justify-start gap-2 text-xs">
+                                                                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Precio S/</span>
-                                                                            <input type="number" step="0.01" className="w-14 p-0 border-none outline-none font-bold text-right text-yellow-700" value={editForm.happyHourPrice || ''} onChange={e => setEditForm({ ...editForm, happyHourPrice: e.target.value })} />
+                                                                            <span className="text-gray-400 font-bold">Precio S/</span>
+                                                                            <input type="number" step="0.01" className="w-12 p-0 border-none outline-none font-bold text-right text-yellow-700" value={editForm.happyHourPrice || ''} onChange={e => setEditForm({ ...editForm, happyHourPrice: e.target.value })} />
                                                                         </div>
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Inicio</span>
+                                                                            <span className="text-gray-400 font-bold">Inicio</span>
                                                                             <input type="time" className="w-16 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent" value={editForm.happyHourStart || ''} onChange={e => setEditForm({ ...editForm, happyHourStart: e.target.value })} />
                                                                         </div>
                                                                         <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Fin</span>
+                                                                            <span className="text-gray-400 font-bold">Fin</span>
                                                                             <input type="time" className="w-16 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent" value={editForm.happyHourEnd || ''} onChange={e => setEditForm({ ...editForm, happyHourEnd: e.target.value })} />
                                                                         </div>
                                                                     </div>
@@ -1253,35 +1251,33 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex gap-4">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${editForm.isStockManaged ? 'bg-blue-100 border-blue-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={editForm.isStockManaged}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: true, requiresPreparation: false, stock: editForm.stock || 0 })}
-                                                                className="accent-blue-600"
-                                                            /> Terminado
-                                                        </label>
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${!editForm.isStockManaged && editForm.requiresPreparation ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={!editForm.isStockManaged && editForm.requiresPreparation}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: true, stock: 0 })}
-                                                                className="accent-green-600"
-                                                            /> Preparado
-                                                        </label>
-                                                        <label className={`flex items-center gap-2 px-2 py-1 rounded border cursor-pointer text-xs ${!editForm.isStockManaged && !editForm.requiresPreparation ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-200'}`}>
-                                                            <input type="radio"
-                                                                checked={!editForm.isStockManaged && !editForm.requiresPreparation}
-                                                                onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: false, stock: 0 })}
-                                                                className="accent-orange-600"
-                                                            /> Libre
-                                                        </label>
-                                                    </div>
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-t border-dashed border-pink-200/50 pt-2">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${editForm.isStockManaged ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={editForm.isStockManaged}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: true, requiresPreparation: false, stock: editForm.stock || 0 })}
+                                                            className="accent-blue-600"
+                                                        /> Terminado
+                                                    </label>
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${!editForm.isStockManaged && editForm.requiresPreparation ? 'bg-green-100 border-green-300 text-green-800' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={!editForm.isStockManaged && editForm.requiresPreparation}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: true, stock: 0 })}
+                                                            className="accent-green-600"
+                                                        /> Preparado
+                                                    </label>
+                                                    <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${!editForm.isStockManaged && !editForm.requiresPreparation ? 'bg-orange-100 border-orange-355 text-orange-850' : 'bg-white border-gray-250 text-gray-600'}`}>
+                                                        <input type="radio"
+                                                            checked={!editForm.isStockManaged && !editForm.requiresPreparation}
+                                                            onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: false, stock: 0 })}
+                                                            className="accent-orange-600"
+                                                        /> Libre
+                                                    </label>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setCreatingSection(null)} className="text-gray-500 hover:bg-gray-200 p-2 rounded"><X size={18} /></button>
-                                                    <button onClick={() => handleSaveProduct(false)} className="bg-pink-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-pink-700">Guardar</button>
+                                                <div className="flex gap-2 justify-end">
+                                                    <button onClick={() => setCreatingSection(null)} className="text-gray-500 hover:bg-gray-200 px-3 py-1.5 rounded text-sm font-medium">Cancelar</button>
+                                                    <button onClick={() => handleSaveProduct(false)} className="bg-pink-600 text-white px-5 py-1.5 rounded-lg font-bold text-sm hover:bg-pink-700 shadow-md transition-all active:scale-95">Guardar</button>
                                                 </div>
                                             </div>
                                         </div>
