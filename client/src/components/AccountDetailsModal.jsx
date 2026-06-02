@@ -165,7 +165,7 @@ const AccountDetailsModal = ({
                                     return (
                                         <div key={idx} className={`border rounded-lg p-4 flex justify-between items-start ${isCurrentPayment ? 'bg-green-100/50 border-green-300' : 'bg-green-50/50 border-green-100/50'}`}>
                                             <div>
-                                                <div className="font-bold text-gray-800 text-sm">Pago consumo {isCurrentPayment && <span className="ml-2 text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Abono Actual</span>}</div>
+                                                <div className="font-bold text-gray-800 text-sm">Pago consumo</div>
                                                 <div className="text-xs text-gray-400 mt-2">
                                                     {new Date(payment.createdAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     <span className="capitalize ml-1">- {payment.method}</span>

@@ -10,6 +10,7 @@ import {
     User, 
     CreditCard, 
     ArrowRight, 
+    ArrowLeft,
     Printer, 
     Trash2,
     FileX,
@@ -416,6 +417,411 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         }
     };
 
+    // ==========================================
+    // RENDER HELPERS (DRY & RESPONSIVE DESIGN)
+    // ==========================================
+
+    const renderSummaryBox = () => (
+        <div className="bg-indigo-700 p-6 md:p-8 text-white relative shrink-0 border-b border-indigo-800 shadow-xl shadow-slate-100/50 rounded-[1.5rem] md:rounded-none">
+            <span className="text-[9px] font-bold text-indigo-200/80 uppercase tracking-widest block mb-2">SALDO PENDIENTE</span>
+            
+            <div className="text-4xl font-black mb-6 tracking-tighter">
+                <span className="text-2xl font-bold text-indigo-100 mr-2">S/</span>
+                {remainingBalance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-bold">
+                <div className="text-indigo-100/80">
+                    Total cuenta: <span className="text-white">S/ {totalPossible.toFixed(2)}</span>
+                </div>
+                <div className="text-indigo-100/80">
+                    Emitido: <span className="text-white">S/ {totalAlreadyBilled.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderItemsList = () => (
+        <div>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Ítems Disponibles</h3>
+            {Object.keys(groupedItems).length === 0 ? (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center py-8">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">No hay ítems pendientes<br/>de facturación</p>
+                </div>
+            ) : (
+                Object.keys(groupedItems).map((groupName) => {
+                    const groupItems = groupedItems[groupName];
+                    const isExpanded = expandedGroups.includes(groupName);
+                    const allSelected = groupItems.length > 0 && groupItems.every(i => selectedItems.find(s => s.id === i.id));
+
+                    const handleToggleGroup = (e) => {
+                        e.stopPropagation();
+                        if (allSelected) {
+                            setSelectedItems(prev => prev.filter(p => !groupItems.find(g => g.id === p.id)));
+                        } else {
+                            const newSelection = [...selectedItems];
+                            groupItems.forEach(item => {
+                                if (!newSelection.find(s => s.id === item.id)) {
+                                    newSelection.push(item);
+                                }
+                            });
+                            setSelectedItems(newSelection);
+                        }
+                    };
+
+                    return (
+                        <div key={groupName} className="mb-3">
+                            <div 
+                                onClick={() => setExpandedGroups(isExpanded ? expandedGroups.filter(g => g !== groupName) : [...expandedGroups, groupName])}
+                                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border cursor-pointer group/header
+                                    ${isExpanded ? 'bg-slate-50 border-slate-200' : 'bg-white border-transparent hover:bg-slate-50'}
+                                `}
+                            >
+                                <div className="flex-1 flex items-center justify-between mr-6">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[11px] font-black text-slate-700 tracking-tight capitalize">{groupName.toLowerCase()}</span>
+                                        <span className="text-[10px] font-bold text-slate-300">({groupItems.length} {groupName.toLowerCase().includes('alojamiento') ? 'noches' : 'ítems'})</span>
+                                    </div>
+                                    <span className="text-[11px] font-black text-slate-800">
+                                        {groupItems.reduce((acc, curr) => acc + curr.amount, 0).toFixed(2)}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={handleToggleGroup}
+                                        className={`text-[9px] font-black px-2 py-1 rounded-lg transition-all
+                                            ${allSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-100 hover:bg-blue-50'}
+                                        `}
+                                    >
+                                        {allSelected ? 'QUITAR' : 'TODO'}
+                                    </button>
+                                    {isExpanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                                </div>
+                            </div>
+
+                            {isExpanded && (
+                                <div className="mt-2 space-y-1.5 ml-2 border-l-2 border-slate-100 pl-3">
+                                    {groupItems.map((item) => {
+                                        const isSelected = selectedItems.find(i => i.id === item.id);
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => toggleItem(item)}
+                                                className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all border
+                                                    ${isSelected 
+                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-900/10' 
+                                                        : 'bg-white border-transparent hover:bg-slate-50 text-slate-600'}
+                                                `}
+                                            >
+                                                <div className="flex-1 overflow-hidden">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                            {item.qty} UNI
+                                                        </span>
+                                                        <span className="text-[10px] font-black truncate leading-tight block">{item.description}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] font-bold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>S/ {item.amount.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                                {isSelected && <Check size={14} strokeWidth={4} className="shrink-0" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })
+            )}
+        </div>
+    );
+
+    const renderHistoryList = (isMobile = false) => (
+        <div>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Comprobantes Emitidos</h3>
+            <div className="space-y-3">
+                {remainingBalance > 0.01 && !isMobile && (
+                    <button 
+                        className="w-full text-left p-4 rounded-[1.5rem] border-2 border-dashed border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                        onClick={() => document.getElementById('preparation-slide')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/20">
+                                <FileText size={18} />
+                            </div>
+                            <div>
+                                <span className="text-[11px] font-black text-blue-700 uppercase tracking-widest block leading-none">Nueva Emisión</span>
+                            </div>
+                        </div>
+                    </button>
+                )}
+
+                {history.length === 0 && (
+                    <p className="text-[10px] font-black text-slate-300 uppercase text-center py-4 tracking-widest">Sin historial de emisiones</p>
+                )}
+
+                {history.map((doc) => (
+                    <button 
+                        key={doc.id}
+                        className="w-full text-left p-4 rounded-2xl md:rounded-3xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all group relative overflow-hidden active:scale-[0.98]"
+                        onClick={() => {
+                            if (isMobile) {
+                                setSelectedDocId(doc.id);
+                            } else {
+                                const el = document.getElementById(`doc-slide-${doc.id}`);
+                                if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                                }
+                            }
+                        }}
+                    >
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="w-10 h-10 rounded-xl md:rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
+                                <Printer size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="text-[10px] font-black text-slate-800 tracking-tight flex items-center gap-2 overflow-hidden">
+                                        <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                            {doc.serie}-{doc.correlativo}
+                                        </span>
+                                        {doc.status === 'anulado' && <span className="text-[8px] font-black text-rose-400 shrink-0">ANULADA</span>}
+                                    </div>
+                                    <div className="text-[10px] font-black text-slate-900 shrink-0">S/ {parseFloat(doc.total).toFixed(2)}</div>
+                                </div>
+                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                                    {doc.clienteNombre || account.customerName || 'Varios'}
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderFormCard = (isMobile = false) => (
+        <div className="bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border border-slate-100 shadow-2xl shadow-blue-900/5 overflow-hidden transition-all relative">
+            <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
+                {/* Header Area */}
+                <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Preparación</span>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tighter leading-none">Comprobante</h1>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL PARCIAL</span>
+                        <div className="text-2xl md:text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
+                            <span className="text-sm font-medium text-slate-300">S/</span>
+                            {totalSelected.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Form UI - COMPACT VERSION */}
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Doc. Cliente</label>
+                            <div className="flex p-1 bg-slate-50 rounded-xl w-full border border-slate-100">
+                                <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '03' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('03')}>DNI</button>
+                                <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '01' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('01')}>RUC</button>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Número</label>
+                            <div className="relative">
+                                <input type="text" value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
+                                <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>
+                                    {isSearchLoading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Nombre / Razón Social</label>
+                            <div className="relative">
+                                 <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Voucher Details Selection */}
+                    <div className="bg-blue-50/30 border border-blue-50 p-4 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm">
+                                <FileText size={16} />
+                            </div>
+                            <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">{docType === '03' ? 'BOLETA' : 'FACTURA'}</span>
+                        </div>
+                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Serie {series}</span>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-50">
+                        <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Ítems Seleccionados</div>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
+                            {selectedItems.map(item => (
+                                <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-transparent">
+                                    <span className="text-[10px] font-black text-slate-600 truncate max-w-[200px]">{item.description}</span>
+                                    <span className="text-[10px] font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
+                                </div>
+                            ))}
+                            {selectedItems.length === 0 && (
+                                <div className="py-8 text-center text-slate-200 text-[9px] font-bold uppercase tracking-widest border-2 border-dashed border-slate-50 flex flex-col gap-2 rounded-2xl">
+                                    {isMobile ? 'Seleccione ítems arriba' : 'Seleccione ítems a la izquierda'}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-50 shrink-0">
+                <button 
+                    onClick={handleSubmit} 
+                    disabled={loading || selectedItems.length === 0}
+                    className={`w-full py-4 md:py-5 rounded-[1.2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all active:scale-[0.98]
+                        ${loading || selectedItems.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-900/20 hover:bg-black'}`}
+                >
+                    {loading ? <RefreshCw className="animate-spin" size={18} /> : <><span>EMITIR COMPROBANTE</span><ArrowRight size={16} /></>}
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderDocCard = (doc, onBack = null) => {
+        const isAnulado = doc.status === 'anulado';
+        const docLabel = doc.tipo === 'factura' ? 'Factura' : 'Boleta';
+        const docItems = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
+        const { pdf: billingUrl, xml: xmlUrl } = getSunatUrls(doc.sunatResponse);
+        const creditNoteId = doc.notaCredito;
+        const creditNoteUrl = doc.notaCreditoUrl;
+
+        return (
+            <div className={`bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border transition-all overflow-hidden shadow-2xl shadow-blue-900/5
+                ${isAnulado ? 'border-rose-100 opacity-90' : 'border-slate-100'}
+            `}>
+                <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
+                    {onBack && (
+                        <button 
+                            onClick={onBack}
+                            className="flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-widest mb-4 hover:underline"
+                        >
+                            <ArrowLeft size={14} /> Volver al Listado
+                        </button>
+                    )}
+                    
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                    {isAnulado ? 'ANULADO' : 'EMITIDO'}
+                                </span>
+                            </div>
+                            <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'}`}>
+                                {docLabel}
+                                <span className="ml-3 text-slate-300 font-medium tracking-normal text-lg">[{doc.serie}-{doc.correlativo}]</span>
+                            </h2>
+                            {isAnulado && creditNoteId && (
+                                <div className="flex items-center gap-2 pt-1">
+                                    <span className="text-[10px] font-black bg-rose-50 text-rose-500 px-2 py-0.5 rounded-lg border border-rose-100 uppercase tracking-widest shadow-sm">
+                                        NC: {creditNoteId}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL</span>
+                            <div className="text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
+                                <span className="text-sm font-medium text-slate-300">S/</span>
+                                {parseFloat(doc.total || 0).toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Client & Detail */}
+                    <div className="space-y-6">
+                        <div className="space-y-1">
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Cliente</span>
+                            <p className="text-sm font-black text-slate-700 leading-tight uppercase">{doc.clienteNombre || account.customerName || 'Varios'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{doc.clienteDocumento || '---'}</p>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-50">
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-3">Detalle de Cobro</span>
+                            <div className="space-y-2">
+                                {docItems.map((it, i) => (
+                                    <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50/50 rounded-lg">
+                                        <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">{it.description || it.name}</span>
+                                        <span className="text-[10px] font-black text-slate-800 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-50 mt-auto shrink-0">
+                    <div className="space-y-4">
+                        <div className="flex gap-3">
+                            <a 
+                                href={billingUrl ? (billingUrl.includes('?') ? `${billingUrl}&v=${Date.now()}` : `${billingUrl}?v=${Date.now()}`) : '#'} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className={`flex-1 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm border
+                                    ${isAnulado ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 text-slate-600'}
+                                `}
+                            >
+                                <FileText size={16} /> VER {doc.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}
+                            </a>
+                            <div className="flex gap-2 shrink-0">
+                                <button 
+                                    onClick={() => handleShareWhatsapp(billingUrl)} 
+                                    className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
+                                    title="WhatsApp Comprobante"
+                                >
+                                    <WhatsAppIcon size={20} />
+                                </button>
+                                {!isAnulado && (
+                                    <button 
+                                        onClick={() => handleAnnul(doc)}
+                                        className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all border border-rose-100 shadow-sm"
+                                        title="Anular Documento"
+                                    >
+                                        <Trash2 size={20} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {isAnulado && creditNoteUrl && (
+                            <div className="flex gap-3 pt-3 border-t border-slate-100/50">
+                                <a 
+                                    href={creditNoteUrl.includes('?') ? `${creditNoteUrl}&v=${Date.now()}` : `${creditNoteUrl}?v=${Date.now()}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="flex-1 bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/30 text-rose-600 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                    <FileText size={16} /> VER NOTA DE CRÉDITO
+                                </a>
+                                <button 
+                                    onClick={() => handleShareWhatsapp(creditNoteUrl)} 
+                                    className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
+                                    title="WhatsApp Nota de Crédito"
+                                >
+                                    <WhatsAppIcon size={20} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (isSuccess) {
         return (
             <div className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
@@ -463,17 +869,17 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     }
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full md:max-w-[1400px] h-screen md:h-[94vh] rounded-none md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-y-auto md:overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full md:max-w-[1400px] h-full md:h-[94vh] rounded-none md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 
                 {/* Header Area */}
-                <div className="px-6 md:px-10 py-4 md:py-6 border-b flex items-center justify-between bg-white/95 backdrop-blur-md sticky top-0 z-[70]">
+                <div className="px-6 md:px-10 py-4 md:py-6 border-b flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 flex-shrink-0 animate-in zoom-in-50 duration-500">
                             <FileText size={24} />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">Gestión de Comprobantes</h2>
+                            <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">Gestión de Comprobantes</h2>
                             <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Cuenta #{account.id}</span>
                                 {account.Table && (
@@ -483,7 +889,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                     </>
                                 )}
                                 <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{account.customerName}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">{account.customerName}</span>
                             </div>
                         </div>
                     </div>
@@ -505,7 +911,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
                 {/* Error Alert Section */}
                 {errorMsg && (
-                    <div className="mx-6 md:mx-10 mt-6 animate-in slide-in-from-top-2 duration-300">
+                    <div className="mx-6 md:mx-10 mt-4 animate-in slide-in-from-top-2 duration-300 shrink-0">
                         <div className="bg-rose-50 border border-rose-100 p-4 rounded-3xl flex items-start gap-4">
                             <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-rose-500 shadow-sm shrink-0">
                                 <AlertCircle size={20} />
@@ -521,429 +927,108 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     </div>
                 )}
 
-                {/* Main Split Body */}
-                <div className="flex-1 flex flex-col md:flex-row bg-slate-50/5 md:overflow-hidden">
-                    
-                    {/* SIDEBAR: (30%) Financials + Items + History Navigator */}
-                    <div className="w-full md:w-[420px] md:min-w-[420px] md:basis-[420px] h-auto md:h-full md:border-r border-b md:border-b-0 flex flex-col bg-white shrink-0 shadow-xl md:shadow-lg relative z-10">
-                        
-                        {/* Summary Header Section - MATCHING REFERENCE IMAGE */}
-                        <div className="bg-indigo-700 p-6 md:p-8 text-white relative shrink-0 border-b border-indigo-800 shadow-xl shadow-slate-100/50">
-                            <span className="text-[9px] font-bold text-indigo-200/80 uppercase tracking-widest block mb-2">SALDO PENDIENTE</span>
-                            
-                            <div className="text-4xl font-black mb-6 tracking-tighter">
-                                <span className="text-2xl font-bold text-indigo-100 mr-2">S/</span>
-                                {remainingBalance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                            </div>
+                {/* MOBILE VIEW LAYOUT */}
+                <div className="flex-1 flex flex-col md:hidden overflow-hidden bg-slate-50/50">
+                    {/* Tab Selector for Mobile */}
+                    <div className="flex border-b border-slate-100 bg-white shrink-0">
+                        {remainingBalance > 0.01 && (
+                            <button
+                                onClick={() => {
+                                    setActiveTab('emit');
+                                    setSelectedDocId(null);
+                                }}
+                                className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 text-center transition-all ${
+                                    activeTab === 'emit' ? 'border-blue-600 text-blue-600 bg-blue-50/10' : 'border-transparent text-slate-400'
+                                }`}
+                            >
+                                Emitir
+                            </button>
+                        )}
+                        <button
+                            onClick={() => {
+                                setActiveTab('history');
+                                setSelectedDocId(null);
+                            }}
+                            className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 text-center transition-all ${
+                                activeTab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/10' : 'border-transparent text-slate-400'
+                            }`}
+                        >
+                            Comprobantes ({history.length})
+                        </button>
+                    </div>
 
-                            <div className="flex items-center justify-between text-[10px] font-bold">
-                                <div className="text-indigo-100/80">
-                                    Total cuenta: <span className="text-white">S/ {totalPossible.toFixed(2)}</span>
+                    {/* Mobile Contents */}
+                    <div className="flex-1 overflow-hidden flex flex-col">
+                        {activeTab === 'emit' ? (
+                            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                                {renderSummaryBox()}
+                                <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                                    {renderItemsList()}
                                 </div>
-                                <div className="text-indigo-100/80">
-                                    Emitido: <span className="text-white">S/ {totalAlreadyBilled.toFixed(2)}</span>
+                                <div className="rounded-[2rem] overflow-hidden">
+                                    {renderFormCard(true)}
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Navigation / Items (Independent Scroll) */}
-                        <div className="flex-1 h-auto md:overflow-y-scroll custom-scrollbar p-6 pt-2 space-y-8">
-                            
-                            {/* Section 1: Items to Invoice (NOW AT THE TOP) */}
-                            <div>
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Ítems Disponibles</h3>
-                                {Object.keys(groupedItems).length === 0 ? (
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center py-8">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">No hay ítems pendientes<br/>de facturación</p>
+                        ) : (
+                            // Tab = history
+                            selectedDocId ? (
+                                // Show specific voucher details
+                                <div className="flex-1 overflow-y-auto p-4 h-full">
+                                    {renderDocCard(
+                                        history.find(d => d.id === selectedDocId),
+                                        () => setSelectedDocId(null)
+                                    )}
+                                </div>
+                            ) : (
+                                // Show list of vouchers
+                                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                                    {renderSummaryBox()}
+                                    <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                                        {renderHistoryList(true)}
                                     </div>
-                                ) : (
-                                    Object.keys(groupedItems).map((groupName) => {
-                                        const groupItems = groupedItems[groupName];
-                                        const isExpanded = expandedGroups.includes(groupName);
-                                        const allSelected = groupItems.length > 0 && groupItems.every(i => selectedItems.find(s => s.id === i.id));
-
-                                        const handleToggleGroup = (e) => {
-                                            e.stopPropagation();
-                                            if (allSelected) {
-                                                setSelectedItems(prev => prev.filter(p => !groupItems.find(g => g.id === p.id)));
-                                            } else {
-                                                const newSelection = [...selectedItems];
-                                                groupItems.forEach(item => {
-                                                    if (!newSelection.find(s => s.id === item.id)) {
-                                                        newSelection.push(item);
-                                                    }
-                                                });
-                                                setSelectedItems(newSelection);
-                                            }
-                                        };
-
-                                        return (
-                                            <div key={groupName} className="mb-3">
-                                                <div 
-                                                    onClick={() => setExpandedGroups(isExpanded ? expandedGroups.filter(g => g !== groupName) : [...expandedGroups, groupName])}
-                                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border cursor-pointer group/header
-                                                        ${isExpanded ? 'bg-slate-50 border-slate-200' : 'bg-white border-transparent hover:bg-slate-50'}
-                                                    `}
-                                                >
-                                                    <div className="flex-1 flex items-center justify-between mr-6">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[11px] font-black text-slate-700 tracking-tight capitalize">{groupName.toLowerCase()}</span>
-                                                            <span className="text-[10px] font-bold text-slate-300">({groupItems.length} {groupName.toLowerCase().includes('alojamiento') ? 'noches' : 'ítems'})</span>
-                                                        </div>
-                                                        <span className="text-[11px] font-black text-slate-800">
-                                                            {groupItems.reduce((acc, curr) => acc + curr.amount, 0).toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    <div className="flex items-center gap-2">
-                                                        <button 
-                                                            onClick={handleToggleGroup}
-                                                            className={`text-[9px] font-black px-2 py-1 rounded-lg transition-all
-                                                                ${allSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-100 hover:bg-blue-50'}
-                                                            `}
-                                                        >
-                                                            {allSelected ? 'QUITAR' : 'TODO'}
-                                                        </button>
-                                                        {isExpanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
-                                                    </div>
-                                                </div>
-
-                                                {isExpanded && (
-                                                    <div className="mt-2 space-y-1.5 ml-2 border-l-2 border-slate-100 pl-3">
-                                                        {groupItems.map((item) => {
-                                                            const isSelected = selectedItems.find(i => i.id === item.id);
-                                                            return (
-                                                                <button
-                                                                    key={item.id}
-                                                                    onClick={() => toggleItem(item)}
-                                                                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all border
-                                                                        ${isSelected 
-                                                                            ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-900/10' 
-                                                                            : 'bg-white border-transparent hover:bg-slate-50 text-slate-600'}
-                                                                    `}
-                                                                >
-                                                                    <div className="flex-1 overflow-hidden">
-                                                                        <div className="flex items-center gap-2 mb-0.5">
-                                                                            <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                                                                {item.qty} {item.qty > 1 ? 'UNI' : 'UNI'}
-                                                                            </span>
-                                                                            <span className="text-[10px] font-black truncate leading-tight block">{item.description}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className={`text-[9px] font-bold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>S/ {item.amount.toFixed(2)}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    {isSelected && <Check size={14} strokeWidth={4} className="shrink-0" />}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-
-                            {/* Section 2: History */}
-                            <div>
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Comprobantes Emitidos</h3>
-                                <div className="space-y-3">
-                                    {/* Trigger for "Preparation" Slide (Only if balance remains) */}
-                                    {remainingBalance > 0.01 && (
-                                        <button 
-                                            className="w-full text-left p-4 rounded-[1.5rem] border-2 border-dashed border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-200 transition-all group"
-                                            onClick={() => document.getElementById('preparation-slide')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/20">
-                                                    <FileText size={18} />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[11px] font-black text-blue-700 uppercase tracking-widest block leading-none">Nueva Emisión</span>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    )}
-
-                                    {history.length === 0 && !remainingBalance > 0.01 && (
-                                        <p className="text-[10px] font-black text-slate-300 uppercase text-center py-4 tracking-widest">Sin historial de emisiones</p>
-                                    )}
-
-                                    {history.map((doc) => (
-                                        <button 
-                                            key={doc.id}
-                                            className="w-full text-left p-4 rounded-2xl md:rounded-3xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all group relative overflow-hidden active:scale-[0.98]"
-                                            onClick={() => {
-                                                const el = document.getElementById(`doc-slide-${doc.id}`);
-                                                if (el) {
-                                                    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                                                }
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3 md:gap-4">
-                                                <div className="w-10 h-10 rounded-xl md:rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
-                                                    <Printer size={18} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <div className="text-[10px] font-black text-slate-800 tracking-tight flex items-center gap-2 overflow-hidden">
-                                                            <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white shadow-sm' : 'bg-emerald-500 text-white shadow-sm'}`}>
-                                                                {doc.serie}-{doc.correlativo}
-                                                            </span>
-                                                            {doc.status === 'anulado' && <span className="text-[8px] font-black text-rose-400 shrink-0">ANULADA</span>}
-                                                        </div>
-                                                        <div className="text-[10px] font-black text-slate-900 shrink-0">S/ {parseFloat(doc.total).toFixed(2)}</div>
-                                                    </div>
-                                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
-                                                        {doc.clienteNombre || account.customerName || 'Varios'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))}
                                 </div>
-                            </div>
+                            )
+                        )}
+                    </div>
+                </div>
+
+                {/* DESKTOP VIEW LAYOUT */}
+                <div className="hidden md:flex flex-1 flex-row bg-slate-50/5 overflow-hidden">
+                    {/* SIDEBAR: Financials + Items + History */}
+                    <div className="w-[420px] min-w-[420px] basis-[420px] h-full border-r flex flex-col bg-white shrink-0 relative z-10">
+                        {renderSummaryBox()}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-2 space-y-8">
+                            {renderItemsList()}
+                            {renderHistoryList(false)}
                         </div>
                     </div>
 
-                    {/* MAIN AREA: (70%) Carousel View */}
-                    <div className="flex-1 flex flex-col relative bg-slate-50/10 md:overflow-hidden">
-                        
-                        {/* THE CAROUSEL CONTAINER - UPDATED FOR MULTI-VOUCHERS */}
-                        <div className="flex-1 flex flex-col md:flex-row md:overflow-x-auto md:snap-x p-6 md:pr-24 md:p-8 gap-6 md:gap-8 items-start">
-                            
-                            {/* SLIDE 1: Preparation (Emission Form) - ONLY IF BALANCE REMAINS */}
+                    {/* CAROUSEL MAIN VIEW */}
+                    <div className="flex-1 flex flex-col relative bg-slate-50/10 overflow-hidden">
+                        <div className="flex-1 flex flex-row overflow-x-auto snap-x p-8 gap-8 items-start">
                             {remainingBalance > 0.01 && (
-                                <div id="preparation-slide" className="min-w-full md:min-w-[calc(100%/2.15)] h-auto md:h-[calc(100vh-250px)] md:max-h-[850px] md:snap-start shrink-0">
-                                    <div className="bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border border-slate-100 shadow-2xl shadow-blue-900/5 overflow-hidden transition-all relative">
-                                        <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
-                                            {/* Header Area */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Preparación</span>
-                                                    <h1 className="text-3xl font-black text-slate-800 tracking-tighter leading-none">Comprobante</h1>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL PARCIAL</span>
-                                                    <div className="text-3xl font-black text-slate-800 flex items-baseline gap-1 tracking-tighter leading-none">
-                                                        <span className="text-sm font-medium text-slate-300">S/</span>
-                                                        {totalSelected.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Form UI - COMPACT VERSION */}
-                                            <div className="space-y-6">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Doc. Cliente</label>
-                                                        <div className="flex p-1 bg-slate-50 rounded-xl w-full border border-slate-100">
-                                                            <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '03' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('03')}>DNI</button>
-                                                            <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '01' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('01')}>RUC</button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Número</label>
-                                                        <div className="relative">
-                                                            <input type="text" value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
-                                                            <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>
-                                                                {isSearchLoading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-span-2 space-y-2">
-                                                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Nombre / Razón Social</label>
-                                                        <div className="relative">
-                                                             <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Voucher Details Selection */}
-                                                <div className="bg-blue-50/30 border border-blue-50 p-4 rounded-2xl flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm">
-                                                            <FileText size={16} />
-                                                        </div>
-                                                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">{docType === '03' ? 'BOLETA' : 'FACTURA'}</span>
-                                                    </div>
-                                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Serie {series}</span>
-                                                </div>
-
-                                                <div className="pt-4 border-t border-slate-50">
-                                                    <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Ítems Seleccionados</div>
-                                                    <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
-                                                        {selectedItems.map(item => (
-                                                            <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-transparent">
-                                                                <span className="text-[10px] font-black text-slate-600 truncate max-w-[200px]">{item.description}</span>
-                                                                <span className="text-[10px] font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
-                                                            </div>
-                                                        ))}
-                                                        {selectedItems.length === 0 && (
-                                                            <div className="py-8 text-center text-slate-200 text-[9px] font-bold uppercase tracking-widest border-2 border-dashed border-slate-50 flex flex-col gap-2 rounded-2xl">
-                                                                Seleccione ítems a la izquierda
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-8 bg-slate-50/50 border-t border-slate-50">
-                                            <button 
-                                                onClick={handleSubmit} 
-                                                disabled={loading || selectedItems.length === 0}
-                                                className={`w-full py-5 rounded-[1.2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all active:scale-[0.98]
-                                                    ${loading || selectedItems.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-900/20 hover:bg-black'}`}
-                                            >
-                                                {loading ? <RefreshCw className="animate-spin" size={18} /> : <><span>EMITIR COMPROBANTE</span><ArrowRight size={16} /></>}
-                                            </button>
-                                        </div>
-                                    </div>
+                                <div id="preparation-slide" className="min-w-[calc(100%/2.15)] h-[calc(100vh-250px)] max-h-[850px] snap-start shrink-0">
+                                    {renderFormCard(false)}
                                 </div>
                             )}
 
-                            {/* DOTTED SEPARATOR */}
                             {remainingBalance > 0.01 && history.length > 0 && (
-                                <div className="md:h-full h-0 md:border-r-2 border-b-2 border-dashed border-slate-200/50 shrink-0 mx-2 md:my-0 my-4 shadow-inner" />
+                                <div className="h-full border-r-2 border-dashed border-slate-200/50 shrink-0 mx-2 shadow-inner" />
                             )}
 
-                            {/* SLIDES FOR HISTORY VOUCHERS */}
-                            {history.map((doc, idx) => {
-                                const isAnulado = doc.status === 'anulado';
-                                const docLabel = doc.tipo === 'factura' ? 'Factura' : 'Boleta';
-                                const docItems = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
-                                const { pdf: billingUrl, xml: xmlUrl } = getSunatUrls(doc.sunatResponse);
-                                const creditNoteId = doc.notaCredito;
-                                const creditNoteUrl = doc.notaCreditoUrl;
-
-                                return (
-                                    <div id={`doc-slide-${doc.id}`} key={doc.id} className="min-w-full md:min-w-[calc(100%/2.15)] h-auto md:h-[calc(100vh-250px)] md:max-h-[850px] md:snap-start shrink-0">
-                                        <div className={`bg-white rounded-none md:rounded-[2rem] h-full flex flex-col border transition-all overflow-hidden shadow-2xl shadow-blue-900/5
-                                            ${isAnulado ? 'border-rose-100 opacity-90' : 'border-slate-100'}
-                                        `}>
-                                            <div className="overflow-y-auto custom-scrollbar flex-1 p-6 md:p-10 space-y-8 md:space-y-10">
-                                                {/* Header */}
-                                                <div className="flex items-start justify-between">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                                                                {isAnulado ? 'ANULADO' : 'EMITIDO'}
-                                                            </span>
-                                                        </div>
-                                                        <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'}`}>
-                                                            {docLabel}
-                                                            <span className="ml-3 text-slate-300 font-medium tracking-normal text-lg">[{doc.serie}-{doc.correlativo}]</span>
-                                                        </h2>
-                                                        {isAnulado && creditNoteId && (
-                                                            <div className="flex items-center gap-2 pt-1">
-                                                                <span className="text-[10px] font-black bg-rose-50 text-rose-500 px-2 py-0.5 rounded-lg border border-rose-100 uppercase tracking-widest shadow-sm">
-                                                                    NC: {creditNoteId}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL</span>
-                                                        <div className="text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
-                                                            <span className="text-sm font-medium text-slate-300">S/</span>
-                                                            {parseFloat(doc.total || 0).toFixed(2)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Client & Detail */}
-                                                <div className="space-y-6">
-                                                    <div className="space-y-1">
-                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Cliente</span>
-                                                        <p className="text-sm font-black text-slate-700 leading-tight uppercase">{doc.clienteNombre || account.customerName || 'Varios'}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{doc.clienteDocumento || '---'}</p>
-                                                    </div>
-
-                                                    <div className="pt-4 border-t border-slate-50">
-                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-3">Detalle de Cobro</span>
-                                                        <div className="space-y-2">
-                                                            {docItems.map((it, i) => (
-                                                                <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50/50 rounded-lg">
-                                                                    <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">{it.description || it.name}</span>
-                                                                    <span className="text-[10px] font-black text-slate-800 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Actions Footer */}
-                                            <div className="p-8 bg-slate-50/50 border-t border-slate-50 mt-auto">
-                                                <div className="space-y-4">
-                                                    {/* PRIMARY DOCUMENT ACTION ROW */}
-                                                    <div className="flex gap-3">
-                                                        <a 
-                                                            href={billingUrl ? (billingUrl.includes('?') ? `${billingUrl}&v=${Date.now()}` : `${billingUrl}?v=${Date.now()}`) : '#'} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            className={`flex-1 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm border
-                                                                ${isAnulado ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 text-slate-600'}
-                                                            `}
-                                                        >
-                                                            <FileText size={16} /> VER {doc.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}
-                                                        </a>
-                                                        <div className="flex gap-2 shrink-0">
-                                                            <button 
-                                                                onClick={() => handleShareWhatsapp(billingUrl)} 
-                                                                className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
-                                                                title="WhatsApp Comprobante"
-                                                            >
-                                                                <WhatsAppIcon size={20} />
-                                                            </button>
-                                                            {!isAnulado && (
-                                                                <button 
-                                                                    onClick={() => handleAnnul(doc)}
-                                                                    className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all border border-rose-100 shadow-sm"
-                                                                    title="Anular Documento"
-                                                                >
-                                                                    <Trash2 size={20} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* CREDIT NOTE ACTION ROW (If applicable) */}
-                                                    {isAnulado && creditNoteUrl && (
-                                                        <div className="flex gap-3 pt-3 border-t border-slate-100/50">
-                                                            <a 
-                                                                href={creditNoteUrl.includes('?') ? `${creditNoteUrl}&v=${Date.now()}` : `${creditNoteUrl}?v=${Date.now()}`} 
-                                                                target="_blank" 
-                                                                rel="noopener noreferrer" 
-                                                                className="flex-1 bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/30 text-rose-600 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
-                                                            >
-                                                                <FileText size={16} /> VER NOTA DE CRÉDITO
-                                                            </a>
-                                                            <button 
-                                                                onClick={() => handleShareWhatsapp(creditNoteUrl)} 
-                                                                className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
-                                                                title="WhatsApp Nota de Crédito"
-                                                            >
-                                                                <WhatsAppIcon size={20} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {/* SPACER AT THE END TO ENSURE LAST CARD IS FULLY VISIBLE & SCROLLABLE ON DESKTOP */}
-                            <div className="hidden md:block w-48 shrink-0 h-1" />
+                            {history.map((doc) => (
+                                <div id={`doc-slide-${doc.id}`} key={doc.id} className="min-w-[calc(100%/2.15)] h-[calc(100vh-250px)] max-h-[850px] snap-start shrink-0">
+                                    {renderDocCard(doc)}
+                                </div>
+                            ))}
+                            <div className="w-48 shrink-0 h-1" />
                         </div>
                     </div>
                 </div>
+
             </div>
-            
+
+            {/* Custom Styles */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 8px;
@@ -957,25 +1042,6 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: #cbd5e1;
-                }
-
-                .custom-scrollbar-h::-webkit-scrollbar {
-                    height: 10px;
-                }
-                .custom-scrollbar-h::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar-h::-webkit-scrollbar-thumb {
-                    background: #cbd5e1;
-                    border-radius: 20px;
-                }
-                .custom-scrollbar-h::-webkit-scrollbar-thumb:hover {
-                    background: #94a3b8;
-                }
-                
-                @keyframes shine {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
                 }
             `}} />
         </div>
