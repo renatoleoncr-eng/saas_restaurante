@@ -1982,7 +1982,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                             <span className="text-base font-bold">{item.name}</span>
                                                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full uppercase font-black tracking-tight">{item._promo.name}</span>
                                                         </div>
-                                                        <span className={`text-xs ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>S/ {Number(parseFloat(item.individualPrice || 0).toFixed(2))} • Combo 2x S/ {Number(parseFloat(item._promo.price).toFixed(2))}</span>
+                                                        <span className={`text-xs ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>S/ {Number(parseFloat(item.individualPrice || 0).toFixed(2))}</span>
                                                     </div>
                                                     {isSelected && <CheckCircle size={24} className="text-white" />}
                                                 </button>

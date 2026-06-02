@@ -399,7 +399,7 @@ export default function DrinkPromotionsConfig() {
                                 <Wine size={18} className="text-purple-500" />
                                 <span className="font-bold text-gray-800 text-base">{promo.name}</span>
                                 <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                                    Combo S/ {Number(parseFloat(promo.price).toFixed(2))}
+                                    S/ {Number(parseFloat(promo.price).toFixed(2))}
                                 </span>
                             </div>
                         )}

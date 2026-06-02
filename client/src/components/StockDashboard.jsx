@@ -171,7 +171,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             type: 'dish',
             stock: 0,
             isStockManaged: false,
-            requiresPreparation: false, // Default to Libre for Phase 1
+            requiresPreparation: true, // Default to Prepared
             presentationsList: []
         };
 
@@ -196,7 +196,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         } else if (activeTab === 'menu_options') {
             // Should not happen via generic button, but fallback
             defaults.isStockManaged = false;
-            defaults.requiresPreparation = false; // Default to Libre for Phase 1
+            defaults.requiresPreparation = true; // Default to Prepared
             defaults.type = 'daily_entry';
         }
 
