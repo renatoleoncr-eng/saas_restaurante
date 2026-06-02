@@ -76,12 +76,19 @@ router.put('/drink-promotions/:id', async (req, res) => {
     }
 });
 
-// DELETE a promotion (cascade deletes items)
+// DELETE a promotion (block if contains items)
 router.delete('/drink-promotions/:id', async (req, res) => {
     try {
-        const { DrinkPromotion } = getModels();
-        const promo = await DrinkPromotion.findByPk(req.params.id);
+        const { DrinkPromotion, DrinkPromotionItem } = getModels();
+        const promo = await DrinkPromotion.findByPk(req.params.id, {
+            include: [{ model: DrinkPromotionItem }]
+        });
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
+
+        if (promo.DrinkPromotionItems && promo.DrinkPromotionItems.length > 0) {
+            return res.status(400).json({ error: 'No se puede eliminar la categoría porque contiene tragos asociados. Elimine los tragos primero.' });
+        }
+
         await promo.destroy();
         res.json({ success: true });
     } catch (err) {

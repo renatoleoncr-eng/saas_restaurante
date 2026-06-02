@@ -27,79 +27,87 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
     };
 
     return (
-        <tr className="bg-purple-50">
-            <td className="px-4 py-2">
-                <input
-                    autoFocus
-                    type="text"
-                    placeholder="Nombre del trago"
-                    className="border rounded-lg px-2 py-1 text-sm w-full focus:ring-2 focus:ring-purple-400 outline-none"
-                    value={form.name}
-                    onChange={e => upd('name', e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSave()}
-                />
-            </td>
-            <td className="px-4 py-2">
-                <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-white text-sm w-28">
-                    <span className="text-gray-400">S/</span>
-                    <input
-                        type="number" step="0.01" placeholder="0.00"
-                        className="w-full outline-none font-bold"
-                        value={form.individualPrice}
-                        onChange={e => upd('individualPrice', e.target.value)}
-                    />
-                </div>
-            </td>
-            <td className="px-4 py-2">
-                <select
-                    className="border rounded-lg px-2 py-1 text-sm w-full"
-                    value={form.type}
-                    onChange={e => upd('type', e.target.value)}
-                >
-                    <option value="free">Libre (sin stock)</option>
-                    <option value="finished">Terminado</option>
-                    <option value="prepared">Preparado (Carta)</option>
-                </select>
-            </td>
-            <td className="px-4 py-2">
-                {form.type === 'finished' ? (
-                    <select
-                        className="border rounded-lg px-2 py-1 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400"
-                        value={form.linkedProductId}
-                        onChange={e => upd('linkedProductId', e.target.value)}
-                    >
-                        <option value="">— Seleccionar Producto —</option>
-                        {allProducts
-                            .filter(p => !p.requiresPreparation)
-                            .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                ) : form.type === 'prepared' ? (
-                    <div className="flex items-center gap-1">
+        <tr className="bg-purple-50 border-y border-purple-100">
+            <td colSpan={5} className="p-3 md:p-4">
+                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                    <div className="flex-1">
+                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Nombre del trago"
+                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-purple-400 outline-none bg-white font-semibold"
+                            value={form.name}
+                            onChange={e => upd('name', e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSave()}
+                        />
+                    </div>
+                    <div className="w-full md:w-32">
+                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Precio Individual</label>
+                        <div className="flex items-center gap-1 border border-purple-200 rounded-lg px-3 py-2 bg-white text-sm">
+                            <span className="text-gray-400">S/</span>
+                            <input
+                                type="number" step="0.01" placeholder="0.00"
+                                className="w-full outline-none font-bold"
+                                value={form.individualPrice}
+                                onChange={e => upd('individualPrice', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="w-full md:w-48">
+                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Tipo</label>
                         <select
-                            className="border rounded-lg px-2 py-1 text-sm flex-1 outline-none focus:ring-2 focus:ring-amber-400"
-                            value={form.linkedProductId}
-                            onChange={e => upd('linkedProductId', e.target.value)}
+                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-purple-400"
+                            value={form.type}
+                            onChange={e => upd('type', e.target.value)}
                         >
-                            <option value="">— Seleccionar Receta —</option>
-                            {allProducts
-                                .filter(p => p.requiresPreparation)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            <option value="free">Libre (sin stock)</option>
+                            <option value="finished">Terminado</option>
+                            <option value="prepared">Preparado (Carta)</option>
                         </select>
                     </div>
-                ) : (
-                    <span className="text-xs text-gray-400 italic">No aplica</span>
-                )}
-            </td>
-            <td className="px-4 py-2">
-                <div className="flex items-center gap-1">
-                    <button onClick={handleSave}
-                        className="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-purple-700">
-                        Guardar
-                    </button>
-                    <button onClick={onCancel}
-                        className="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-300">
-                        Cancelar
-                    </button>
+                    <div className="flex-1 min-w-[150px]">
+                        {form.type !== 'free' && (
+                            <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">
+                                {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
+                            </label>
+                        )}
+                        {form.type === 'finished' ? (
+                            <select
+                                className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                value={form.linkedProductId}
+                                onChange={e => upd('linkedProductId', e.target.value)}
+                            >
+                                <option value="">— Seleccionar Producto —</option>
+                                {allProducts
+                                    .filter(p => !p.requiresPreparation)
+                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        ) : form.type === 'prepared' ? (
+                            <select
+                                className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                                value={form.linkedProductId}
+                                onChange={e => upd('linkedProductId', e.target.value)}
+                            >
+                                <option value="">— Seleccionar Receta —</option>
+                                {allProducts
+                                    .filter(p => p.requiresPreparation)
+                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        ) : (
+                            <span className="hidden md:inline text-xs text-gray-400 italic">No aplica</span>
+                        )}
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2 md:pt-0">
+                        <button onClick={handleSave}
+                            className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700 shadow-sm transition-colors">
+                            Guardar
+                        </button>
+                        <button onClick={onCancel}
+                            className="bg-white hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold border transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             </td>
         </tr>
@@ -125,62 +133,74 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
     });
 
     return (
-        <tr className="bg-blue-50">
-            <td className="px-4 py-2">
-                <input autoFocus type="text"
-                    className="border rounded-lg px-2 py-1 text-sm w-full focus:ring-2 focus:ring-blue-400 outline-none"
-                    value={form.name}
-                    onChange={e => upd('name', e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSave()}
-                />
-            </td>
-            <td className="px-4 py-2">
-                <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-white text-sm w-28">
-                    <span className="text-gray-400">S/</span>
-                    <input type="number" step="0.01"
-                        className="w-full outline-none font-bold"
-                        value={form.individualPrice}
-                        onChange={e => upd('individualPrice', e.target.value)}
-                    />
-                </div>
-            </td>
-            <td className="px-4 py-2">
-                <select className="border rounded-lg px-2 py-1 text-sm w-full" value={form.type}
-                    onChange={e => upd('type', e.target.value)}>
-                    <option value="free">Libre (sin stock)</option>
-                    <option value="finished">Terminado</option>
-                    <option value="prepared">Preparado (Carta)</option>
-                </select>
-            </td>
-            <td className="px-4 py-2">
-                {form.type === 'finished' ? (
-                    <select className="border rounded-lg px-2 py-1 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400" value={form.linkedProductId || ''}
-                        onChange={e => upd('linkedProductId', e.target.value)}>
-                        <option value="">— Seleccionar Producto —</option>
-                        {allProducts
-                            .filter(p => !p.requiresPreparation)
-                            .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                ) : form.type === 'prepared' ? (
-                    <div className="flex items-center gap-1">
-                        <select className="border rounded-lg px-2 py-1 text-sm flex-1 outline-none focus:ring-2 focus:ring-amber-400" value={form.linkedProductId || ''}
-                            onChange={e => upd('linkedProductId', e.target.value)}>
-                            <option value="">— Seleccionar Receta —</option>
-                            {allProducts
-                                .filter(p => p.requiresPreparation)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        <tr className="bg-blue-50 border-y border-blue-100">
+            <td colSpan={5} className="p-3 md:p-4">
+                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                    <div className="flex-1">
+                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
+                        <input autoFocus type="text"
+                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-400 outline-none bg-white font-semibold"
+                            value={form.name}
+                            onChange={e => upd('name', e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSave()}
+                        />
+                    </div>
+                    <div className="w-full md:w-32">
+                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Precio Individual</label>
+                        <div className="flex items-center gap-1 border border-blue-200 rounded-lg px-3 py-2 bg-white text-sm">
+                            <span className="text-gray-400">S/</span>
+                            <input type="number" step="0.01"
+                                className="w-full outline-none font-bold"
+                                value={form.individualPrice}
+                                onChange={e => upd('individualPrice', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="w-full md:w-48">
+                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Tipo</label>
+                        <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-blue-400" value={form.type}
+                            onChange={e => upd('type', e.target.value)}>
+                            <option value="free">Libre (sin stock)</option>
+                            <option value="finished">Terminado</option>
+                            <option value="prepared">Preparado (Carta)</option>
                         </select>
                     </div>
-                ) : (
-                    <span className="text-xs text-gray-400 italic">No aplica</span>
-                )}
-            </td>
-            <td className="px-4 py-2">
-                <div className="flex items-center gap-1">
-                    <button onClick={handleSave}
-                        className="bg-green-500 text-white p-1.5 rounded-lg hover:bg-green-600"><Save size={14} /></button>
-                    <button onClick={onCancel}
-                        className="bg-gray-200 text-gray-600 p-1.5 rounded-lg hover:bg-gray-300"><X size={14} /></button>
+                    <div className="flex-1 min-w-[150px]">
+                        {form.type !== 'free' && (
+                            <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">
+                                {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
+                            </label>
+                        )}
+                        {form.type === 'finished' ? (
+                            <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white" value={form.linkedProductId || ''}
+                                onChange={e => upd('linkedProductId', e.target.value)}>
+                                <option value="">— Seleccionar Producto —</option>
+                                {allProducts
+                                    .filter(p => !p.requiresPreparation)
+                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        ) : form.type === 'prepared' ? (
+                            <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white" value={form.linkedProductId || ''}
+                                onChange={e => upd('linkedProductId', e.target.value)}>
+                                <option value="">— Seleccionar Receta —</option>
+                                {allProducts
+                                    .filter(p => p.requiresPreparation)
+                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        ) : (
+                            <span className="hidden md:inline text-xs text-gray-400 italic">No aplica</span>
+                        )}
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2 md:pt-0">
+                        <button onClick={handleSave}
+                            className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-600 shadow-sm transition-colors">
+                            Guardar
+                        </button>
+                        <button onClick={onCancel}
+                            className="bg-white hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold border transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             </td>
         </tr>
@@ -251,10 +271,18 @@ export default function DrinkPromotionsConfig() {
         loadData();
     };
 
-    const deletePromo = async (id) => {
-        if (!window.confirm('¿Eliminar esta categoría y todos sus tragos?')) return;
-        await axios.delete(`/api/drink-promotions/${id}`);
-        loadData();
+    const deletePromo = async (promo) => {
+        if (promo.DrinkPromotionItems && promo.DrinkPromotionItems.length > 0) {
+            alert("No se puede eliminar la categoría porque contiene tragos asociados. Debe eliminar todos los tragos de esta categoría primero.");
+            return;
+        }
+        if (!window.confirm(`¿Seguro que desea eliminar la categoría "${promo.name}"?`)) return;
+        try {
+            await axios.delete(`/api/drink-promotions/${promo.id}`);
+            loadData();
+        } catch (err) {
+            alert(err.response?.data?.error || "Error al eliminar categoría");
+        }
     };
 
     // ── ITEM CRUD ───────────────────────────────────────────────
@@ -385,7 +413,7 @@ export default function DrinkPromotionsConfig() {
                                     className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg" title="Editar categoría">
                                     <Edit2 size={14} />
                                 </button>
-                                <button onClick={() => deletePromo(promo.id)}
+                                <button onClick={() => deletePromo(promo)}
                                     className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg" title="Eliminar categoría">
                                     <Trash2 size={14} />
                                 </button>
@@ -400,14 +428,14 @@ export default function DrinkPromotionsConfig() {
                     </div>
 
                     {/* Items table */}
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm table-fixed">
                         <thead>
                             <tr className="text-xs text-gray-400 font-semibold border-b bg-gray-50">
-                                <th className="px-4 py-2 text-left">Nombre</th>
-                                <th className="px-4 py-2 text-left">Precio individual</th>
-                                <th className="px-4 py-2 text-left">Tipo</th>
-                                <th className="px-4 py-2 text-left">Vinculado a</th>
-                                <th className="px-4 py-2 text-left"></th>
+                                <th className="px-3 py-2 md:px-4 md:py-2 text-left">Nombre</th>
+                                <th className="px-3 py-2 md:px-4 md:py-2 text-left w-24 md:w-auto">Precio</th>
+                                <th className="hidden md:table-cell px-4 py-2 text-left">Tipo</th>
+                                <th className="hidden md:table-cell px-4 py-2 text-left">Vinculado a</th>
+                                <th className="px-3 py-2 md:px-4 md:py-2 text-right w-20 md:w-auto"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -430,16 +458,48 @@ export default function DrinkPromotionsConfig() {
                                     />
                                 ) : (
                                     <tr key={item.id} className="border-b border-dashed hover:bg-gray-50 group transition-colors">
-                                        <td className="px-4 py-2.5 font-medium text-gray-700">{item.name}</td>
-                                        <td className="px-4 py-2.5 text-gray-600">
+                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5 font-medium text-gray-700">
+                                            <div>{item.name}</div>
+                                            <div className="md:hidden mt-1 flex flex-wrap gap-1.5 items-center">
+                                                <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
+                                                    {TYPE_LABEL[item.type] || item.type}
+                                                </span>
+                                                {item.type === 'finished' && (
+                                                    <span className="text-blue-600 text-[9px] font-semibold">
+                                                        {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
+                                                    </span>
+                                                )}
+                                                {item.type === 'prepared' && (
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-amber-600 text-[9px] font-semibold">
+                                                            {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
+                                                        </span>
+                                                        {item.linkedProductId && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                    if (p) setRecipeProduct(p);
+                                                                }}
+                                                                className="p-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                title="Ver Receta"
+                                                            >
+                                                                <ChefHat size={9} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5 text-gray-600 font-mono font-bold">
                                             S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="hidden md:table-cell px-4 py-2.5">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
                                                 {TYPE_LABEL[item.type] || item.type}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="hidden md:table-cell px-4 py-2.5">
                                             {item.type === 'finished' ? (
                                                 <span className="text-blue-600 text-xs font-medium">
                                                     {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
@@ -467,15 +527,15 @@ export default function DrinkPromotionsConfig() {
                                                 <span className="text-gray-400 text-xs italic">—</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5">
-                                            <div className="hidden group-hover:flex items-center gap-1">
+                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5">
+                                            <div className="flex items-center gap-1.5 justify-end">
                                                 <button onClick={() => { setEditingItem({ ...item }); setAddingItemTo(null); }}
-                                                    className="p-1 text-blue-500 hover:bg-blue-50 rounded" title="Editar">
-                                                    <Edit2 size={13} />
+                                                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg" title="Editar">
+                                                    <Edit2 size={14} />
                                                 </button>
                                                 <button onClick={() => deleteItem(item.id)}
-                                                    className="p-1 text-red-400 hover:bg-red-50 rounded" title="Eliminar">
-                                                    <Trash2 size={13} />
+                                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg" title="Eliminar">
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </td>

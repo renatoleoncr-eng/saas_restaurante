@@ -1319,10 +1319,13 @@ router.get('/reports/daily', async (req, res) => {
                 { model: getModels().User, attributes: ['username', 'displayName'] },
                 {
                     model: Account,
+                    attributes: ['id', 'status', 'total', 'customerName'],
                     include: [
-                        { model: Order, include: [Product] },
-                        { model: Payment },
-                        { model: getModels().Table, include: [getModels().Area] }
+                        {
+                            model: getModels().Table,
+                            attributes: ['id', 'number'],
+                            include: [{ model: getModels().Area, attributes: ['id', 'name'] }]
+                        }
                     ]
                 }
             ],
