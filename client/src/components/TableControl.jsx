@@ -2513,7 +2513,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 className="w-full py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center justify-center gap-1.5 pointer-events-auto transition-transform active:scale-95 text-sm"
                             >
                                 <X size={16} />
-                                <span>Atrás</span>
+                                <span>Ir al salón</span>
                             </button>
                             <button
                                 onClick={() => setShowMobileCart(true)}
@@ -3253,7 +3253,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         disabled={isProcessingPayment}
                                         className={`flex-1 py-3 text-gray-700 rounded-lg font-bold transition-colors ${isProcessingPayment ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'}`}
                                     >
-                                        {isConfirmingPayment ? 'Mudar Método' : 'Cancelar'}
+                                        {isConfirmingPayment ? 'Atrás' : 'Cancelar'}
                                     </button>
                                     <button
                                         onClick={confirmPayment}

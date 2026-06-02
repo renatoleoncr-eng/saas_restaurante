@@ -514,9 +514,9 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
                 {list.map((item, idx) => {
                     return (
                         <div key={idx} className="bg-white p-2 md:p-3 rounded-lg border shadow-sm group hover:border-blue-300 transition-colors">
-                            <div className="flex gap-2 mb-0 items-start">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                 <select
-                                    className="flex-1 min-w-0 border p-2 rounded text-sm font-bold text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none truncate pr-6"
+                                    className="w-full sm:flex-1 min-w-0 border p-2 rounded text-sm font-bold text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none truncate pr-6"
                                     value={item.linkId || ''}
                                     onChange={e => updateItem(category, idx, 'linkId', e.target.value)}
                                 >
@@ -527,33 +527,35 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
                                         </option>
                                     ))}
                                 </select>
-                                <div className="flex justify-center items-center w-24 shrink-0 h-[38px]">
-                                    {item.linkId ? (
-                                        (() => {
-                                            const max = getTheoreticalMaxStock(item.linkId);
-                                            if (max !== null) {
+                                <div className="flex items-center justify-between sm:justify-center gap-2 sm:shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
+                                    <div className="flex justify-center items-center w-24 h-[38px] border border-dashed border-gray-100 rounded-lg sm:border-0 bg-gray-50/50 sm:bg-transparent px-2">
+                                        {item.linkId ? (
+                                            (() => {
+                                                const max = getTheoreticalMaxStock(item.linkId);
+                                                if (max !== null) {
+                                                    return (
+                                                        <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                            Stock: {max}
+                                                        </span>
+                                                    );
+                                                }
                                                 return (
-                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                                        Stock: {max}
+                                                    <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                        Libre
                                                     </span>
                                                 );
-                                            }
-                                            return (
-                                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                                    Libre
-                                                </span>
-                                            );
-                                        })()
-                                    ) : (
-                                        <span className="text-gray-400 text-xs font-bold">-</span>
-                                    )}
+                                            })()
+                                        ) : (
+                                            <span className="text-gray-400 text-xs font-bold">-</span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => deleteItem(category, idx)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded h-[38px] flex items-center justify-center border sm:border-0 border-gray-100 px-3 sm:px-2"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => deleteItem(category, idx)}
-                                    className="p-2 text-red-500 hover:bg-red-50 rounded shrink-0 h-[42px] flex items-center justify-center"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
                             </div>
                         </div>
                     );
