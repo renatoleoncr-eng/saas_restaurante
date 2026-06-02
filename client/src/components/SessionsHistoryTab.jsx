@@ -606,6 +606,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
