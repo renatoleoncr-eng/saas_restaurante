@@ -432,7 +432,9 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                             return (
                                                 <div 
                                                     key={catKey} 
-                                                    className={`bg-white border rounded-xl overflow-hidden shadow-xs flex flex-col transition-all duration-200 ${catColorClass}`}
+                                                    className={`bg-white border rounded-xl overflow-hidden shadow-xs flex flex-col transition-all duration-200 ${catColorClass} ${
+                                                        isCatExpanded ? 'col-span-2 sm:col-span-4 lg:col-span-5' : ''
+                                                    }`}
                                                 >
                                                     <div 
                                                         className="p-3.5 cursor-pointer hover:bg-gray-50 flex flex-col items-center text-center transition-colors relative"

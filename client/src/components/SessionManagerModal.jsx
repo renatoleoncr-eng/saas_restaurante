@@ -367,7 +367,12 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         {Object.entries(sessionData.salesSummary)
                                             .filter(([catKey, catData]) => catKey !== 'otros' || catData.count > 0)
                                             .map(([catKey, catData]) => (
-                                            <div key={catKey} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                                            <div 
+                                                key={catKey} 
+                                                className={`bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col transition-all duration-200 ${
+                                                    expandedCategory === catKey ? 'col-span-2 md:col-span-4' : ''
+                                                }`}
+                                            >
                                                 <div 
                                                     className="p-3 cursor-pointer hover:bg-gray-50 flex flex-col items-center text-center transition-colors relative"
                                                     onClick={() => setExpandedCategory(expandedCategory === catKey ? null : catKey)}
