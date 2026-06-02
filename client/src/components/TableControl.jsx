@@ -4,6 +4,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
+import PinPadModal from './PinPadModal';
 
 export default function TableControl({ tableId, accountId, onClose }) {
     const { user, refreshTrigger, refreshData } = useRestaurant();
@@ -984,24 +985,45 @@ export default function TableControl({ tableId, accountId, onClose }) {
         setPendingMenuProduct(null);
     };
 
+    const [showPinPad, setShowPinPad] = useState(false);
+    const [pinError, setPinError] = useState('');
+
     const sendOrder = async () => {
         if (cart.length === 0) return;
 
+        if (user?.requirePinPrompt) {
+            setPinError('');
+            setShowPinPad(true);
+            return;
+        }
+
+        await executeSendOrder();
+    };
+
+    const handlePinConfirm = async (enteredPin) => {
+        setPinError('');
+        const success = await executeSendOrder(enteredPin);
+        if (success) {
+            setShowPinPad(false);
+        }
+    };
+
+    const executeSendOrder = async (authorPin = null) => {
         let targetAccountId = account?.id;
 
         try {
             if (!targetAccountId) {
                 // Open account NOW because we are sending an order
                 const newAccount = await handleAutoOpen();
-                if (!newAccount) return;
+                if (!newAccount) return false;
                 targetAccountId = newAccount.id;
             }
 
             await axios.post('/api/orders', {
                 accountId: targetAccountId,
                 products: cart,
-                userId: user?.id || null
-
+                userId: user?.id || null,
+                authorPin: authorPin
             });
             setCart([]);
 
@@ -1014,10 +1036,16 @@ export default function TableControl({ tableId, accountId, onClose }) {
             refreshData();
 
             setShowMobileCart(false);
+            return true;
         } catch (err) {
             const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || 'Error enviando pedido';
-            alert(errorMsg);
+            if (user?.requirePinPrompt) {
+                setPinError(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
             console.error(err);
+            return false;
         }
     };
 
@@ -1662,6 +1690,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
                             }}
                         />
                     )}
+
+                    {/* Pin Pad Modal */}
+                    <PinPadModal
+                        isOpen={showPinPad}
+                        onClose={() => setShowPinPad(false)}
+                        onConfirm={handlePinConfirm}
+                        errorMsg={pinError}
+                    />
 
                     {/* Main Content Area — Flex column to support sticky footer */}
                     <div className="flex-1 flex flex-col min-h-0 p-3 pb-24 md:pb-4 overflow-hidden">

@@ -24,7 +24,9 @@ router.post('/login', async (req, res) => {
             id: user.id,
             username: user.username,
             role: user.role,
-            displayName: user.displayName
+            displayName: user.displayName,
+            requirePinPrompt: user.requirePinPrompt,
+            pin: user.pin
         });
 
     } catch (err) {

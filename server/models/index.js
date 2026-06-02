@@ -162,6 +162,15 @@ const User = sequelize.define('User', {
     displayName: {
         type: DataTypes.STRING,
         defaultValue: 'Staff'
+    },
+    pin: {
+        type: DataTypes.STRING(4),
+        allowNull: true,
+        unique: true
+    },
+    requirePinPrompt: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 });
 

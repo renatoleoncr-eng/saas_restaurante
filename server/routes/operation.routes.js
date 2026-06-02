@@ -954,7 +954,7 @@ router.post('/orders', async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-        const { accountId, products } = req.body;
+        const { accountId, products, authorPin } = req.body;
         let { userId } = req.body; // userId optional
 
         // Sanitize userId: Ensure it's a valid integer or null
@@ -968,6 +968,27 @@ router.post('/orders', async (req, res) => {
             }
         } else {
             userId = null;
+        }
+
+        // Validate PIN if terminal requires it, or if authorPin is provided
+        const { User } = getModels();
+        if (userId) {
+            const placingUser = await User.findByPk(userId);
+            if (placingUser && placingUser.requirePinPrompt) {
+                if (!authorPin) {
+                    await t.rollback();
+                    return res.status(400).json({ error: 'Se requiere PIN de mozo para confirmar el pedido en esta terminal.' });
+                }
+            }
+        }
+
+        if (authorPin) {
+            const pinUser = await User.findOne({ where: { pin: authorPin } });
+            if (!pinUser) {
+                await t.rollback();
+                return res.status(400).json({ error: 'PIN incorrecto o no asignado' });
+            }
+            userId = pinUser.id; // Override order creator with the actual mozo
         }
 
 

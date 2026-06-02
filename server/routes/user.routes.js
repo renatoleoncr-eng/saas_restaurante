@@ -10,7 +10,7 @@ const { logAction } = require('../utils/audit');
 router.get('/users', async (req, res) => {
     try {
         const users = await User.findAll({
-            attributes: ['id', 'username', 'displayName', 'role'] // Exclude password
+            attributes: ['id', 'username', 'displayName', 'role', 'pin', 'requirePinPrompt'] // Exclude password
         });
         res.json(users);
     } catch (err) {
@@ -21,17 +21,25 @@ router.get('/users', async (req, res) => {
 // CREATE USER (Admin)
 router.post('/users', async (req, res) => {
     try {
-        const { username, password, displayName, role } = req.body;
+        const { username, password, displayName, role, pin, requirePinPrompt } = req.body;
 
         // Check duplicate
         const existing = await User.findOne({ where: { username } });
         if (existing) return res.status(400).json({ error: 'El usuario ya existe' });
 
+        // Check duplicate PIN if provided
+        if (pin) {
+            const existingPin = await User.findOne({ where: { pin } });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+        }
+
         const newUser = await User.create({
             username,
             password, // Store plain/hashed as per current logic
             displayName,
-            role
+            role,
+            pin: pin || null,
+            requirePinPrompt: requirePinPrompt || false
         });
 
         await logAction(req, 'CREATE_USER', 'User', newUser.id, { username, role });
@@ -45,12 +53,20 @@ router.post('/users', async (req, res) => {
 // UPDATE USER (Admin)
 router.put('/users/:id', async (req, res) => {
     try {
-        const { displayName, role } = req.body;
+        const { displayName, role, pin, requirePinPrompt } = req.body;
         const user = await User.findByPk(req.params.id);
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        if (displayName) user.displayName = displayName;
-        if (role) user.role = role;
+        // Check duplicate PIN if provided and changed
+        if (pin && pin !== user.pin) {
+            const existingPin = await User.findOne({ where: { pin } });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+        }
+
+        if (displayName !== undefined) user.displayName = displayName;
+        if (role !== undefined) user.role = role;
+        user.pin = pin || null;
+        if (requirePinPrompt !== undefined) user.requirePinPrompt = requirePinPrompt;
 
         await user.save();
         await logAction(req, 'UPDATE_USER', 'User', user.id, { changes: req.body });

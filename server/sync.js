@@ -61,7 +61,11 @@ async function runAutomaticFix() {
         // INVOICES
         { table: 'Invoices', column: 'AccountId', type: 'INTEGER' },
         { table: 'Invoices', column: 'notaCredito', type: 'VARCHAR(255)' },
-        { table: 'Invoices', column: 'notaCreditoUrl', type: 'VARCHAR(255)' }
+        { table: 'Invoices', column: 'notaCreditoUrl', type: 'VARCHAR(255)' },
+
+        // USERS
+        { table: 'Users', column: 'pin', type: 'VARCHAR(4)' },
+        { table: 'Users', column: 'requirePinPrompt', type: 'BOOLEAN DEFAULT 0' }
     ];
 
     for (const m of migrations) {
@@ -79,6 +83,14 @@ async function runAutomaticFix() {
         console.log(`[Fix] Populated priceAtOrderAtCreation for legacy orders`);
     } catch (e) {
         console.error(`[Fix] Error populating priceAtOrderAtCreation:`, e);
+    }
+
+    // Create unique index for user pin in SQLite
+    try {
+        await sequelize.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_pin ON Users (pin);`);
+        console.log(`[Fix] Created unique index users_pin on Users (pin)`);
+    } catch (e) {
+        // Ignore
     }
 }
 

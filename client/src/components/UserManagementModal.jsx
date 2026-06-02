@@ -11,7 +11,7 @@ export default function UserManagementModal({ onClose }) {
     const [passwordModalTarget, setPasswordModalTarget] = useState(null);
 
     // Form State
-    const [formData, setFormData] = useState({ username: '', password: '', displayName: '', role: 'waiter' });
+    const [formData, setFormData] = useState({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
 
     useEffect(() => {
         loadUsers();
@@ -45,7 +45,9 @@ export default function UserManagementModal({ onClose }) {
                 // Update
                 await axios.put(`/api/users/${editingUser.id}`, {
                     displayName: formData.displayName,
-                    role: formData.role
+                    role: formData.role,
+                    pin: formData.pin,
+                    requirePinPrompt: formData.requirePinPrompt
                 });
             } else {
                 // Create
@@ -53,7 +55,7 @@ export default function UserManagementModal({ onClose }) {
             }
             setShowForm(false);
             setEditingUser(null);
-            setFormData({ username: '', password: '', displayName: '', role: 'waiter' });
+            setFormData({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
             loadUsers();
         } catch (err) {
             alert(err.response?.data?.error || 'Error guardando usuario');
@@ -66,7 +68,9 @@ export default function UserManagementModal({ onClose }) {
             username: user.username,
             password: '', // Password not editable directly here
             displayName: user.displayName,
-            role: user.role
+            role: user.role,
+            pin: user.pin || '',
+            requirePinPrompt: !!user.requirePinPrompt
         });
         setShowForm(true);
     };
@@ -160,13 +164,43 @@ export default function UserManagementModal({ onClose }) {
                                                 </select>
                                             </div>
 
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">PIN de Mozo (4 dígitos, opcional)</label>
+                                                <input
+                                                    type="text"
+                                                    maxLength={4}
+                                                    pattern="\d*"
+                                                    placeholder="Ej: 1234"
+                                                    className="w-full border p-2 rounded"
+                                                    value={formData.pin}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/\D/g, ''); // only digits
+                                                        setFormData({ ...formData, pin: val });
+                                                    }}
+                                                />
+                                                <p className="text-xs text-gray-400 mt-1">Usado para identificarse en terminales compartidas.</p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 pt-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="requirePinPrompt"
+                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                    checked={formData.requirePinPrompt}
+                                                    onChange={e => setFormData({ ...formData, requirePinPrompt: e.target.checked })}
+                                                />
+                                                <label htmlFor="requirePinPrompt" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
+                                                    Modo Terminal Compartida (Pedirá PIN para pedidos)
+                                                </label>
+                                            </div>
+
                                             <div className="flex justify-end gap-2 pt-4">
                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                         setShowForm(false);
                                                         setEditingUser(null);
-                                                        setFormData({ username: '', password: '', displayName: '', role: 'waiter' });
+                                                        setFormData({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
                                                     }}
                                                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                                                 >
@@ -195,6 +229,8 @@ export default function UserManagementModal({ onClose }) {
                                             <th className="px-6 py-4">Usuario</th>
                                             <th className="px-6 py-4">Nombre</th>
                                             <th className="px-6 py-4">Rol</th>
+                                            <th className="px-6 py-4">PIN</th>
+                                            <th className="px-6 py-4">Terminal</th>
                                             <th className="px-6 py-4 text-right">Acciones</th>
                                         </tr>
                                     </thead>
@@ -207,6 +243,18 @@ export default function UserManagementModal({ onClose }) {
                                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'kitchen' ? 'bg-orange-100 text-orange-700' : u.role === 'cashier' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                                         {u.role}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600 font-mono">{u.pin || '-'}</td>
+                                                <td className="px-6 py-4">
+                                                    {u.requirePinPrompt ? (
+                                                        <span className="px-2 py-1 rounded text-xs font-bold uppercase bg-red-100 text-red-700">
+                                                            SI
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 rounded text-xs font-bold uppercase bg-gray-100 text-gray-500">
+                                                            NO
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                     <button
