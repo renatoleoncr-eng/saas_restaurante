@@ -12,6 +12,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     const [expandedPaymentMethod, setExpandedPaymentMethod] = useState(null);
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
+    const [justOpened, setJustOpened] = useState(false);
 
     // Expense Modal states
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -92,6 +93,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                 openingCash: parseFloat(openingCash) || 0,
                 userId: user?.id
             });
+            setJustOpened(true);
             fetchCurrentSession();
         } catch (err) {
             alert(err.response?.data?.error || "Error al abrir sesión");
@@ -208,6 +210,26 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-blue-200 hover:shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
                             >
                                 <CheckCircle size={20} /> Abrir Turno de Salón
+                            </button>
+                        </div>
+                    ) : justOpened ? (
+                        /* JUST OPENED CONFIRMATION VIEW */
+                        <div className="space-y-6 py-6 text-center">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
+                                <CheckCircle size={36} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">¡Turno Abierto Exitosamente!</h3>
+                                <p className="text-gray-500 text-sm mt-1">
+                                    La caja ha sido iniciada con <span className="font-bold text-gray-700">S/ {parseFloat(openingCash || 0).toFixed(2)}</span>
+                                </p>
+                            </div>
+                            
+                            <button 
+                                onClick={onClose}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-green-100 transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
+                            >
+                                <Coffee size={20} /> Empezar / Ir al Salón
                             </button>
                         </div>
                     ) : !isClosingMode ? (

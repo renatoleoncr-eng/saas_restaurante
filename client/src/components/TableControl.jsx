@@ -1478,21 +1478,13 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     </span>
                 );
             } else {
-                return (
-                    <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
-                        Libre
-                    </span>
-                );
+                return null;
             }
         }
 
         const isManaged = prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited);
         if (!isManaged) {
-            return (
-                <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5 shadow-sm">
-                    Libre
-                </span>
-            );
+            return null;
         }
 
         if (isOutOfStock) {

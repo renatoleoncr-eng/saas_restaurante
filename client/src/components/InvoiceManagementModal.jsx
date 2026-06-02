@@ -566,7 +566,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 {history.map((doc) => (
                     <button 
                         key={doc.id}
-                        className="w-full text-left p-4 rounded-2xl md:rounded-3xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all group relative overflow-hidden active:scale-[0.98]"
+                        className="w-full text-left p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all group relative overflow-hidden active:scale-[0.98]"
                         onClick={() => {
                             if (isMobile) {
                                 setSelectedDocId(doc.id);
@@ -578,23 +578,26 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             }
                         }}
                     >
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="w-10 h-10 rounded-xl md:rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
-                                <Printer size={18} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="text-[10px] font-black text-slate-800 tracking-tight flex items-center gap-2 overflow-hidden">
-                                        <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                                            {doc.serie}-{doc.correlativo}
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-slate-50 text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all flex items-center justify-center shrink-0">
+                                    <Printer size={16} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <span className={`px-2 py-0.5 rounded uppercase text-[8px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                            {doc.tipoDocumento === '01' ? 'Factura' : 'Boleta'} {doc.serie}-{doc.correlativo}
                                         </span>
                                         {doc.status === 'anulado' && <span className="text-[8px] font-black text-rose-400 shrink-0">ANULADA</span>}
                                     </div>
-                                    <div className="text-[10px] font-black text-slate-900 shrink-0">S/ {parseFloat(doc.total).toFixed(2)}</div>
+                                    <div className="text-[9px] font-bold text-slate-500 truncate max-w-[130px] sm:max-w-[180px] uppercase">
+                                        {doc.clienteNombre || account.customerName || 'Varios'}
+                                    </div>
                                 </div>
-                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
-                                    {doc.clienteNombre || account.customerName || 'Varios'}
-                                </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <div className="text-xs font-black text-slate-900">S/ {parseFloat(doc.total).toFixed(2)}</div>
+                                <div className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{new Date(doc.createdAt).toLocaleDateString([], {day:'2-digit', month:'2-digit'})}</div>
                             </div>
                         </div>
                     </button>
