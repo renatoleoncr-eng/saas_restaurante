@@ -12,10 +12,11 @@ import { useNavigate } from 'react-router-dom';
 import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
 import BillingConfigModal from '../components/BillingConfigModal';
 import QrManagement from './QrManagement';
+import AuditLogView from '../components/AuditLogView';
 import { 
     LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
     Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard,
-    Tv, Menu
+    Tv, Menu, ClipboardList
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -32,9 +33,9 @@ export default function Dashboard() {
     // Role-based view protection
     useEffect(() => {
         const restrictedViews = {
-            waiter: ['drink_promos', 'qr_management'],
-            cashier: ['drink_promos'], 
-            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management']
+            waiter: ['drink_promos', 'qr_management', 'audit'],
+            cashier: ['drink_promos', 'audit'], 
+            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management', 'audit']
         };
 
         if (user && restrictedViews[user.role]?.includes(currentView)) {
@@ -137,6 +138,9 @@ export default function Dashboard() {
         }
         if (currentView === 'qr_management') {
             return <QrManagement />;
+        }
+        if (currentView === 'audit') {
+            return <AuditLogView />;
         }
 
         switch (user.role) {
@@ -359,6 +363,18 @@ export default function Dashboard() {
                             </button>
                         )}
 
+                        {/* Audit - Admin Only */}
+                        {user.role === 'admin' && (
+                            <button
+                                onClick={() => { setCurrentView('audit'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Auditoría"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'audit' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <ClipboardList size={20} />
+                                {!isCollapsed && <span>Auditoría</span>}
+                            </button>
+                        )}
+
                         {/* QrManagement option is now in the user popover menu */}
                     </nav>
 
@@ -444,7 +460,8 @@ export default function Dashboard() {
                          currentView === 'reports' ? 'Caja / Reportes' :
                          currentView === 'accounts' ? 'Historial Cuentas' :
                          currentView === 'drink_promos' ? 'Promociones 2x1' :
-                         currentView === 'qr_management' ? 'Pantalla Cliente' : 'Makala'}
+                         currentView === 'qr_management' ? 'Pantalla Cliente' :
+                         currentView === 'audit' ? 'Auditoría' : 'Makala'}
                     </span>
                     <div className="relative" ref={mobileMenuRef}>
                         <button

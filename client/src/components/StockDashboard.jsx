@@ -532,11 +532,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 <>
                     {/* General Create Form Modal (For standard products) */}
                     {creatingSection === 'general' && !readOnly && (
-                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in">
                             {/* Backdrop click to close */}
                             <div className="fixed inset-0" onClick={() => setCreatingSection(null)}></div>
                             
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] z-10 relative">
+                            <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-3xl rounded-none sm:rounded-xl shadow-2xl flex flex-col overflow-hidden z-10 relative animate-in zoom-in-95">
                                 {/* Modal Header */}
                                 <div className="p-4 border-b flex justify-between items-center bg-gray-50">
                                     <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
@@ -549,9 +549,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 </div>
 
                                 {/* Modal Body (Scrollable) */}
-                                <div className="p-6 overflow-y-auto space-y-5 flex-1">
+                                <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/30">
                                     {/* ---------------- GROUPED FIELDS (PRODUCT LEVEL) ---------------- */}
-                                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
                                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas (Inmutables tras creación)</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="col-span-1 md:col-span-2">
@@ -584,180 +584,341 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                     </div>
 
                                     {/* ---------------- INDEPENDENT FIELDS (VARIANTS) ---------------- */}
-                                    {activeTab !== 'menu_options' && (
-                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Presentaciones / Variantes (Independientes)</h4>
-                                                <button
-                                                    onClick={() => setEditForm({
-                                                        ...editForm,
-                                                        presentationsList: [...(editForm.presentationsList || []), { name: '', price: '0.00', stock: 0 }]
-                                                    })}
-                                                    className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-md hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100 transition-colors"
-                                                >
-                                                    <Plus size={12} /> Agregar Variante
-                                                </button>
-                                            </div>
+                                    {activeTab !== 'menu_options' && (() => {
+                                        const variants = editForm.presentationsList || [];
+                                        const hasMultipleVariants = variants.length > 1;
 
-                                            <div className="grid grid-cols-12 gap-2 text-xs font-bold text-gray-400 mb-2 px-1">
-                                                <div className="col-span-5">Nombre Presentación</div>
-                                                <div className="col-span-3">Precio (S/)</div>
-                                                <div className="col-span-3">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
-                                                <div className="col-span-1"></div>
-                                            </div>
+                                        if (!hasMultipleVariants) {
+                                            const p = variants[0] || { name: 'Estándar', price: '0.00', stock: 0 };
+                                            return (
+                                                <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm space-y-4">
+                                                    <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Precio y Stock (Sin Variantes)</h4>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const currentPrice = p.price || '0.00';
+                                                                setEditForm({
+                                                                    ...editForm,
+                                                                    presentationsList: [
+                                                                        { ...p, name: p.name === 'Estándar' ? 'Estándar' : p.name || 'Estándar' },
+                                                                        { name: '', price: currentPrice, stock: 0 }
+                                                                    ]
+                                                                });
+                                                            }}
+                                                            className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-md hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100 transition-colors"
+                                                        >
+                                                            <Plus size={12} /> Configurar Variantes
+                                                        </button>
+                                                    </div>
 
-                                            <div className="space-y-3">
-                                                {(editForm.presentationsList || []).map((p, idx) => (
-                                                    <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2.5">
-                                                        <div className="grid grid-cols-12 gap-2 items-center">
-                                                            <div className="col-span-5">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
-                                                                    className="w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none"
-                                                                    value={p.name}
-                                                                    onChange={e => {
-                                                                        const newList = [...editForm.presentationsList];
-                                                                        newList[idx].name = e.target.value;
-                                                                        setEditForm({ ...editForm, presentationsList: newList });
-                                                                    }}
-                                                                />
-                                                            </div>
-
-                                                            <div className="col-span-3">
-                                                                <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    placeholder="0.00"
-                                                                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-medium"
-                                                                    value={p.price}
-                                                                    onChange={e => {
-                                                                        const newList = [...editForm.presentationsList];
-                                                                        newList[idx].price = e.target.value;
-                                                                        setEditForm({ ...editForm, presentationsList: newList });
-                                                                    }}
-                                                                />
-                                                            </div>
-
-                                                            <div className="col-span-3">
-                                                                {editForm.isStockManaged ? (
-                                                                    <div className="relative">
-                                                                        <input
-                                                                            type="number"
-                                                                            placeholder="0"
-                                                                            disabled={!!p.id}
-                                                                            className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
-                                                                            value={p.stock || ''}
-                                                                            onChange={e => {
-                                                                                if (!p.id) {
-                                                                                    const newList = [...editForm.presentationsList];
-                                                                                    newList[idx].stock = e.target.value;
-                                                                                    setEditForm({ ...editForm, presentationsList: newList });
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                        {!!p.id && (
-                                                                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                                                <span className="text-gray-400 text-xs">🔒</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="text-xs text-gray-400 italic flex items-center h-full pl-2">N/A</span>
-                                                                )}
-                                                            </div>
-
-                                                            <div className="col-span-1 flex justify-center">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const newList = editForm.presentationsList.filter((_, i) => i !== idx);
-                                                                        setEditForm({ ...editForm, presentationsList: newList });
-                                                                    }}
-                                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
-                                                                    title="Eliminar Variante"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-bold text-gray-700 mb-1">Precio (S/)</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                placeholder="0.00"
+                                                                className="w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                                                value={p.price}
+                                                                onChange={e => {
+                                                                    const newList = [...variants];
+                                                                    if (newList.length === 0) newList.push({ name: 'Estándar', price: '0.00', stock: 0 });
+                                                                    newList[0].price = e.target.value;
+                                                                    setEditForm({ ...editForm, price: e.target.value, presentationsList: newList });
+                                                                }}
+                                                            />
                                                         </div>
 
-                                                        {/* Happy Hour Row */}
-                                                        <div className="border-t border-dashed border-gray-100 pt-2">
-                                                            <div className="flex flex-wrap items-center gap-3">
-                                                                <label htmlFor={`hh_${idx}`} className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                                        <div>
+                                                            <label className="block text-sm font-bold text-gray-700 mb-1">Stock</label>
+                                                            {editForm.isStockManaged ? (
+                                                                <div className="relative">
                                                                     <input
-                                                                        type="checkbox"
-                                                                        id={`hh_${idx}`}
-                                                                        checked={p.happyHourPrice !== null && p.happyHourPrice !== undefined}
+                                                                        type="number"
+                                                                        placeholder="0"
+                                                                        disabled={!!p.id}
+                                                                        className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
+                                                                        value={p.stock || ''}
                                                                         onChange={e => {
-                                                                            const newList = [...editForm.presentationsList];
-                                                                            if (e.target.checked) {
-                                                                                newList[idx].happyHourPrice = p.price || '';
-                                                                                newList[idx].happyHourStart = '10:00';
-                                                                                newList[idx].happyHourEnd = '17:00';
-                                                                            } else {
-                                                                                newList[idx].happyHourPrice = null;
-                                                                                newList[idx].happyHourStart = null;
-                                                                                newList[idx].happyHourEnd = null;
+                                                                            if (!p.id) {
+                                                                                const newList = [...variants];
+                                                                                if (newList.length === 0) newList.push({ name: 'Estándar', price: '0.00', stock: 0 });
+                                                                                newList[0].stock = e.target.value;
+                                                                                setEditForm({ ...editForm, stock: e.target.value, presentationsList: newList });
                                                                             }
-                                                                            setEditForm({ ...editForm, presentationsList: newList });
                                                                         }}
-                                                                        className="accent-yellow-600 w-3.5 h-3.5"
                                                                     />
-                                                                    Happy Hour
-                                                                </label>
-                                                                {(p.happyHourPrice !== null && p.happyHourPrice !== undefined) && (
-                                                                    <div className="flex items-center justify-start gap-2 text-xs">
-                                                                        <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Precio S/</span>
-                                                                            <input
-                                                                                type="number"
-                                                                                step="0.01"
-                                                                                placeholder="0.00"
-                                                                                className="w-16 p-0 border-none outline-none font-bold text-right text-yellow-700 font-medium"
-                                                                                value={p.happyHourPrice || ''}
-                                                                                onChange={e => {
-                                                                                    const newList = [...editForm.presentationsList];
-                                                                                    newList[idx].happyHourPrice = e.target.value;
-                                                                                    setEditForm({ ...editForm, presentationsList: newList });
-                                                                                }}
-                                                                            />
+                                                                    {!!p.id && (
+                                                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                                            <span className="text-gray-400 text-xs">🔒</span>
                                                                         </div>
-                                                                        <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Inicio</span>
-                                                                            <input
-                                                                                type="time"
-                                                                                className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
-                                                                                value={p.happyHourStart || ''}
-                                                                                onChange={e => {
-                                                                                    const newList = [...editForm.presentationsList];
-                                                                                    newList[idx].happyHourStart = e.target.value;
-                                                                                    setEditForm({ ...editForm, presentationsList: newList });
-                                                                                }}
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200">
-                                                                            <span className="text-gray-500 font-bold">Fin</span>
-                                                                            <input
-                                                                                type="time"
-                                                                                className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
-                                                                                value={p.happyHourEnd || ''}
-                                                                                onChange={e => {
-                                                                                    const newList = [...editForm.presentationsList];
-                                                                                    newList[idx].happyHourEnd = e.target.value;
-                                                                                    setEditForm({ ...editForm, presentationsList: newList });
-                                                                                }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400 italic flex items-center h-full pl-2">N/A (Stock no gestionado)</span>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                ))}
+
+                                                    {/* Happy Hour Row */}
+                                                    <div className="border-t border-dashed border-gray-200 pt-3">
+                                                        <div className="flex flex-wrap items-center gap-3">
+                                                            <label htmlFor="hh_simple" className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id="hh_simple"
+                                                                    checked={p.happyHourPrice !== null && p.happyHourPrice !== undefined}
+                                                                    onChange={e => {
+                                                                        const newList = [...variants];
+                                                                        if (newList.length === 0) newList.push({ name: 'Estándar', price: '0.00', stock: 0 });
+                                                                        if (e.target.checked) {
+                                                                            newList[0].happyHourPrice = p.price || '';
+                                                                            newList[0].happyHourStart = '10:00';
+                                                                            newList[0].happyHourEnd = '17:00';
+                                                                        } else {
+                                                                            newList[0].happyHourPrice = null;
+                                                                            newList[0].happyHourStart = null;
+                                                                            newList[0].happyHourEnd = null;
+                                                                        }
+                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                    }}
+                                                                    className="accent-yellow-600 w-3.5 h-3.5"
+                                                                />
+                                                                Happy Hour
+                                                            </label>
+                                                            {(p.happyHourPrice !== null && p.happyHourPrice !== undefined) && (
+                                                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                                    <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                        <span className="text-gray-500 font-bold">Precio S/</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            placeholder="0.00"
+                                                                            className="w-16 p-0 border-none outline-none font-bold text-right text-yellow-700 font-medium bg-transparent"
+                                                                            value={p.happyHourPrice || ''}
+                                                                            onChange={e => {
+                                                                                const newList = [...variants];
+                                                                                newList[0].happyHourPrice = e.target.value;
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                        <span className="text-gray-500 font-bold">Inicio</span>
+                                                                        <input
+                                                                            type="time"
+                                                                            className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
+                                                                            value={p.happyHourStart || ''}
+                                                                            onChange={e => {
+                                                                                const newList = [...variants];
+                                                                                newList[0].happyHourStart = e.target.value;
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                        <span className="text-gray-500 font-bold">Fin</span>
+                                                                        <input
+                                                                            type="time"
+                                                                            className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
+                                                                            value={p.happyHourEnd || ''}
+                                                                            onChange={e => {
+                                                                                const newList = [...variants];
+                                                                                newList[0].happyHourEnd = e.target.value;
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        // Render Multi-Variants View (variants.length > 1)
+                                        return (
+                                            <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Presentaciones / Variantes (Múltiples)</h4>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditForm({
+                                                            ...editForm,
+                                                            presentationsList: [...variants, { name: '', price: '0.00', stock: 0 }]
+                                                        })}
+                                                        className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-md hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100 transition-colors"
+                                                    >
+                                                        <Plus size={12} /> Agregar Variante
+                                                    </button>
+                                                </div>
+
+                                                <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-bold text-gray-400 mb-2 px-1">
+                                                    <div className="col-span-5">Nombre Presentación</div>
+                                                    <div className="col-span-3">Precio (S/)</div>
+                                                    <div className="col-span-3">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
+                                                    <div className="col-span-1"></div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {variants.map((p, idx) => (
+                                                        <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2.5">
+                                                            <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-2 items-stretch sm:items-center">
+                                                                <div className="sm:col-span-5">
+                                                                    <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre Presentación</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
+                                                                        className="w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white animate-in"
+                                                                        value={p.name}
+                                                                        onChange={e => {
+                                                                            const newList = [...editForm.presentationsList];
+                                                                            newList[idx].name = e.target.value;
+                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                <div className="sm:col-span-3">
+                                                                    <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Precio (S/)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        placeholder="0.00"
+                                                                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-white"
+                                                                        value={p.price}
+                                                                        onChange={e => {
+                                                                            const newList = [...editForm.presentationsList];
+                                                                            newList[idx].price = e.target.value;
+                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                <div className="sm:col-span-3">
+                                                                    <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Stock</label>
+                                                                    {editForm.isStockManaged ? (
+                                                                        <div className="relative font-medium">
+                                                                            <input
+                                                                                type="number"
+                                                                                placeholder="0"
+                                                                                disabled={!!p.id}
+                                                                                className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
+                                                                                value={p.stock || ''}
+                                                                                onChange={e => {
+                                                                                    if (!p.id) {
+                                                                                        const newList = [...editForm.presentationsList];
+                                                                                        newList[idx].stock = e.target.value;
+                                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                            {!!p.id && (
+                                                                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                                                    <span className="text-gray-400 text-xs">🔒</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-xs text-gray-400 italic flex items-center h-full pl-2 bg-gray-50 p-2 rounded">N/A</span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const newList = editForm.presentationsList.filter((_, i) => i !== idx);
+                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                        }}
+                                                                        className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
+                                                                        title="Eliminar Variante"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Happy Hour Row */}
+                                                            <div className="border-t border-dashed border-gray-100 pt-2">
+                                                                <div className="flex flex-wrap items-center gap-3">
+                                                                    <label htmlFor={`hh_${idx}`} className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors animate-in">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            id={`hh_${idx}`}
+                                                                            checked={p.happyHourPrice !== null && p.happyHourPrice !== undefined}
+                                                                            onChange={e => {
+                                                                                const newList = [...editForm.presentationsList];
+                                                                                if (e.target.checked) {
+                                                                                    newList[idx].happyHourPrice = p.price || '';
+                                                                                    newList[idx].happyHourStart = '10:00';
+                                                                                    newList[idx].happyHourEnd = '17:00';
+                                                                                } else {
+                                                                                    newList[idx].happyHourPrice = null;
+                                                                                    newList[idx].happyHourStart = null;
+                                                                                    newList[idx].happyHourEnd = null;
+                                                                                }
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                            className="accent-yellow-600 w-3.5 h-3.5"
+                                                                        />
+                                                                        Happy Hour
+                                                                    </label>
+                                                                    {(p.happyHourPrice !== null && p.happyHourPrice !== undefined) && (
+                                                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                                            <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                                <span className="text-gray-500 font-bold">Precio S/</span>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    step="0.01"
+                                                                                    placeholder="0.00"
+                                                                                    className="w-16 p-0 border-none outline-none font-bold text-right text-yellow-700 font-medium bg-transparent"
+                                                                                    value={p.happyHourPrice || ''}
+                                                                                    onChange={e => {
+                                                                                        const newList = [...editForm.presentationsList];
+                                                                                        newList[idx].happyHourPrice = e.target.value;
+                                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                                <span className="text-gray-500 font-bold">Inicio</span>
+                                                                                <input
+                                                                                    type="time"
+                                                                                    className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
+                                                                                    value={p.happyHourStart || ''}
+                                                                                    onChange={e => {
+                                                                                        const newList = [...editForm.presentationsList];
+                                                                                        newList[idx].happyHourStart = e.target.value;
+                                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded border border-yellow-200 animate-in fade-in">
+                                                                                <span className="text-gray-500 font-bold">Fin</span>
+                                                                                <input
+                                                                                    type="time"
+                                                                                    className="w-20 p-0 border-none outline-none font-bold text-yellow-700 bg-transparent"
+                                                                                    value={p.happyHourEnd || ''}
+                                                                                    onChange={e => {
+                                                                                        const newList = [...editForm.presentationsList];
+                                                                                        newList[idx].happyHourEnd = e.target.value;
+                                                                                        setEditForm({ ...editForm, presentationsList: newList });
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Modal Footer */}

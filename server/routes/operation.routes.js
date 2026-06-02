@@ -1266,6 +1266,82 @@ router.delete('/orders/:id', async (req, res) => {
     }
 });
 
+// Decrement Order quantity by 1
+router.put('/orders/:id/decrement', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { Order, Product, Account } = getModels();
+        const order = await Order.findByPk(id, {
+            include: [Product]
+        });
+
+        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        if (order.quantity <= 1) {
+            return res.status(400).json({ error: 'La cantidad mínima es 1. Use DELETE para eliminar el pedido.' });
+        }
+
+        const account = await Account.findByPk(order.AccountId);
+        if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
+
+        const orderPrice = parseFloat(order.priceAtOrder || 0);
+
+        // 1. Decrement quantity
+        order.quantity = order.quantity - 1;
+        await order.save();
+
+        // 2. Recalculate Account Total safely
+        account.total = Math.max(0, parseFloat(account.total) - orderPrice);
+        await account.save();
+
+        // 3. Audit log
+        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+        await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: 1, accountId: order.AccountId, tableId: account.TableId, comment: "Reducción de cantidad por 1" });
+
+        // 4. Respond FAST
+        res.json({ success: true, message: 'Cantidad reducida. Restaurando stock en segundo plano...', quantity: order.quantity });
+
+        // 5. Background: Restore Stock & Notify
+        (async () => {
+            try {
+                // Restore stock for 1 unit of main product
+                await processStockChange(order.ProductId, 1, false, order.presentation, null, order.UserId, order.AccountId);
+
+                // Restore stock for subItems with scale 1
+                if (order.subItemsData) {
+                    const subItems = typeof order.subItemsData === 'string' ? JSON.parse(order.subItemsData) : order.subItemsData;
+                    if (Array.isArray(subItems)) {
+                        for (const sub of subItems) {
+                            const totalSubQty = (sub.quantity || 1) * 1; // exactly 1 order quantity reduced!
+
+                            // A. Restore Menu Config Stock (Virtual Limit)
+                            if (sub.menuItemId) {
+                                await updateDailyMenuStock(sub.menuItemId, totalSubQty, false);
+                            }
+
+                            // B. Restore Physical Inventory (if linked)
+                            if (sub.productId) {
+                                await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId);
+                            }
+                        }
+                    }
+                }
+
+                const io = req.app.get('io');
+                if (io && account) {
+                    io.emit('new_order', { accountId: account.id, tableId: account.TableId });
+                    io.emit('product_updated', {});
+                }
+            } catch (bgErr) {
+                console.error("ERROR RESTORING STOCK IN BACKGROUND ON DECREMENT:", bgErr);
+            }
+        })();
+
+    } catch (err) {
+        console.error("ERROR DECREMENTING ORDER:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- KITCHEN / OPERATIONS ---
 
 // Get All Active Orders (grouped by Account)

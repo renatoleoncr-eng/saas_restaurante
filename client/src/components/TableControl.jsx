@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download } from 'lucide-react';
@@ -46,11 +47,6 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
     const handlePrintLocalInvoice = (invoice) => {
         if (!invoice) return;
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            alert("Por favor habilita las ventanas emergentes (pop-ups) para ver e imprimir el ticket.");
-            return;
-        }
 
         const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
         const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
@@ -103,7 +99,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
 
-        printWindow.document.write(`
+        const printableHtml = `
             <html>
             <head>
                 <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
@@ -235,17 +231,33 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     <span>Autorizado mediante Resolución de SUNAT</span><br><br>
                     <b>¡Gracias por su preferencia!</b>
                 </div>
-                
-                <script>
-                    window.onload = function() {
-                        window.print();
-                        setTimeout(function() { window.close(); }, 500);
-                    }
-                </script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        // Create invisible iframe for printing
+        let iframe = document.getElementById('print-iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
+        iframe.contentWindow.document.open();
+        iframe.contentWindow.document.write(printableHtml);
+        iframe.contentWindow.document.close();
+
+        // Trigger print after load
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }, 300);
     };
 
     const handleDownloadLocalXml = (invoice) => {
@@ -436,7 +448,11 @@ export default function TableControl({ tableId, accountId, onClose }) {
         }
 
         const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
-        window.open(waUrl, '_blank');
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            window.location.href = waUrl;
+        } else {
+            window.open(waUrl, '_blank');
+        }
     };
 
     const searchClientData = async () => {
@@ -751,8 +767,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 tableId,
                 customerName: clientForm.accountType === 'staff' ? 'Personal' : 'Cliente',
                 clientDni: '',
+                clientAddress: clientForm.direccion || '',
                 userId: user?.id || null,
-
                 accountType: clientForm.accountType
             });
             setAccount(res.data);
@@ -1072,6 +1088,23 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
         } catch (err) {
             alert("Error eliminando pedido");
+            console.error(err);
+        }
+    };
+
+    const handleDecrementOrder = async (orderId) => {
+        try {
+            await axios.put(`/api/orders/${orderId}/decrement`);
+            // Force reload manually to see price update immediately
+            const accRes = await axios.get(`/api/accounts/table/${tableId}`);
+            setAccount(accRes.data);
+
+            // Force Menu Refresh immediately to update Stock UI
+            await fetchDailyMenu();
+            refreshData();
+
+        } catch (err) {
+            alert("Error reduciendo cantidad de pedido");
             console.error(err);
         }
     };
@@ -1410,9 +1443,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
     }; const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const accountTotal = account ? parseFloat(account.total) : 0;
 
-    if (loading) return <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">Cargando...</div>;
+    if (loading) {
+        return createPortal(
+            <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">Cargando...</div>,
+            document.body
+        );
+    }
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-stretch md:items-center justify-center p-0 md:p-4 z-50">
             <div className="bg-white w-full h-[100dvh] md:h-[90vh] md:max-w-6xl rounded-none md:rounded-lg shadow-2xl flex flex-col md:flex-row overflow-hidden relative">
 
@@ -1428,11 +1466,134 @@ export default function TableControl({ tableId, accountId, onClose }) {
                             {/* Account Info in Cart View */}
                             {account && (
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600 text-sm">Cuenta #{account.id}</span>
-                                        <span className="font-bold text-lg text-blue-800">Total: S/ {Number(accountTotal.toFixed(1))}</span>
+                                    {isEditingClient ? (
+                                        <div className="bg-white p-3 rounded border shadow-sm space-y-2">
+                                            <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    id="staff_toggle_edit_mobile"
+                                                    checked={clientForm.accountType === 'staff'}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setShowStaffConfirm(true); // Open custom modal
+                                                        } else {
+                                                            setClientForm({ ...clientForm, accountType: 'standard' });
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="staff_toggle_edit_mobile" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
+                                            </div>
+                                            {clientForm.accountType === 'staff' ? (
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                                    <input 
+                                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                        value={clientForm.direccion || ''} 
+                                                        onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                        placeholder="Escriba un comentario (ej: Juan Pérez)" 
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex gap-2">
+                                                        <input 
+                                                            className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                            value={clientForm.dni} 
+                                                            onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
+                                                            placeholder="DNI / RUC" 
+                                                            onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
+                                                        />
+                                                        <button 
+                                                            onClick={searchClientData} 
+                                                            disabled={isSearchingClient} 
+                                                            className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
+                                                            title="Buscar datos"
+                                                        >
+                                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
+                                                        </button>
+                                                    </div>
+                                                    <input 
+                                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                        value={clientForm.name} 
+                                                        onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
+                                                        placeholder="Nombre / Razón Social" 
+                                                    />
+                                                    {clientForm.dni && clientForm.dni.trim().length === 11 && (
+                                                        <input 
+                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1 bg-white" 
+                                                            value={clientForm.direccion || ''} 
+                                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                            placeholder="Dirección Fiscal" 
+                                                        />
+                                                    )}
+                                                </>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm font-medium">Cancelar</button>
+                                                <button onClick={updateClientInfo} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm font-medium">Guardar</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-600 text-sm">Cuenta #{account.id}</span>
+                                                <span className="font-bold text-lg text-blue-800">Total: S/ {Number(accountTotal.toFixed(1))}</span>
+                                            </div>
+                                            <div className="flex justify-between items-start mt-2">
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-800 font-bold">{account.customerName}</span>
+                                                        {account.accountType === 'staff' && (
+                                                            <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
+                                                        )}
+                                                    </div>
+                                                    {account.clientDni && (
+                                                        <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
+                                                    )}
+                                                    {account.accountType === 'staff' && account.clientAddress && (
+                                                        <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
+                                                            Nota: {account.clientAddress}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-bold px-2 py-1 rounded bg-white border border-blue-200 hover:bg-blue-50">Editar Cliente</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* New Account Info in Cart View (Checkbox Staff + Comment) */}
+                            {!account && (
+                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 mb-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="staff_toggle_new_mobile"
+                                            checked={clientForm.accountType === 'staff'}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setShowStaffConfirm(true); // Open custom modal
+                                                } else {
+                                                    setClientForm({ ...clientForm, accountType: 'standard' });
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="staff_toggle_new_mobile" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
                                     </div>
-                                    <div className="text-xs text-gray-500 mt-1">{account.customerName}</div>
+                                    {clientForm.accountType === 'staff' && (
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                            <input 
+                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                value={clientForm.direccion || ''} 
+                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                placeholder="Escriba un comentario..." 
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1466,7 +1627,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
                                                     {/* Actions */}
                                                     <div className="flex items-center gap-2">
-                                                        {user.role === 'admin' && (
+                                                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
                                                             deleteConfirmId === o.id ? (
                                                                 <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                                     <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
@@ -1480,13 +1641,24 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                     >No</button>
                                                                 </div>
                                                             ) : (
-                                                                <button
-                                                                    onClick={() => setDeleteConfirmId(o.id)}
-                                                                    className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
-                                                                    title="Eliminar Pedido (Admin)"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {o.quantity > 1 && (
+                                                                        <button
+                                                                            onClick={() => handleDecrementOrder(o.id)}
+                                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded-lg transition-colors"
+                                                                            title="Reducir Cantidad"
+                                                                        >
+                                                                            <Minus size={14} />
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => setDeleteConfirmId(o.id)}
+                                                                        className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
+                                                                        title="Eliminar Pedido"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
                                                             )
                                                         )}
                                                     </div>
@@ -1640,7 +1812,13 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     </button>
                                 )}
                             </div>
-                            <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full md:hidden"><X /></button>
+                            <button 
+                                onClick={handleClose} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold md:hidden"
+                            >
+                                <X size={16} />
+                                <span>Atrás</span>
+                            </button>
                         </div>
 
                         {/* Search Bar */}
@@ -1750,7 +1928,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     key={`${prod.id}-${displayStock}`}
                                                     disabled={isOutOfStock}
                                                     onClick={() => handleProductClick(prod)}
-                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between h-44 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
+                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between min-h-[11rem] h-auto pb-4 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
                                                 >
                                                     {cartQty > 0 && (
                                                         <div className="absolute top-2 right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
@@ -1771,7 +1949,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 {variantsList.map((variant, idx) => {
                                                                     const isHH = variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd);
                                                                     return (
-                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-4 py-1.5 rounded-full text-base font-bold border shadow-sm flex items-center gap-1`}>
+                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
                                                                             {isHH && <Clock size={14} />}
                                                                             S/ {Number(parseFloat(isHH ? variant.happyHourPrice : variant.price).toFixed(1))}
                                                                         </div>
@@ -1779,12 +1957,12 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 })}
                                                             </div>
                                                         ) : hasVariants && variantsList.length === 1 ? (
-                                                            <div className={`${variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-base px-4 py-1.5 rounded-full border flex items-center gap-1`}>
+                                                            <div className={`${variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-1.5 rounded-full border flex items-center gap-1`}>
                                                                 {variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) && <Clock size={14} />}
                                                                 S/ {Number(parseFloat(variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? variantsList[0].happyHourPrice : variantsList[0].price).toFixed(1))}
                                                             </div>
                                                         ) : (
-                                                            <div className={`${prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-base px-4 py-1.5 rounded-full border flex items-center gap-1`}>
+                                                            <div className={`${prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-1.5 rounded-full border flex items-center gap-1`}>
                                                                 {prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) && <Clock size={14} />}
                                                                 S/ {Number(parseFloat(prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? prod.happyHourPrice : prod.price).toFixed(1))}
                                                             </div>
@@ -1852,7 +2030,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                     key={`${prod.id}-${displayStock}`}
                                                     disabled={isOutOfStock}
                                                     onClick={() => handleProductClick(prod)}
-                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between h-40 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
+                                                    className={`bg-white p-3 rounded-xl border shadow-sm text-center flex flex-col items-center justify-between min-h-[10rem] h-auto pb-4 relative active:scale-95 transition-all ${isOutOfStock ? 'opacity-60' : ''} ${needsExtraWidth ? 'md:col-span-2' : ''}`}
                                                 >
                                                     {cartQty > 0 && (
                                                         <div className="absolute top-2 right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
@@ -1873,7 +2051,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 {variantsList.map((variant, idx) => {
                                                                     const isHH = variant.happyHourPrice && isHappyHourActive(variant.happyHourStart, variant.happyHourEnd);
                                                                     return (
-                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-4 py-1.5 rounded-full text-base font-bold border shadow-sm flex items-center gap-1`}>
+                                                                        <div key={idx} className={`${isHH ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-base font-bold border shadow-sm flex items-center gap-1`}>
                                                                             {isHH && <Clock size={14} />}
                                                                             S/ {Number(parseFloat(isHH ? variant.happyHourPrice : variant.price).toFixed(1))}
                                                                         </div>
@@ -1881,12 +2059,12 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 })}
                                                             </div>
                                                         ) : hasVariants && variantsList.length === 1 ? (
-                                                            <div className={`${variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-base px-4 py-1.5 rounded-full border flex items-center gap-1`}>
+                                                            <div className={`${variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-1.5 rounded-full border flex items-center gap-1`}>
                                                                 {variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) && <Clock size={14} />}
                                                                 S/ {Number(parseFloat(variantsList[0].happyHourPrice && isHappyHourActive(variantsList[0].happyHourStart, variantsList[0].happyHourEnd) ? variantsList[0].happyHourPrice : variantsList[0].price).toFixed(1))}
                                                             </div>
                                                         ) : (
-                                                            <div className={`${prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-base px-4 py-1.5 rounded-full border flex items-center gap-1`}>
+                                                            <div className={`${prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-blue-50 text-blue-600 border-blue-100'} font-bold text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-1.5 rounded-full border flex items-center gap-1`}>
                                                                 {prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) && <Clock size={14} />}
                                                                 S/ {Number(parseFloat(prod.happyHourPrice && isHappyHourActive(prod.happyHourStart, prod.happyHourEnd) ? prod.happyHourPrice : prod.price).toFixed(1))}
                                                             </div>
@@ -2317,36 +2495,50 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         />
                                         <label htmlFor="staff_toggle_edit" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <input 
-                                            className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                            value={clientForm.dni} 
-                                            onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
-                                            placeholder="DNI / RUC" 
-                                            onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
-                                        />
-                                        <button 
-                                            onClick={searchClientData} 
-                                            disabled={isSearchingClient} 
-                                            className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
-                                            title="Buscar datos"
-                                        >
-                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
-                                        </button>
-                                    </div>
-                                    <input 
-                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                        value={clientForm.name} 
-                                        onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
-                                        placeholder="Nombre / Razón Social" 
-                                    />
-                                    {clientForm.dni && clientForm.dni.trim().length === 11 && (
-                                        <input 
-                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1" 
-                                            value={clientForm.direccion || ''} 
-                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                            placeholder="Dirección Fiscal" 
-                                        />
+                                    {clientForm.accountType === 'staff' ? (
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                            <input 
+                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                                value={clientForm.direccion || ''} 
+                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                placeholder="Escriba un comentario (ej: Juan Pérez)" 
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                                    value={clientForm.dni} 
+                                                    onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
+                                                    placeholder="DNI / RUC" 
+                                                    onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
+                                                />
+                                                <button 
+                                                    onClick={searchClientData} 
+                                                    disabled={isSearchingClient} 
+                                                    className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
+                                                    title="Buscar datos"
+                                                >
+                                                    {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
+                                                </button>
+                                            </div>
+                                            <input 
+                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                                value={clientForm.name} 
+                                                onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
+                                                placeholder="Nombre / Razón Social" 
+                                            />
+                                            {clientForm.dni && clientForm.dni.trim().length === 11 && (
+                                                <input 
+                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1" 
+                                                    value={clientForm.direccion || ''} 
+                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                    placeholder="Dirección Fiscal" 
+                                                />
+                                            )}
+                                        </>
                                     )}
                                     <div className="flex gap-2">
                                         <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm">Cancelar</button>
@@ -2365,6 +2557,11 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             </div>
                                             {account.clientDni && (
                                                 <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
+                                            )}
+                                            {account.accountType === 'staff' && account.clientAddress && (
+                                                <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
+                                                    Nota: {account.clientAddress}
+                                                </div>
                                             )}
                                         </div>
                                         <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-semibold px-2 py-1 rounded hover:bg-blue-50">Editar Cliente</button>
@@ -2389,6 +2586,17 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     />
                                     <label htmlFor="staff_toggle_new" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
                                 </div>
+                                {clientForm.accountType === 'staff' && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                        <input 
+                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                            value={clientForm.direccion || ''} 
+                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                            placeholder="Escriba un comentario..." 
+                                        />
+                                    </div>
+                                )}
                                 <div className="text-sm text-gray-500 italic">
                                     Agrega productos para abrir la mesa.
                                 </div>
@@ -2471,7 +2679,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
                                             {/* Actions */}
                                             <div className="flex items-center gap-2">
-                                                {user.role === 'admin' && (
+                                                {['admin', 'waiter', 'cashier'].includes(user.role) && (
                                                     deleteConfirmId === o.id ? (
                                                         <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                             <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
@@ -2485,13 +2693,24 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                             >No</button>
                                                         </div>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => setDeleteConfirmId(o.id)}
-                                                            className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
-                                                            title="Eliminar Pedido (Admin)"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                        <div className="flex items-center gap-1.5">
+                                                            {o.quantity > 1 && (
+                                                                <button
+                                                                    onClick={() => handleDecrementOrder(o.id)}
+                                                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded-lg transition-colors"
+                                                                    title="Reducir Cantidad"
+                                                                >
+                                                                    <Minus size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => setDeleteConfirmId(o.id)}
+                                                                className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
+                                                                title="Eliminar Pedido"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
                                                     )
                                                 )}
                                             </div>
@@ -2719,7 +2938,17 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             <div className="space-y-4">
                                                 <div className="flex gap-2 pt-2">
                                                     <button
-                                                        onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(successInvoice.invoice)}
+                                                        onClick={() => {
+                                                            if (pdf) {
+                                                                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                                                                    window.location.href = pdf;
+                                                                } else {
+                                                                    window.open(pdf, '_blank');
+                                                                }
+                                                            } else {
+                                                                handlePrintLocalInvoice(successInvoice.invoice);
+                                                            }
+                                                        }}
                                                         className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200"
                                                     >
                                                         <Printer size={16} />
@@ -2985,6 +3214,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                     </div>
                 )
             }
-        </div >
+        </div >,
+        document.body
     );
 }
