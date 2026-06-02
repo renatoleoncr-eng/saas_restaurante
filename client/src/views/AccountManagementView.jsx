@@ -72,6 +72,21 @@ export default function AccountManagementView() {
     const [payFiles, setPayFiles] = useState([]);
     const [isPaying, setIsPaying] = useState(false);
 
+    // Invoice emission states for abono
+    const [billingConfig, setBillingConfig] = useState(null);
+    const [issueInvoice, setIssueInvoice] = useState(false);
+    const [invoiceType, setInvoiceType] = useState('boleta');
+    const [invoiceClientDoc, setInvoiceClientDoc] = useState('');
+    const [invoiceClientName, setInvoiceClientName] = useState('');
+    const [invoiceClientDir, setInvoiceClientDir] = useState('');
+    const [isSearchingInvoiceClient, setIsSearchingInvoiceClient] = useState(false);
+    const [invoiceResult, setInvoiceResult] = useState(null); // { success, pdf, error }
+
+    // Load billing config on mount
+    useEffect(() => {
+        axios.get('/api/billing/config').then(r => setBillingConfig(r.data)).catch(() => {});
+    }, []);
+
     useEffect(() => {
         if (!socket) return;
         if (payAccount) {
@@ -94,16 +109,68 @@ export default function AccountManagementView() {
         setPayAmount(acc.deuda || 0);
         setPayMethod('efectivo');
         setPayFiles([]);
+        setIssueInvoice(false);
+        setInvoiceType('boleta');
+        setInvoiceClientDoc('');
+        setInvoiceClientName('');
+        setInvoiceClientDir('');
+        setInvoiceResult(null);
+    };
+
+    const searchInvoiceClientData = async () => {
+        const doc = invoiceClientDoc.trim();
+        if (doc.length !== 8 && doc.length !== 11) {
+            alert('El documento debe tener 8 (DNI) u 11 (RUC) dígitos.');
+            return;
+        }
+        setIsSearchingInvoiceClient(true);
+        try {
+            const res = await axios.get(`/api/billing/consulta?doc=${doc}`);
+            if (res.data) {
+                let fullName = '';
+                let dir = '';
+                if (doc.length === 11) {
+                    fullName = res.data.razon_social || res.data.razonSocial || '';
+                    dir = res.data.direccion || res.data.direccion_fiscal || '';
+                    setInvoiceType('factura');
+                } else {
+                    fullName = `${res.data.nombres || ''} ${res.data.apellidoPaterno || ''} ${res.data.apellidoMaterno || ''}`.trim();
+                    if (!fullName) fullName = res.data.nombre || res.data.nombreCompleto || '';
+                    setInvoiceType('boleta');
+                }
+                if (fullName) {
+                    setInvoiceClientName(fullName);
+                    if (dir) setInvoiceClientDir(dir);
+                } else {
+                    alert('No se encontró el nombre para este documento.');
+                }
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+        } finally {
+            setIsSearchingInvoiceClient(false);
+        }
     };
 
     const handlePartialPayment = async () => {
-        // ... (existing payment logic)
         if (!payAccount || !payAmount || isNaN(payAmount) || Number(payAmount) <= 0) {
             alert("Ingrese un monto válido mayor a 0.");
             return;
         }
+        // Validate invoice fields if issuing
+        if (issueInvoice && invoiceType === 'factura') {
+            if (!invoiceClientDoc || invoiceClientDoc.trim().length !== 11) {
+                alert('Para factura se requiere un RUC de 11 dígitos.');
+                return;
+            }
+            if (!invoiceClientName.trim()) {
+                alert('Para factura se requiere la Razón Social.');
+                return;
+            }
+        }
         setIsPaying(true);
         try {
+            // Step 1: Register the abono payment
             const formData = new FormData();
             formData.append('amount', payAmount);
             formData.append('paymentMethod', payMethod);
@@ -116,8 +183,45 @@ export default function AccountManagementView() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            setPayAccount(null);
-            loadAccounts();
+            // Step 2: Issue invoice if requested
+            if (issueInvoice) {
+                try {
+                    const invoiceRes = await axios.post('/api/billing/invoices', {
+                        tipo: invoiceType,
+                        clienteDocumento: invoiceClientDoc.trim() || (invoiceType === 'factura' ? '' : '00000000'),
+                        clienteNombre: invoiceClientName.trim() || 'CLIENTES VARIOS',
+                        clienteDireccion: invoiceClientDir.trim() || '',
+                        items: [{
+                            description: `Abono parcial - Cuenta #${payAccount.id}${payAccount.clientName ? ` (${payAccount.clientName})` : ''}`,
+                            quantity: 1,
+                            amount: Number(payAmount)
+                        }],
+                        userId: user?.id,
+                        accountId: payAccount.id
+                    });
+
+                    // Parse PDF URL from sunat response
+                    let pdfUrl = null;
+                    if (invoiceRes.data?.sunatResponse) {
+                        const sr = typeof invoiceRes.data.sunatResponse === 'string'
+                            ? JSON.parse(invoiceRes.data.sunatResponse)
+                            : invoiceRes.data.sunatResponse;
+                        pdfUrl = sr?.url_ticket || sr?.links?.pdf || sr?.pdf || null;
+                        if (pdfUrl && (pdfUrl.includes('72.61.57.199') || pdfUrl.includes('maksuites') || pdfUrl.includes('bluzcx'))) {
+                            pdfUrl = pdfUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                        }
+                    }
+                    setInvoiceResult({ success: true, pdf: pdfUrl, invoice: invoiceRes.data?.invoice });
+                } catch (invErr) {
+                    console.error('Error emitting invoice for abono', invErr);
+                    setInvoiceResult({ success: false, error: invErr.response?.data?.error || 'Error al emitir comprobante' });
+                }
+                // Don't close modal yet — show invoice result
+                loadAccounts();
+            } else {
+                setPayAccount(null);
+                loadAccounts();
+            }
         } catch (error) {
             console.error("Error sending partial payment", error);
             alert(error.response?.data?.error || "Error al registrar el abono");
@@ -375,7 +479,7 @@ export default function AccountManagementView() {
 
 
                                                     {/* Pay Partial Button */}
-                                                    {!isComplete && acc.status !== 'cancelled' && acc.accountType !== 'staff' && isAdmin && (
+                                                    {!isComplete && acc.status !== 'cancelled' && acc.accountType !== 'staff' && (isAdmin || user.role === 'waiter') && (
                                                         <button
                                                             onClick={() => openPayModal(acc)}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-bold bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
@@ -470,88 +574,231 @@ export default function AccountManagementView() {
             {/* PARTIAL PAYMENT MODAL */}
             {payAccount && (
                 <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
-                        <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Registrar Abono</h2>
+                    <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
 
-                        <div className="bg-blue-50 p-4 rounded-lg mb-6 flex flex-col items-center justify-center border border-blue-100">
-                            <div className="text-sm text-gray-500">Saldo Pendiente</div>
-                            <div className="text-3xl font-bold text-blue-600">S/ {Number(payAccount.deuda || 0).toFixed(2)}</div>
-                            <div className="mt-1 text-xs text-gray-400">Total: S/ {Number(payAccount.total || 0).toFixed(2)}</div>
-                        </div>
-
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Monto a Abonar (S/)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                                    value={payAmount}
-                                    onChange={(e) => setPayAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    autoFocus
-                                />
+                        {/* INVOICE RESULT SCREEN */}
+                        {invoiceResult ? (
+                            <div className="text-center space-y-4">
+                                {invoiceResult.success ? (
+                                    <>
+                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                                            <CheckCircle size={32} className="text-green-600" />
+                                        </div>
+                                        <h2 className="text-xl font-bold text-gray-800">Abono Registrado</h2>
+                                        <p className="text-sm text-gray-500">El comprobante fue emitido exitosamente.</p>
+                                        {invoiceResult.invoice && (
+                                            <div className="bg-gray-50 p-3 rounded-lg border text-sm">
+                                                <span className="font-bold">{invoiceResult.invoice.serie}-{invoiceResult.invoice.correlativo}</span>
+                                                <span className="ml-2 text-gray-500 capitalize">{invoiceResult.invoice.tipo}</span>
+                                            </div>
+                                        )}
+                                        {invoiceResult.pdf && (
+                                            <a
+                                                href={invoiceResult.pdf}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                                            >
+                                                <FileText size={16} /> Ver Comprobante PDF
+                                            </a>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+                                            <CreditCard size={32} className="text-yellow-600" />
+                                        </div>
+                                        <h2 className="text-xl font-bold text-gray-800">Abono Registrado</h2>
+                                        <p className="text-sm text-red-500">El abono se registró pero hubo un error al emitir el comprobante:</p>
+                                        <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{invoiceResult.error}</p>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => { setPayAccount(null); setInvoiceResult(null); }}
+                                    className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 mt-4"
+                                >
+                                    Cerrar
+                                </button>
                             </div>
+                        ) : (
+                            <>
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Registrar Abono</h2>
 
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago:</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {['efectivo', 'yape', 'tarjeta', 'transferencia'].map(method => (
-                                        <button
-                                            key={method}
-                                            onClick={() => setPayMethod(method)}
-                                            className={`p-2 rounded-lg text-sm border flex justify-center items-center transition-all ${payMethod === method ? 'border-green-500 bg-green-50 text-green-700 cursor-default font-bold' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <span className="capitalize">{method}</span>
-                                        </button>
-                                    ))}
+                                <div className="bg-blue-50 p-4 rounded-lg mb-6 flex flex-col items-center justify-center border border-blue-100">
+                                    <div className="text-sm text-gray-500">Saldo Pendiente</div>
+                                    <div className="text-3xl font-bold text-blue-600">S/ {Number(payAccount.deuda || 0).toFixed(2)}</div>
+                                    <div className="mt-1 text-xs text-gray-400">Total: S/ {Number(payAccount.total || 0).toFixed(2)}</div>
                                 </div>
-                            </div>
 
-                            {/* EVIDENCE UPLOAD */}
-                            {payMethod !== 'efectivo' && (
-                                <div className="animate-in slide-in-from-top-2">
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        Subir Comprobante (Opcional):
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={(e) => setPayFiles(Array.from(e.target.files))}
-                                        className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    />
-                                    {payFiles.length > 0 && (
-                                        <div className="text-xs text-green-600 mt-2 flex flex-col gap-1 max-h-20 overflow-y-auto">
-                                            <span className="font-bold text-gray-700 mb-1">Archivos seleccionados:</span>
-                                            {payFiles.map((file, idx) => (
-                                                <div key={idx} className="flex items-center gap-1">
-                                                    <CheckCircle size={10} /> {file.name}
-                                                </div>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Monto a Abonar (S/)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                                            value={payAmount}
+                                            onChange={(e) => setPayAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            autoFocus
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago:</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['efectivo', 'yape', 'tarjeta', 'transferencia'].map(method => (
+                                                <button
+                                                    key={method}
+                                                    onClick={() => setPayMethod(method)}
+                                                    className={`p-2 rounded-lg text-sm border flex justify-center items-center transition-all ${payMethod === method ? 'border-green-500 bg-green-50 text-green-700 cursor-default font-bold' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <span className="capitalize">{method}</span>
+                                                </button>
                                             ))}
+                                        </div>
+                                    </div>
+
+                                    {/* EVIDENCE UPLOAD */}
+                                    {payMethod !== 'efectivo' && (
+                                        <div className="animate-in slide-in-from-top-2">
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                                                Subir Comprobante (Opcional):
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => setPayFiles(Array.from(e.target.files))}
+                                                className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+                                            {payFiles.length > 0 && (
+                                                <div className="text-xs text-green-600 mt-2 flex flex-col gap-1 max-h-20 overflow-y-auto">
+                                                    <span className="font-bold text-gray-700 mb-1">Archivos seleccionados:</span>
+                                                    {payFiles.map((file, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1">
+                                                            <CheckCircle size={10} /> {file.name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ELECTRONIC INVOICE SECTION */}
+                                    {billingConfig?.facturacionElectronica && (
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 animate-in fade-in">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="abono_issue_invoice"
+                                                    checked={issueInvoice}
+                                                    onChange={(e) => setIssueInvoice(e.target.checked)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                    disabled={isPaying}
+                                                />
+                                                <label htmlFor="abono_issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
+                                                    Emitir Comprobante Electrónico
+                                                </label>
+                                            </div>
+
+                                            {issueInvoice && (
+                                                <div className="space-y-3 mt-3 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setInvoiceType('boleta')}
+                                                            disabled={isPaying}
+                                                            className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isPaying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            Boleta
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setInvoiceType('factura')}
+                                                            disabled={isPaying}
+                                                            className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isPaying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            Factura
+                                                        </button>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
+                                                                value={invoiceClientDoc}
+                                                                onChange={e => {
+                                                                    setInvoiceClientDoc(e.target.value);
+                                                                    if (e.target.value.length === 11) setInvoiceType('factura');
+                                                                    else if (e.target.value.length === 8) setInvoiceType('boleta');
+                                                                }}
+                                                                disabled={isPaying}
+                                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                onKeyDown={e => e.key === 'Enter' && searchInvoiceClientData()}
+                                                            />
+                                                            <button
+                                                                onClick={searchInvoiceClientData}
+                                                                disabled={isSearchingInvoiceClient || isPaying || !invoiceClientDoc}
+                                                                className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                                            >
+                                                                {isSearchingInvoiceClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">{invoiceType === 'factura' ? 'Razón Social' : 'Nombre del Cliente'}</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
+                                                            value={invoiceClientName}
+                                                            onChange={e => setInvoiceClientName(e.target.value)}
+                                                            disabled={isPaying}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                        />
+                                                    </div>
+                                                    {(invoiceType === 'factura' || (invoiceClientDoc && invoiceClientDoc.trim().length === 11)) && (
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Dirección Fiscal de la Empresa"
+                                                                value={invoiceClientDir}
+                                                                onChange={e => setInvoiceClientDir(e.target.value)}
+                                                                disabled={isPaying}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setPayAccount(null)}
-                                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200"
-                                disabled={isPaying}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handlePartialPayment}
-                                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold shadow-md hover:bg-green-700 disabled:opacity-50"
-                                disabled={isPaying}
-                            >
-                                {isPaying ? "Abonando..." : "Confirmar Abono"}
-                            </button>
-                        </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setPayAccount(null)}
+                                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200"
+                                        disabled={isPaying}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handlePartialPayment}
+                                        className={`flex-1 py-3 text-white rounded-lg font-bold shadow-md disabled:opacity-50 transition-colors ${issueInvoice ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
+                                        disabled={isPaying}
+                                    >
+                                        {isPaying ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Loader2 size={16} className="animate-spin" />
+                                                {issueInvoice ? 'Emitiendo...' : 'Abonando...'}
+                                            </span>
+                                        ) : issueInvoice ? 'Abonar y Emitir' : 'Confirmar Abono'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

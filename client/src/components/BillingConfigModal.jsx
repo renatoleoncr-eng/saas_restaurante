@@ -842,7 +842,12 @@ const BillingConfigModal = ({ onClose }) => {
                                                         <td className="px-4 py-3 whitespace-nowrap">
                                                             <div className="flex flex-col">
                                                                 <span className="text-sm font-bold text-gray-900">{docId}</span>
-                                                                <span className="text-[10px] text-gray-400 font-medium">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-[10px] text-gray-400 font-medium">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
+                                                                    {(() => { try { const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items; return items?.some(i => i.description?.includes('Abono')); } catch { return false; } })() && (
+                                                                        <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold px-1.5 py-0 rounded-full uppercase">Abono</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3">
