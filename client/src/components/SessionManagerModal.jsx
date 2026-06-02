@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee } from 'lucide-react';
 
@@ -95,15 +96,16 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         }
     };
 
-    if (loading) return (
+    if (loading) return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
-            <div className="bg-white p-6 rounded-xl shadow-2xl animate-pulse">Cargando datos de caja...</div>
-        </div>
+            <div className="bg-white p-6 rounded-xl shadow-2xl animate-pulse text-gray-700 font-bold">Cargando datos de caja...</div>
+        </div>,
+        document.body
     );
 
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] animate-in zoom-in-95 duration-200">
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-stretch md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+            <div className="bg-white w-full h-[100dvh] md:h-auto md:max-h-[90vh] md:max-w-xl md:rounded-none md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 
                 {/* Header */}
                 <div className={`bg-gradient-to-r ${sessionData && !isClosingMode ? 'from-green-600 to-emerald-700' : 'from-blue-600 to-indigo-700'} p-4 md:p-5 text-white flex justify-between items-center shadow-md shrink-0`}>
@@ -204,7 +206,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 </div>
                             </div>
 
-                            <div className="border rounded-2xl overflow-hidden shadow-inner bg-white">
+                            {/* DESKTOP VIEW: Standard Table */}
+                            <div className="hidden md:block border rounded-2xl overflow-hidden shadow-inner bg-white">
                                 <div className="overflow-x-auto no-scrollbar">
                                     <table className="w-full text-sm table-fixed">
                                         <thead className="bg-gray-100 text-gray-600">
@@ -278,6 +281,80 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+
+                            {/* MOBILE VIEW: Responsive list of payment methods instead of squished table */}
+                            <div className="md:hidden space-y-3">
+                                {['efectivo', 'tarjeta', 'yape', 'transferencia'].map(m => {
+                                    const expected = sessionData.expected[m] || 0;
+                                    const countedStr = countedValues[m];
+                                    const counted = parseFloat(countedStr) || 0;
+                                    const diff = countedStr !== '' ? counted - expected : 0;
+                                    
+                                    return (
+                                        <div key={m} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                                            {/* Header of Payment Card */}
+                                            <div className="flex justify-between items-center">
+                                                <button
+                                                    onClick={() => setExpandedPaymentMethod(expandedPaymentMethod === m ? null : m)}
+                                                    className="font-bold text-gray-800 text-sm flex items-center gap-1.5 hover:text-blue-600 transition-colors select-none"
+                                                >
+                                                    {expandedPaymentMethod === m ? <ChevronUp size={14} className="text-blue-500" /> : <ChevronDown size={14} className="text-gray-400" />}
+                                                    {displayNames[m]}
+                                                </button>
+                                                <span className="text-xs text-gray-500 font-medium">
+                                                    Esperado: <span className="font-bold text-gray-700 font-mono">S/ {expected.toFixed(2)}</span>
+                                                </span>
+                                            </div>
+                                            
+                                            {/* Input + Difference row */}
+                                            <div className="grid grid-cols-2 gap-3 items-center">
+                                                <div>
+                                                    <label className="block text-[9px] uppercase font-extrabold text-gray-400 mb-1">Monto Contado</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">S/</span>
+                                                        <input 
+                                                            type="number"
+                                                            value={countedValues[m]}
+                                                            onChange={e => setCountedValues({...countedValues, [m]: e.target.value})}
+                                                            onWheel={(e) => e.target.blur()}
+                                                            className="w-full pl-7 pr-3 py-2 border rounded-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none text-xs text-right bg-gray-50/50"
+                                                            placeholder="0.00"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="block text-[9px] uppercase font-extrabold text-gray-400 mb-1">Diferencia</span>
+                                                    <span className={`text-xs font-bold font-mono ${countedStr === '' ? 'text-gray-300' : diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : 'text-blue-500'}`}>
+                                                        {countedStr !== '' ? (diff !== 0 ? (diff < 0 ? `- S/ ${Math.abs(diff).toFixed(2)}` : `+ S/ ${diff.toFixed(2)}`) : '✓ OK') : '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Expanded Transactions for Mobile */}
+                                            {expandedPaymentMethod === m && (
+                                                <div className="p-3 bg-gray-50 border-t border-gray-100 rounded-lg max-h-40 overflow-y-auto mt-2">
+                                                    <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-1">
+                                                        <Receipt size={12} /> Transacciones
+                                                    </h4>
+                                                    {sessionData.payments?.filter(p => (p.method || 'efectivo').toLowerCase() === m).length > 0 ? (
+                                                        <ul className="space-y-1.5">
+                                                            {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
+                                                                <li key={p.id} className="flex justify-between items-center text-[10px] bg-white p-2 rounded border border-gray-100 shadow-sm">
+                                                                    <span className="font-semibold text-gray-700">Mesa {p.Account?.Table?.number || 'Caja/Llevar'}</span>
+                                                                    <span className="font-mono font-bold text-gray-600">S/ {parseFloat(p.amount).toFixed(2)}</span>
+                                                                    <span className="text-gray-400">{new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <div className="text-[10px] text-gray-400 italic">No hay transacciones.</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* Sales Summary Categories */}
@@ -464,6 +541,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                         </div>
                     );
                 })()}
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -397,7 +397,7 @@ export default function DrinkPromotionsConfig() {
                         ) : (
                             <div className="flex items-center gap-3">
                                 <Wine size={18} className="text-purple-500" />
-                                <span className="bg-purple-100 text-purple-700 text-xs font-extrabold px-3 py-1 rounded-full">
+                                <span className="bg-purple-100 text-purple-700 text-sm font-black px-4 py-1.5 rounded-full shadow-sm">
                                     {promo.name}
                                 </span>
                             </div>
@@ -408,32 +408,32 @@ export default function DrinkPromotionsConfig() {
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => setEditingPromo({ id: promo.id, name: promo.name, price: promo.price })}
-                                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg" title="Editar categoría">
-                                    <Edit2 size={14} />
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar categoría">
+                                    <Edit2 size={18} />
                                 </button>
                                 <button onClick={() => deletePromo(promo)}
-                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg" title="Eliminar categoría">
-                                    <Trash2 size={14} />
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Eliminar categoría">
+                                    <Trash2 size={18} />
                                 </button>
                                 {/* The "+" button — matches Opciones Menú UX */}
                                 <button
                                     onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
-                                    className="ml-1 bg-purple-500 text-white p-1.5 rounded-lg hover:bg-purple-600 shadow-sm" title="Agregar trago">
-                                    <Plus size={16} />
+                                    className="ml-1 bg-purple-500 text-white p-2 rounded-lg hover:bg-purple-600 shadow-sm" title="Agregar trago">
+                                    <Plus size={18} />
                                 </button>
                             </div>
                         )}
                     </div>
 
                     {/* Items table */}
-                    <table className="w-full text-sm table-fixed">
+                    <table className="w-full text-base md:text-sm table-fixed">
                         <thead>
-                            <tr className="text-xs text-gray-400 font-semibold border-b bg-gray-50">
-                                <th className="px-3 py-2 md:px-4 md:py-2 text-left">Nombre</th>
-                                <th className="px-3 py-2 md:px-4 md:py-2 text-left w-24 md:w-auto">Precio</th>
-                                <th className="hidden md:table-cell px-4 py-2 text-left">Tipo</th>
-                                <th className="hidden md:table-cell px-4 py-2 text-left">Vinculado a</th>
-                                <th className="px-3 py-2 md:px-4 md:py-2 text-right w-20 md:w-auto"></th>
+                            <tr className="text-xs md:text-xs text-gray-500 font-black uppercase tracking-wider border-b bg-gray-50/80">
+                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-left">Nombre</th>
+                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-left w-28 md:w-auto">Precio</th>
+                                <th className="hidden md:table-cell px-4 py-2.5 text-left">Tipo</th>
+                                <th className="hidden md:table-cell px-4 py-2.5 text-left">Vinculado a</th>
+                                <th className="px-3 py-3 md:px-4 md:py-2.5 text-right w-24 md:w-auto"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -455,21 +455,21 @@ export default function DrinkPromotionsConfig() {
                                         onCancel={() => setEditingItem(null)}
                                     />
                                 ) : (
-                                    <tr key={item.id} className="border-b border-dashed hover:bg-gray-50 group transition-colors">
-                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5 font-medium text-gray-700">
-                                            <div>{item.name}</div>
-                                            <div className="md:hidden mt-1 flex flex-wrap gap-1.5 items-center">
-                                                <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
+                                    <tr key={item.id} className="border-b border-dashed hover:bg-gray-50/50 group transition-colors">
+                                        <td className="px-3 py-4 md:px-4 md:py-3 font-semibold text-gray-800">
+                                            <div className="text-base md:text-sm font-bold text-gray-900 leading-snug">{item.name}</div>
+                                            <div className="md:hidden mt-2 flex flex-wrap gap-1.5 items-center">
+                                                <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
                                                     {TYPE_LABEL[item.type] || item.type}
                                                 </span>
                                                 {item.type === 'finished' && (
-                                                    <span className="text-blue-600 text-[9px] font-semibold">
+                                                    <span className="text-blue-600 text-[10px] md:text-[9px] font-bold">
                                                         {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin vincular —'}
                                                     </span>
                                                 )}
                                                 {item.type === 'prepared' && (
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-amber-600 text-[9px] font-semibold">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-amber-600 text-[10px] md:text-[9px] font-bold">
                                                             {allProducts.find(p => p.id === item.linkedProductId)?.name || '— Sin receta —'}
                                                         </span>
                                                         {item.linkedProductId && (
@@ -479,17 +479,17 @@ export default function DrinkPromotionsConfig() {
                                                                     const p = allProducts.find(prod => prod.id === item.linkedProductId);
                                                                     if (p) setRecipeProduct(p);
                                                                 }}
-                                                                className="p-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
                                                                 title="Ver Receta"
                                                             >
-                                                                <ChefHat size={9} />
+                                                                <ChefHat size={12} />
                                                             </button>
                                                         )}
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5 text-gray-600 font-mono font-bold">
+                                        <td className="px-3 py-4 md:px-4 md:py-3 text-gray-950 font-mono font-black text-base md:text-sm">
                                             S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
                                         </td>
                                         <td className="hidden md:table-cell px-4 py-2.5">
@@ -510,9 +510,9 @@ export default function DrinkPromotionsConfig() {
                                                     {item.linkedProductId && (
                                                         <button
                                                             onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                if (p) setRecipeProduct(p);
+                                                                    e.stopPropagation();
+                                                                    const p = allProducts.find(prod => prod.id === item.linkedProductId);
+                                                                    if (p) setRecipeProduct(p);
                                                             }}
                                                             className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
                                                             title="Gestionar Receta"
@@ -525,15 +525,15 @@ export default function DrinkPromotionsConfig() {
                                                 <span className="text-gray-400 text-xs italic">—</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-2.5 md:px-4 md:py-2.5">
-                                            <div className="flex items-center gap-1.5 justify-end">
+                                        <td className="px-3 py-4 md:px-4 md:py-3">
+                                            <div className="flex items-center gap-2 justify-end">
                                                 <button onClick={() => { setEditingItem({ ...item }); setAddingItemTo(null); }}
-                                                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg" title="Editar">
-                                                    <Edit2 size={14} />
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
+                                                    <Edit2 size={18} />
                                                 </button>
                                                 <button onClick={() => deleteItem(item.id)}
-                                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg" title="Eliminar">
-                                                    <Trash2 size={14} />
+                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Eliminar">
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>
@@ -557,9 +557,9 @@ export default function DrinkPromotionsConfig() {
                     {addingItemTo !== promo.id && (
                         <button
                             onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
-                            className="w-full py-2 text-xs text-purple-500 hover:bg-purple-50 flex items-center justify-center gap-1 transition-colors border-t border-dashed border-purple-100"
+                            className="w-full py-3.5 text-sm font-extrabold text-purple-600 hover:bg-purple-50 flex items-center justify-center gap-1 transition-colors border-t border-dashed border-purple-100"
                         >
-                            <Plus size={12} /> Agregar trago a esta categoría
+                            <Plus size={16} /> Agregar trago a esta categoría
                         </button>
                     )}
                 </div>
