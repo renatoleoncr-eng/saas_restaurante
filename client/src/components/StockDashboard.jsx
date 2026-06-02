@@ -171,7 +171,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             type: 'dish',
             stock: 0,
             isStockManaged: false,
-            requiresPreparation: true,
+            requiresPreparation: false, // Default to Libre for Phase 1
             presentationsList: []
         };
 
@@ -185,13 +185,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             defaults.presentationsList = [{ name: 'Estándar', price: '0.00', stock: 0 }];
         } else if (activeTab === 'prepared') {
             defaults.isStockManaged = false;
-            defaults.requiresPreparation = true; // Default to Preparado
+            defaults.requiresPreparation = false; // Default to Libre for Phase 1
             defaults.type = 'dish';
-            defaults.presentationsList = [{ name: 'Estándar', price: '0.00' }]; // Add default variant for Preparados
+            defaults.presentationsList = [{ name: 'Estándar', price: '0.00' }]; // Add default variant
         } else if (activeTab === 'menu_options') {
             // Should not happen via generic button, but fallback
             defaults.isStockManaged = false;
-            defaults.requiresPreparation = true; // Default to Preparado so Libre isn't fake-checked
+            defaults.requiresPreparation = false; // Default to Libre for Phase 1
             defaults.type = 'daily_entry';
         }
 
