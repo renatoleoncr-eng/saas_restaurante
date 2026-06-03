@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Calendar, FileText, ChevronRight, Edit2, Trash2, CreditCard, CheckCircle, X, Loader2 } from 'lucide-react';
+import { Search, Calendar, FileText, ChevronRight, Edit2, Trash2, CreditCard, CheckCircle, X, Loader2, Camera, Image } from 'lucide-react';
 import TableControl from '../components/TableControl';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from '../components/AccountDetailsModal';
@@ -76,6 +76,12 @@ export default function AccountManagementView() {
     const [payAmount, setPayAmount] = useState('');
     const [payMethod, setPayMethod] = useState('efectivo');
     const [payFiles, setPayFiles] = useState([]);
+    const handlePayFileChange = (e) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            setPayFiles(prev => [...prev, ...files]);
+        }
+    };
     const [isPaying, setIsPaying] = useState(false);
 
     // Invoice emission states for abono
@@ -161,6 +167,11 @@ export default function AccountManagementView() {
     const handlePartialPayment = async () => {
         if (!payAccount || !payAmount || isNaN(payAmount) || Number(payAmount) <= 0) {
             alert("Ingrese un monto válido mayor a 0.");
+            return;
+        }
+        const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+        if (isEvidenceMandatory && payFiles.length === 0) {
+            alert("Se requiere subir al menos un comprobante o foto de evidencia.");
             return;
         }
         // Validate invoice fields if issuing
@@ -693,30 +704,90 @@ export default function AccountManagementView() {
                                     </div>
 
                                     {/* EVIDENCE UPLOAD */}
-                                    {payMethod !== 'efectivo' && (
-                                        <div className="animate-in slide-in-from-top-2">
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">
-                                                Subir Comprobante (Opcional):
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={(e) => setPayFiles(Array.from(e.target.files))}
-                                                className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                            />
-                                            {payFiles.length > 0 && (
-                                                <div className="text-xs text-green-600 mt-2 flex flex-col gap-1 max-h-20 overflow-y-auto">
-                                                    <span className="font-bold text-gray-700 mb-1">Archivos seleccionados:</span>
-                                                    {payFiles.map((file, idx) => (
-                                                        <div key={idx} className="flex items-center gap-1">
-                                                            <CheckCircle size={10} /> {file.name}
-                                                        </div>
-                                                    ))}
+                                    {(() => {
+                                        const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+                                        return (
+                                            <div className="animate-in slide-in-from-top-2">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">
+                                                    Subir Evidencia {isEvidenceMandatory ? '(Obligatorio)' : '(Opcional)'}:
+                                                </label>
+                                                
+                                                <div className="flex gap-2 mb-3">
+                                                    {/* Gallery button (Mobile only) */}
+                                                    <label
+                                                        htmlFor="pay-evidence-gallery"
+                                                        className="md:hidden flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        <Image size={14} /> Galería
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        id="pay-evidence-gallery"
+                                                        accept="image/*"
+                                                        multiple
+                                                        disabled={isPaying}
+                                                        onChange={handlePayFileChange}
+                                                        className="hidden"
+                                                    />
+
+                                                    {/* Camera button (Mobile only) */}
+                                                    <label
+                                                        htmlFor="pay-evidence-camera"
+                                                        className="md:hidden flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg text-xs font-semibold hover:bg-orange-100 active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        <Camera size={14} /> Cámara
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        id="pay-evidence-camera"
+                                                        accept="image/*"
+                                                        capture="environment"
+                                                        disabled={isPaying}
+                                                        onChange={handlePayFileChange}
+                                                        className="hidden"
+                                                    />
+
+                                                    {/* File Upload button (Desktop only) */}
+                                                    <label
+                                                        htmlFor="pay-evidence-desktop"
+                                                        className="hidden md:flex w-full items-center justify-center gap-1.5 py-2 px-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        <Image size={14} /> Seleccionar Archivo(s)
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        id="pay-evidence-desktop"
+                                                        accept="image/*"
+                                                        multiple
+                                                        disabled={isPaying}
+                                                        onChange={handlePayFileChange}
+                                                        className="hidden"
+                                                    />
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
+
+                                                {payFiles.length > 0 && (
+                                                    <div className="text-xs text-green-600 mt-2 flex flex-col gap-1 max-h-32 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-150">
+                                                        <span className="font-bold text-gray-700 mb-1">Archivos seleccionados ({payFiles.length}):</span>
+                                                        {payFiles.map((file, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between gap-1 text-gray-600 py-0.5 border-b border-gray-100 last:border-0">
+                                                                <div className="flex items-center gap-1 truncate">
+                                                                    <CheckCircle size={12} className="text-green-500 shrink-0" />
+                                                                    <span className="truncate">{file.name}</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPayFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                                    className="text-red-500 hover:text-red-700 p-0.5"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* ELECTRONIC INVOICE SECTION */}
                                     {billingConfig?.facturacionElectronica && (
@@ -808,27 +879,41 @@ export default function AccountManagementView() {
                                     )}
                                 </div>
 
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setPayAccount(null)}
-                                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200"
-                                        disabled={isPaying}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={handlePartialPayment}
-                                        className={`flex-1 py-3 text-white rounded-lg font-bold shadow-md disabled:opacity-50 transition-colors ${issueInvoice ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
-                                        disabled={isPaying}
-                                    >
-                                        {isPaying ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <Loader2 size={16} className="animate-spin" />
-                                                {issueInvoice ? 'Emitiendo...' : 'Abonando...'}
-                                            </span>
-                                        ) : issueInvoice ? 'Abonar y Emitir' : 'Confirmar Abono'}
-                                    </button>
-                                </div>
+                                {(() => {
+                                    const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+                                    const isPayDisabled = isPaying || (isEvidenceMandatory && payFiles.length === 0);
+
+                                    return (
+                                        <>
+                                            {isEvidenceMandatory && payFiles.length === 0 && (
+                                                <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
+                                                    * Se requiere subir comprobante o foto para continuar.
+                                                </p>
+                                            )}
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => setPayAccount(null)}
+                                                    className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200"
+                                                    disabled={isPaying}
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    onClick={handlePartialPayment}
+                                                    className={`flex-1 py-3 text-white rounded-lg font-bold shadow-md transition-colors ${isPayDisabled ? 'bg-gray-400 cursor-not-allowed shadow-none' : issueInvoice ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
+                                                    disabled={isPayDisabled}
+                                                >
+                                                    {isPaying ? (
+                                                        <span className="flex items-center justify-center gap-2">
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                            {issueInvoice ? 'Emitiendo...' : 'Abonando...'}
+                                                        </span>
+                                                    ) : issueInvoice ? 'Abonar y Emitir' : 'Confirmar Abono'}
+                                                </button>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </>
                         )}
                     </div>
