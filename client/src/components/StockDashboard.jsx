@@ -166,7 +166,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 amount: adjustmentForm.amount,
                 reason: adjustmentForm.reason || (adjustmentItem.type === 'add' ? 'Compra Manual' : 'Ajuste Manual'),
                 userId: null,
-                variantId: adjustmentForm.variantId || null // Pass selected variant
+                variantId: adjustmentForm.variantId || adjustmentItem.variantId || null // Pass selected variant
             });
 
             setAdjustmentItem(null);
@@ -486,7 +486,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         </h3>
                         <div className="mb-4 p-3 bg-gray-50 rounded border">
                             <div className="font-bold text-gray-800">{adjustmentItem.name}</div>
-                            {adjustmentItem.ProductVariants && adjustmentItem.ProductVariants.length > 0 ? (
+                            {adjustmentItem.ProductVariants && adjustmentItem.ProductVariants.length > 1 && !adjustmentItem.variantId ? (
                                 <div className="mt-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Seleccionar Presentación</label>
                                     <select
@@ -662,25 +662,57 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         <div>
                                                             <label className="block text-sm font-bold text-gray-700 mb-1">Stock</label>
                                                             {editForm.isStockManaged ? (
-                                                                <div className="relative">
-                                                                    <input
-                                                                        type="number"
-                                                                        placeholder="0"
-                                                                        disabled={!!p.id}
-                                                                        className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
-                                                                        value={p.stock || ''}
-                                                                        onChange={e => {
-                                                                            if (!p.id) {
-                                                                                const newList = [...variants];
-                                                                                if (newList.length === 0) newList.push({ name: 'Estándar', price: '0.00', stock: 0 });
-                                                                                newList[0].stock = e.target.value;
-                                                                                setEditForm({ ...editForm, stock: e.target.value, presentationsList: newList });
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                    {!!p.id && (
-                                                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                                            <span className="text-gray-400 text-xs">🔒</span>
+                                                                <div className="flex items-center gap-1.5 w-full">
+                                                                    <div className="relative flex-1">
+                                                                        <input
+                                                                            type="number"
+                                                                            placeholder="0"
+                                                                            disabled={!!p.id}
+                                                                            className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
+                                                                            value={p.stock || ''}
+                                                                            onChange={e => {
+                                                                                if (!p.id) {
+                                                                                    const newList = [...variants];
+                                                                                    if (newList.length === 0) newList.push({ name: 'Estándar', price: '0.00', stock: 0 });
+                                                                                    newList[0].stock = e.target.value;
+                                                                                    setEditForm({ ...editForm, stock: e.target.value, presentationsList: newList });
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        {!!p.id && (
+                                                                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                                                <span className="text-gray-400 text-xs">🔒</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {!!p.id && !readOnly && user?.role === 'admin' && (
+                                                                        <div className="flex gap-1 animate-in fade-in duration-200">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => openAdjustment({
+                                                                                    id: editForm.id,
+                                                                                    name: editForm.name,
+                                                                                    variantId: p.id,
+                                                                                    stock: p.stock
+                                                                                }, 'add')}
+                                                                                className="bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded flex items-center justify-center border border-green-200 transition-colors"
+                                                                                title="Agregar Stock"
+                                                                            >
+                                                                                <Plus size={14} />
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => openAdjustment({
+                                                                                    id: editForm.id,
+                                                                                    name: editForm.name,
+                                                                                    variantId: p.id,
+                                                                                    stock: p.stock
+                                                                                }, 'remove')}
+                                                                                className="bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded flex items-center justify-center border border-red-200 transition-colors"
+                                                                                title="Disminuir Stock"
+                                                                            >
+                                                                                <Minus size={14} />
+                                                                            </button>
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -785,9 +817,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                 </div>
 
                                                 <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-bold text-gray-400 mb-2 px-1">
-                                                    <div className="col-span-5">Nombre Presentación</div>
+                                                    <div className="col-span-4">Nombre Presentación</div>
                                                     <div className="col-span-3">Precio (S/)</div>
-                                                    <div className="col-span-3">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
+                                                    <div className="col-span-4">Stock {editForm.id ? '(Solo Nuevos)' : '(Inicial)'}</div>
                                                     <div className="col-span-1"></div>
                                                 </div>
 
@@ -795,7 +827,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     {variants.map((p, idx) => (
                                                         <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2.5">
                                                             <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-2 items-stretch sm:items-center">
-                                                                <div className="sm:col-span-5">
+                                                                <div className="sm:col-span-4">
                                                                     <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre Presentación</label>
                                                                     <input
                                                                         type="text"
@@ -826,27 +858,59 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     />
                                                                 </div>
 
-                                                                <div className="sm:col-span-3">
+                                                                <div className="sm:col-span-4">
                                                                     <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Stock</label>
                                                                     {editForm.isStockManaged ? (
-                                                                        <div className="relative font-medium">
-                                                                            <input
-                                                                                type="number"
-                                                                                placeholder="0"
-                                                                                disabled={!!p.id}
-                                                                                className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
-                                                                                value={p.stock || ''}
-                                                                                onChange={e => {
-                                                                                    if (!p.id) {
-                                                                                        const newList = [...editForm.presentationsList];
-                                                                                        newList[idx].stock = e.target.value;
-                                                                                        setEditForm({ ...editForm, presentationsList: newList });
-                                                                                    }
-                                                                                }}
-                                                                            />
-                                                                            {!!p.id && (
-                                                                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                                                    <span className="text-gray-400 text-xs">🔒</span>
+                                                                        <div className="flex items-center gap-1.5 w-full">
+                                                                            <div className="relative flex-1 font-medium">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    placeholder="0"
+                                                                                    disabled={!!p.id}
+                                                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
+                                                                                    value={p.stock || ''}
+                                                                                    onChange={e => {
+                                                                                        if (!p.id) {
+                                                                                            const newList = [...editForm.presentationsList];
+                                                                                            newList[idx].stock = e.target.value;
+                                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                                        }
+                                                                                    }}
+                                                                                />
+                                                                                {!!p.id && (
+                                                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                                                        <span className="text-gray-400 text-xs">🔒</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {!!p.id && !readOnly && user?.role === 'admin' && (
+                                                                                <div className="flex gap-1 animate-in fade-in duration-200">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openAdjustment({
+                                                                                            id: editForm.id,
+                                                                                            name: `${editForm.name} (${p.name})`,
+                                                                                            variantId: p.id,
+                                                                                            stock: p.stock
+                                                                                        }, 'add')}
+                                                                                        className="bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded flex items-center justify-center border border-green-200 transition-colors"
+                                                                                        title="Agregar Stock"
+                                                                                    >
+                                                                                        <Plus size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openAdjustment({
+                                                                                            id: editForm.id,
+                                                                                            name: `${editForm.name} (${p.name})`,
+                                                                                            variantId: p.id,
+                                                                                            stock: p.stock
+                                                                                        }, 'remove')}
+                                                                                        className="bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded flex items-center justify-center border border-red-200 transition-colors"
+                                                                                        title="Disminuir Stock"
+                                                                                    >
+                                                                                        <Minus size={14} />
+                                                                                    </button>
                                                                                 </div>
                                                                             )}
                                                                         </div>
@@ -1703,14 +1767,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                                     {product.isStockManaged && (
                                                                                                         <>
                                                                                                             <button
-                                                                                                                onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id }, 'add')}
+                                                                                                                onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id, stock: v.stock }, 'add')}
                                                                                                                 className="bg-green-100 text-green-600 p-1.5 rounded hover:bg-green-200"
                                                                                                                 title="Agregar Stock"
                                                                                                             >
                                                                                                                 <Plus size={14} />
                                                                                                             </button>
                                                                                                             <button
-                                                                                                                onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id }, 'remove')}
+                                                                                                                onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id, stock: v.stock }, 'remove')}
                                                                                                                 className="bg-red-100 text-red-600 p-1.5 rounded hover:bg-red-200"
                                                                                                                 title="Quitar Stock"
                                                                                                             >
