@@ -131,24 +131,30 @@ const AccountDetailsModal = ({
                         <h4 className="text-sm font-bold text-gray-500 mb-3">Consumos / Cargos a la Mesa</h4>
                         <div className="space-y-3">
                             {account.Orders && account.Orders.length > 0 ? (
-                                account.Orders.map((ord, idx) => (
-                                    <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-4 flex justify-between items-start">
-                                        <div>
-                                            <div className="font-bold text-gray-800 text-sm">Venta Productos</div>
-                                            <div className="text-sm text-gray-600 mt-1">
-                                                <span className="text-orange-600 font-bold">{ord.quantity}x</span> {ord.Product?.name || 'Producto Desconocido'}
-                                                {ord.presentation && <span className="text-blue-500 font-medium ml-1">({ord.presentation})</span>}
+                                account.Orders.map((ord, idx) => {
+                                    const isCombo = !ord.ProductId && ord.notes;
+                                    const productName = isCombo ? `2x1: ${ord.notes}` : (ord.Product?.name || 'Producto Desconocido');
+                                    const displayNotes = isCombo ? null : ord.notes;
+
+                                    return (
+                                        <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-4 flex justify-between items-start">
+                                            <div>
+                                                <div className="font-bold text-gray-800 text-sm">Venta Productos</div>
+                                                <div className="text-sm text-gray-600 mt-1">
+                                                    <span className="text-orange-600 font-bold">{ord.quantity}x</span> {productName}
+                                                    {ord.presentation && <span className="text-blue-500 font-medium ml-1">({ord.presentation})</span>}
+                                                </div>
+                                                <div className="text-xs text-gray-400 mt-2">
+                                                    {new Date(ord.createdAt || new Date()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    {displayNotes && <span className="italic block mt-1 text-gray-500">Nota: "{displayNotes}"</span>}
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-gray-400 mt-2">
-                                                {new Date(ord.createdAt || new Date()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                {ord.notes && <span className="italic block mt-1 text-gray-500">Nota: "{ord.notes}"</span>}
+                                            <div className="font-bold text-orange-600 text-sm whitespace-nowrap">
+                                                + {formatCurrency(ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? (ord.priceAtOrder * ord.quantity) : (ord.Product?.price || 0) * ord.quantity)}
                                             </div>
                                         </div>
-                                        <div className="font-bold text-orange-600 text-sm whitespace-nowrap">
-                                            + {formatCurrency(ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? (ord.priceAtOrder * ord.quantity) : (ord.Product?.price || 0) * ord.quantity)}
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <div className="text-sm text-gray-400 italic p-4 bg-gray-50 rounded-lg border">Sin consumos registrados.</div>
                             )}

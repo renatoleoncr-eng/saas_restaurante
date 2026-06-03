@@ -1718,7 +1718,10 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                             let displayNotes = o.notes;
                                             let originalP = null;
 
-                                            if (o.Product && o.Product.name) {
+                                            if (!o.ProductId && o.notes) {
+                                                pName = `2x1: ${o.notes}`;
+                                                displayNotes = null;
+                                            } else if (o.Product && o.Product.name) {
                                                 pName = o.Product.name;
                                             } else if (products.length > 0) {
                                                 const localP = products.find(p => p.id === o.ProductId);
