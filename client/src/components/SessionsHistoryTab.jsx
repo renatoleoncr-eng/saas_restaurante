@@ -181,11 +181,13 @@ export default function SessionsHistoryTab() {
 // Inner Component: SessionDetailsModal
 function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     const [expandedCategory, setExpandedCategory] = useState(null);
+    const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
 
     // Reset expanded category on modal open
     useEffect(() => {
         if (isOpen) {
             setExpandedCategory(null);
+            setSelectedMethodFilter('todos');
         }
     }, [isOpen]);
 
@@ -255,7 +257,10 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
         return [...paymentsList, ...expensesList].sort((a, b) => new Date(b.time) - new Date(a.time));
     };
 
-    const movements = getMovements();
+    const allMovements = getMovements();
+    const movements = selectedMethodFilter === 'todos'
+        ? allMovements
+        : allMovements.filter(m => m.method === selectedMethodFilter);
 
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
@@ -393,9 +398,18 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 const exp = Number(expectedValues[m] || 0);
                                                 const cnt = Number(countedValues[m] || 0);
                                                 const diff = cnt - exp;
+                                                const isSelected = selectedMethodFilter === m;
                                                 
                                                 return (
-                                                    <tr key={m} className="hover:bg-gray-50/30 transition-colors">
+                                                    <tr 
+                                                        key={m} 
+                                                        onClick={() => setSelectedMethodFilter(prev => prev === m ? 'todos' : m)}
+                                                        className={`cursor-pointer transition-colors ${
+                                                            isSelected 
+                                                                ? 'bg-blue-50 hover:bg-blue-100/80 font-bold border-l-4 border-blue-500' 
+                                                                : 'hover:bg-gray-50/30'
+                                                        }`}
+                                                    >
                                                         <td className="px-3 md:px-5 py-3 capitalize font-semibold text-gray-700 flex items-center gap-2">
                                                             <span className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 ${
                                                                 m === 'efectivo' ? 'bg-emerald-500' :
@@ -421,14 +435,39 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
                             {/* Movimientos de Caja Section */}
                             <div className="bg-white border rounded-xl overflow-hidden shadow-xs">
-                                <div className="bg-gray-50 px-5 py-3 border-b flex items-center justify-between">
-                                    <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
-                                        <Receipt size={16} className="text-gray-500" />
-                                        Movimientos de Caja
-                                    </h3>
-                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
-                                        {movements.length} Transacciones
-                                    </span>
+                                <div className="bg-gray-50 px-5 py-3 border-b flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                            <Receipt size={16} className="text-gray-500" />
+                                            Movimientos de Caja
+                                        </h3>
+                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                            {movements.length}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {['todos', ...methods].map(method => {
+                                            const count = method === 'todos' 
+                                                ? allMovements.length 
+                                                : allMovements.filter(mov => mov.method === method).length;
+                                            
+                                            const isPillSelected = selectedMethodFilter === method;
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    type="button"
+                                                    onClick={() => setSelectedMethodFilter(method)}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize transition-all active:scale-95 ${
+                                                        isPillSelected
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    {method === 'todos' ? 'Todos' : method} ({count})
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                                 <div className="p-3 max-h-60 overflow-y-auto no-scrollbar">
                                     {movements.length > 0 ? (

@@ -13,6 +13,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
     const [justOpened, setJustOpened] = useState(false);
+    const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
 
     // Expense Modal states
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -60,7 +61,10 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         return [...paymentsList, ...expensesList].sort((a, b) => new Date(b.time) - new Date(a.time));
     };
 
-    const movements = getMovements();
+    const allMovements = getMovements();
+    const movements = selectedMethodFilter === 'todos'
+        ? allMovements
+        : allMovements.filter(m => m.method === selectedMethodFilter);
 
     const fetchCurrentSession = async () => {
         try {
@@ -254,15 +258,38 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                             {/* Movimientos de Caja Section */}
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">
-                                <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <div className="bg-gray-50 px-4 py-3 border-b flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2">
                                         <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
                                             <Receipt size={16} className="text-gray-500" />
-                                            Movimientos
+                                            Movimientos de Caja
                                         </h3>
-                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold w-fit">
-                                            {movements.length} Transacciones
+                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                            {movements.length}
                                         </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {['todos', 'efectivo', 'tarjeta', 'yape', 'transferencia'].map(method => {
+                                            const count = method === 'todos' 
+                                                ? allMovements.length 
+                                                : allMovements.filter(mov => mov.method === method).length;
+                                            
+                                            const isPillSelected = selectedMethodFilter === method;
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    type="button"
+                                                    onClick={() => setSelectedMethodFilter(method)}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize transition-all active:scale-95 ${
+                                                        isPillSelected
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    {method === 'todos' ? 'Todos' : method} ({count})
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <button 
                                         onClick={() => setShowExpenseModal(true)}
@@ -525,14 +552,45 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                              {/* Movimientos de Caja Section */}
                              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">
-                                 <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-                                     <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
-                                         <Receipt size={16} className="text-gray-500" />
-                                         Movimientos de Caja
-                                     </h3>
-                                     <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
-                                         {movements.length} Transacciones
-                                     </span>
+                                 <div className="bg-gray-50 px-4 py-3 border-b flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                     <div className="flex items-center gap-2">
+                                         <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                                             <Receipt size={16} className="text-gray-500" />
+                                             Movimientos
+                                         </h3>
+                                         <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                             {movements.length}
+                                         </span>
+                                     </div>
+                                     <div className="flex flex-wrap gap-1">
+                                         {['todos', 'efectivo', 'tarjeta', 'yape', 'transferencia'].map(method => {
+                                             const count = method === 'todos' 
+                                                 ? allMovements.length 
+                                                 : allMovements.filter(mov => mov.method === method).length;
+                                             
+                                             const isPillSelected = selectedMethodFilter === method;
+                                             return (
+                                                 <button
+                                                     key={method}
+                                                     type="button"
+                                                     onClick={() => setSelectedMethodFilter(method)}
+                                                     className={`px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize transition-all active:scale-95 ${
+                                                         isPillSelected
+                                                             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                             : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                                     }`}
+                                                 >
+                                                     {method === 'todos' ? 'Todos' : method} ({count})
+                                                 </button>
+                                             );
+                                         })}
+                                     </div>
+                                     <button 
+                                         onClick={() => setShowExpenseModal(true)}
+                                         className="text-[11px] bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
+                                     >
+                                         + Registrar Egreso
+                                     </button>
                                  </div>
                                  
                                  <div className="p-2 max-h-60 overflow-y-auto no-scrollbar">
