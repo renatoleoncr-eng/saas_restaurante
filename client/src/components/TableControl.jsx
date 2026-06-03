@@ -3276,8 +3276,8 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 </div>
 
                                 {/* EVIDENCE UPLOAD */}
-                                {(() => {
-                                    const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(paymentMethod);
+                                {paymentMethod !== 'efectivo' && (() => {
+                                    const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(paymentMethod);
                                     return (
                                         <div className="mb-6 animate-in slide-in-from-top-2">
                                             <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -3453,7 +3453,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 )}
 
                                 {(() => {
-                                    const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(paymentMethod);
+                                    const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(paymentMethod);
                                     const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0);
 
                                     return (

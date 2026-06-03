@@ -169,7 +169,7 @@ export default function AccountManagementView() {
             alert("Ingrese un monto válido mayor a 0.");
             return;
         }
-        const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+        const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(payMethod);
         if (isEvidenceMandatory && payFiles.length === 0) {
             alert("Se requiere subir al menos un comprobante o foto de evidencia.");
             return;
@@ -704,8 +704,8 @@ export default function AccountManagementView() {
                                     </div>
 
                                     {/* EVIDENCE UPLOAD */}
-                                    {(() => {
-                                        const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+                                    {payMethod !== 'efectivo' && (() => {
+                                        const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(payMethod);
                                         return (
                                             <div className="animate-in slide-in-from-top-2">
                                                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -880,7 +880,7 @@ export default function AccountManagementView() {
                                 </div>
 
                                 {(() => {
-                                    const isEvidenceMandatory = ['efectivo', 'tarjeta', 'yape'].includes(payMethod);
+                                    const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(payMethod);
                                     const isPayDisabled = isPaying || (isEvidenceMandatory && payFiles.length === 0);
 
                                     return (
