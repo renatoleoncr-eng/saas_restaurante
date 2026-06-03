@@ -236,6 +236,14 @@ router.put('/products/:id', async (req, res) => {
 
         if (parsedPresentations && Array.isArray(parsedPresentations)) {
             const existingVariants = await ProductVariant.findAll({ where: { ProductId: id }, transaction: t });
+            
+            // Reconcile deletion: Find variants in DB that are no longer in the request payload
+            const updatedVariantIds = parsedPresentations.map(p => p.id).filter(id => id);
+            const toDelete = existingVariants.filter(ev => !updatedVariantIds.includes(ev.id));
+            for (const variant of toDelete) {
+                await variant.destroy({ transaction: t });
+            }
+
             for (const p of parsedPresentations) {
                 const variantName = p.name || p.size || String(p.price);
                 let match = p.id ? existingVariants.find(ev => ev.id == p.id) : existingVariants.find(ev => ev.name === variantName);

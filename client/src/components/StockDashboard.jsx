@@ -582,17 +582,16 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/30">
                                     {/* ---------------- GROUPED FIELDS (PRODUCT LEVEL) ---------------- */}
                                     <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas (Inmutables tras creación)</h4>
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas (Tipo inmutable tras creación)</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="col-span-1 md:col-span-2">
                                                 <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Producto</label>
                                                 <input
                                                     type="text"
                                                     placeholder="Ej. Coca Cola"
-                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${editForm.id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`}
+                                                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
                                                     value={editForm.name}
-                                                    onChange={e => !editForm.id && setEditForm({ ...editForm, name: e.target.value })}
-                                                    disabled={!!editForm.id}
+                                                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                                 />
                                             </div>
 
