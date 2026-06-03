@@ -3411,7 +3411,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 <div className="space-y-2 text-left">
                                                     <div>
                                                         <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
-                                                        <div className="flex gap-2">
+                                                        <div className="relative">
                                                             <input 
                                                                 type="text" 
                                                                 placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
@@ -3423,16 +3423,14 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                     else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
                                                                 }}
                                                                 disabled={isConfirmingPayment}
-                                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white pr-10"
                                                                 onKeyDown={e => e.key === 'Enter' && searchClientData()}
                                                             />
-                                                            <button 
-                                                                onClick={searchClientData} 
-                                                                disabled={isSearchingClient || isConfirmingPayment || !clientForm.dni}
-                                                                className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
-                                                            >
-                                                                {isSearchingClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                                                            </button>
+                                                            {isSearchingClient && (
+                                                                <div className="absolute right-3 top-2.5 text-blue-500">
+                                                                    <Loader2 size={16} className="animate-spin" />
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div>

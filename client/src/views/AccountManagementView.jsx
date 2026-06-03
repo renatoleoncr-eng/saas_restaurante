@@ -837,31 +837,29 @@ export default function AccountManagementView() {
                                                         </button>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="text"
-                                                                placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
-                                                                value={invoiceClientDoc}
-                                                                onChange={e => {
-                                                                    const val = e.target.value;
-                                                                    setInvoiceClientDoc(val);
-                                                                    if (val.length === 11) setInvoiceType('factura');
-                                                                    else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
-                                                                }}
-                                                                disabled={isPaying}
-                                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                                                                onKeyDown={e => e.key === 'Enter' && searchInvoiceClientData()}
-                                                            />
-                                                            <button
-                                                                onClick={searchInvoiceClientData}
-                                                                disabled={isSearchingInvoiceClient || isPaying || !invoiceClientDoc}
-                                                                className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
-                                                            >
-                                                                {isSearchingInvoiceClient ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                         <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                         <div className="relative">
+                                                             <input
+                                                                 type="text"
+                                                                 placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
+                                                                 value={invoiceClientDoc}
+                                                                 onChange={e => {
+                                                                     const val = e.target.value;
+                                                                     setInvoiceClientDoc(val);
+                                                                     if (val.length === 11) setInvoiceType('factura');
+                                                                     else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
+                                                                 }}
+                                                                 disabled={isPaying}
+                                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white pr-10"
+                                                                 onKeyDown={e => e.key === 'Enter' && searchInvoiceClientData()}
+                                                             />
+                                                             {isSearchingInvoiceClient && (
+                                                                 <div className="absolute right-3 top-2.5 text-blue-500">
+                                                                     <Loader2 size={16} className="animate-spin" />
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-bold text-gray-600 mb-1">{invoiceType === 'factura' ? 'Razón Social' : 'Nombre del Cliente'}</label>
                                                         <input
