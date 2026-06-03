@@ -1089,7 +1089,6 @@ export default function TableControl({ tableId, accountId, onClose }) {
             // Also trigger global refresh to update other components
             refreshData();
 
-            setShowMobileCart(false);
             return true;
         } catch (err) {
             const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || 'Error enviando pedido';
