@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search } from 'lucide-react';
@@ -102,8 +102,50 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     useEffect(() => {
         setCreatingSection(null);
         setEditForm({});
-        setSearchQuery('');
     }, [activeTab]);
+
+    const prevSearchQueryRef = useRef('');
+
+    // Transversal search across the 4 tabs
+    useEffect(() => {
+        const prevSearchQuery = prevSearchQueryRef.current;
+        prevSearchQueryRef.current = searchQuery;
+
+        // Only switch tabs if the search query has changed (user is typing)
+        if (searchQuery === prevSearchQuery) return;
+        if (!searchQuery) return;
+
+        const query = searchQuery.toLowerCase();
+        const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
+
+        const productMatches = (p) => p.name.toLowerCase().includes(query);
+        const ingredientMatches = (i) => i.name.toLowerCase().includes(query);
+
+        const hasFinishedMatches = products.some(p => p.isStockManaged && !excludedTypes.includes(p.type) && productMatches(p));
+        const hasPreparedMatches = products.some(p => !p.isStockManaged && p.requiresPreparation && !excludedTypes.includes(p.type) && productMatches(p));
+        const hasFreeMatches = products.some(p => !p.isStockManaged && !p.requiresPreparation && !excludedTypes.includes(p.type) && productMatches(p));
+        const hasIngredientMatches = ingredients.some(i => ingredientMatches(i));
+
+        // Check if the current tab has any match
+        let currentTabHasMatches = false;
+        if (activeTab === 'finished') currentTabHasMatches = hasFinishedMatches;
+        else if (activeTab === 'prepared') currentTabHasMatches = hasPreparedMatches;
+        else if (activeTab === 'free') currentTabHasMatches = hasFreeMatches;
+        else if (activeTab === 'ingredients') currentTabHasMatches = hasIngredientMatches;
+
+        if (currentTabHasMatches) return;
+
+        // Switch to the first tab that has matches
+        if (hasFinishedMatches) {
+            setActiveTab('finished');
+        } else if (hasPreparedMatches) {
+            setActiveTab('prepared');
+        } else if (hasFreeMatches) {
+            setActiveTab('free');
+        } else if (hasIngredientMatches) {
+            setActiveTab('ingredients');
+        }
+    }, [searchQuery, products, ingredients, activeTab]);
 
     const loadProducts = async () => {
         try {
@@ -1851,96 +1893,159 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                             const displayStock = variants.length > 0
                                                 ? (hasMultipleVariants ? totalStock : (singleVariant.stock !== undefined ? singleVariant.stock : 0))
                                                 : (product.stock || 0);
+                                            const isExpanded = creatingSection === `expand-${product.id}`;
 
                                             return (
-                                                <div key={product.id} className="bg-white p-4 rounded-lg shadow border flex justify-between items-center">
-                                                    <div>
-                                                        <div className="font-bold text-lg text-gray-800">{product.name}</div>
-                                                        <div className="text-sm text-gray-500 mb-1">
-                                                            <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'daily_option' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                                {product.type === 'daily_option' ? 'Opción Menú' : product.type}
-                                                            </span>
-                                                            <span>
-                                                                {hasMultipleVariants 
-                                                                    ? 'Precio Variable' 
-                                                                    : `S/ ${Number(parseFloat(singleVariant.price || product.price || 0).toFixed(1))}`
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                        {!readOnly && !product.isStockManaged && product.requiresPreparation && (
-                                                            <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
-                                                        )}
-                                                        {product.isStockManaged ? (
-                                                            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-                                                                {hasMultipleVariants ? (
-                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                                                        Stock: {totalStock} ({variants.length} Pres.)
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                                                        Stock: {displayStock} {singleVariant.name && singleVariant.name !== 'Estándar' ? `(${singleVariant.name})` : ''}
-                                                                    </span>
-                                                                )}
-
-                                                                {!readOnly && (
-                                                                    <div className="flex gap-1 items-center">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                if (hasMultipleVariants) {
-                                                                                    openAdjustment(product, 'add');
-                                                                                } else {
-                                                                                    openAdjustment({
-                                                                                        ...product,
-                                                                                        variantId: singleVariant.id,
-                                                                                        stock: singleVariant.stock
-                                                                                    }, 'add');
-                                                                                }
-                                                                            }}
-                                                                            className="bg-green-50 text-green-700 hover:bg-green-100 p-1 rounded-md border border-green-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
-                                                                            title="Agregar Stock"
-                                                                        >
-                                                                            <Plus size={14} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                if (hasMultipleVariants) {
-                                                                                    openAdjustment(product, 'remove');
-                                                                                } else {
-                                                                                    openAdjustment({
-                                                                                        ...product,
-                                                                                        variantId: singleVariant.id,
-                                                                                        stock: singleVariant.stock
-                                                                                    }, 'remove');
-                                                                                }
-                                                                            }}
-                                                                            className="bg-red-50 text-red-700 hover:bg-red-100 p-1 rounded-md border border-red-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
-                                                                            title="Quitar Stock"
-                                                                        >
-                                                                            <Minus size={14} />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
-                                                                <span className={`inline-block border text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm
-                                                                    ${product.requiresPreparation 
-                                                                        ? 'bg-orange-50 text-orange-700 border-orange-200' 
-                                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                                                                    {product.requiresPreparation ? 'Preparado' : 'Libre'}
+                                                <div key={product.id} className="bg-white p-4 rounded-lg shadow border flex flex-col gap-3">
+                                                    <div className="flex justify-between items-start w-full">
+                                                        <div className="flex-1">
+                                                            <div className="font-bold text-lg text-gray-800">{product.name}</div>
+                                                            <div className="text-sm text-gray-500 mb-1">
+                                                                <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'daily_option' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                    {product.type === 'daily_option' ? 'Opción Menú' : product.type}
                                                                 </span>
-                                                                {hasMultipleVariants && (
-                                                                    <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                                                                        {variants.length} Variantes
+                                                                <span>
+                                                                    {hasMultipleVariants 
+                                                                        ? 'Precio Variable' 
+                                                                        : `S/ ${Number(parseFloat(singleVariant.price || product.price || 0).toFixed(1))}`
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                            {!readOnly && !product.isStockManaged && product.requiresPreparation && (
+                                                                <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
+                                                            )}
+                                                            {product.isStockManaged ? (
+                                                                <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                                                                    {hasMultipleVariants ? (
+                                                                        <button
+                                                                            onClick={() => setCreatingSection(isExpanded ? null : `expand-${product.id}`)}
+                                                                            className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm hover:bg-blue-100 transition-colors active:scale-95"
+                                                                        >
+                                                                            Stock: {totalStock} ({variants.length} Pres.) {isExpanded ? '▲' : '▼'}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                                                            Stock: {displayStock} {singleVariant.name && singleVariant.name !== 'Estándar' ? `(${singleVariant.name})` : ''}
+                                                                        </span>
+                                                                    )}
+
+                                                                    {!readOnly && (
+                                                                        <div className="flex gap-1 items-center">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (hasMultipleVariants) {
+                                                                                        openAdjustment(product, 'add');
+                                                                                    } else {
+                                                                                        openAdjustment({
+                                                                                            ...product,
+                                                                                            variantId: singleVariant.id,
+                                                                                            stock: singleVariant.stock
+                                                                                        }, 'add');
+                                                                                    }
+                                                                                }}
+                                                                                className="bg-green-50 text-green-700 hover:bg-green-100 p-1 rounded-md border border-green-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                                title="Agregar Stock"
+                                                                            >
+                                                                                <Plus size={14} />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (hasMultipleVariants) {
+                                                                                        openAdjustment(product, 'remove');
+                                                                                    } else {
+                                                                                        openAdjustment({
+                                                                                            ...product,
+                                                                                            variantId: singleVariant.id,
+                                                                                            stock: singleVariant.stock
+                                                                                        }, 'remove');
+                                                                                    }
+                                                                                }}
+                                                                                className="bg-red-50 text-red-700 hover:bg-red-100 p-1 rounded-md border border-red-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                                title="Quitar Stock"
+                                                                            >
+                                                                                <Minus size={14} />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                                                                    <span className={`inline-block border text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm
+                                                                        ${product.requiresPreparation 
+                                                                            ? 'bg-orange-50 text-orange-700 border-orange-200' 
+                                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                                                        {product.requiresPreparation ? 'Preparado' : 'Libre'}
                                                                     </span>
-                                                                )}
+                                                                    {hasMultipleVariants && (
+                                                                        <button
+                                                                            onClick={() => setCreatingSection(isExpanded ? null : `expand-${product.id}`)}
+                                                                            className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm hover:bg-gray-100 transition-colors active:scale-95"
+                                                                        >
+                                                                            {variants.length} Variantes {isExpanded ? '▲' : '▼'}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {!readOnly && (
+                                                            <div className="flex gap-2 shrink-0">
+                                                                <button onClick={() => handleEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 active:scale-95 transition-all"><Edit2 size={18} /></button>
+                                                                <button onClick={() => handleDelete(product.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100 active:scale-95 transition-all"><Trash2 size={18} /></button>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {!readOnly && (
-                                                        <div className="flex flex-col gap-2">
-                                                            <button onClick={() => handleEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded"><Edit2 size={18} /></button>
-                                                            <button onClick={() => handleDelete(product.id)} className="p-2 bg-red-50 text-red-600 rounded"><Trash2 size={18} /></button>
+                                                    {isExpanded && hasMultipleVariants && (
+                                                        <div className="mt-1 pt-3 border-t border-gray-100 w-full space-y-2.5 animate-in slide-in-from-top-1">
+                                                            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                                                Presentaciones / Stock:
+                                                            </div>
+                                                            {variants.map(v => (
+                                                                <div key={v.id} className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-100">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-bold text-sm text-gray-700">{v.name}</span>
+                                                                        <span className="text-xs text-gray-500 font-mono">S/ {Number(parseFloat(v.price || 0).toFixed(1))}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        {product.isStockManaged ? (
+                                                                            <>
+                                                                                <span className={`font-bold text-xs px-2.5 py-1 rounded-full border shadow-sm ${v.stock < 5 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                                                                    Stock: {v.stock}
+                                                                                </span>
+                                                                                {!readOnly && (
+                                                                                    <div className="flex gap-1">
+                                                                                        <button
+                                                                                            onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id, stock: v.stock }, 'add')}
+                                                                                            className="bg-green-50 text-green-700 hover:bg-green-100 p-1 rounded-md border border-green-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                                            title="Agregar Stock"
+                                                                                        >
+                                                                                            <Plus size={14} />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => openAdjustment({ ...product, name: `${product.name} (${v.name})`, variantId: v.id, stock: v.stock }, 'remove')}
+                                                                                            className="bg-red-50 text-red-700 hover:bg-red-100 p-1 rounded-md border border-red-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                                            title="Quitar Stock"
+                                                                                        >
+                                                                                            <Minus size={14} />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
+                                                                            </>
+                                                                        ) : product.requiresPreparation ? (
+                                                                            <button
+                                                                                onClick={() => setRecipeProduct(product)}
+                                                                                className="text-orange-600 hover:bg-orange-50 p-1 rounded flex items-center gap-1 text-xs font-bold border border-orange-100"
+                                                                                title="Ver/Editar Receta"
+                                                                            >
+                                                                                <ChefHat size={14} /> Configurar
+                                                                            </button>
+                                                                        ) : (
+                                                                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm uppercase tracking-wider bg-gray-50 text-gray-500 border border-gray-200">
+                                                                                Libre
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     )}
                                                 </div>

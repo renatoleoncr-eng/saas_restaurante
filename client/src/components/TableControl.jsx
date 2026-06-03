@@ -1490,6 +1490,17 @@ export default function TableControl({ tableId, accountId, onClose }) {
         };
     };
 
+    const isProductOutOfStock = (prod) => {
+        const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
+        let displayStock = getEffectiveStock(prod);
+        if (prod.type === 'menu') {
+            const stats = getMenuStockStats(prod);
+            displayStock = stats.stock;
+        }
+        const isMissingRecipe = prod.requiresPreparation && !prod.isStockManaged && prod.type !== 'menu' && (!prod.Recipes || prod.Recipes.length === 0);
+        return isMissingRecipe || ((prod.isStockManaged || prod.requiresPreparation || prod.type === 'menu') && (displayStock - cartQty) <= 0);
+    };
+
     const renderStockOrLibreBadge = (prod, displayStock, isOutOfStock, isMissingRecipe, isMenuUnlimited, hasVariants, variantsList, stockDetails) => {
         if (isMissingRecipe) {
             return (
@@ -2171,9 +2182,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                                     {(products.filter(p => {
                                         if (selectedCategory === 'menu') {
-                                            return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name);
+                                            return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStock(p);
                                         }
-                                        return p.type === selectedCategory;
+                                        return p.type === selectedCategory && !isProductOutOfStock(p);
                                     }).length === 0) ? (
                                         <div className="col-span-full text-center text-gray-400 py-20 italic">
                                             No hay productos disponibles o no coinciden con la búsqueda.
@@ -2181,9 +2192,9 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     ) : (
                                         products.filter(p => {
                                             if (selectedCategory === 'menu') {
-                                                return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name);
+                                                return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStock(p);
                                             }
-                                            return p.type === selectedCategory;
+                                            return p.type === selectedCategory && !isProductOutOfStock(p);
                                         }).map(prod => {
                                             const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
                                             let displayStock = getEffectiveStock(prod);
