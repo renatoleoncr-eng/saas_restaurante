@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search } from 'lucide-react';
 import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
@@ -15,6 +15,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         return localStorage.getItem('stock_activeTab') || 'finished';
     });
     const [products, setProducts] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [isEditing, setIsEditing] = useState(null); // ID of product being edited
     const [creatingSection, setCreatingSection] = useState(null); // 'entries', 'mains', 'general', null
     // REMOVED isCreating
@@ -101,6 +102,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     useEffect(() => {
         setCreatingSection(null);
         setEditForm({});
+        setSearchQuery('');
     }, [activeTab]);
 
     const loadProducts = async () => {
@@ -381,26 +383,26 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     products={products} // Pass all products to find ingredients
                 />
             )}
-
             <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4`}>
 
-                {/* MOBILE TABS (TOP) */}
-                {mode !== 'menu_only' && (
-                    <div className="md:hidden w-full">
-                        <MobileTabMenu
-                            tabs={[
-                                { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
-                                { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
-                                { id: 'free', label: `Libres (${countFree})`, icon: Zap },
-                                { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
-                            ]}
-                            activeTab={activeTab}
-                            onTabChange={setActiveTab}
-                        />
-                    </div>
-                )}
+                {/* TABS CONTROLLERS */}
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    {/* MOBILE TABS (TOP) */}
+                    {mode !== 'menu_only' && (
+                        <div className="md:hidden w-full">
+                            <MobileTabMenu
+                                tabs={[
+                                    { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                                    { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
+                                    { id: 'free', label: `Libres (${countFree})`, icon: Zap },
+                                    { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                ]}
+                                activeTab={activeTab}
+                                onTabChange={setActiveTab}
+                            />
+                        </div>
+                    )}
 
-                <div className={`flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto ${activeTab === 'ingredients' ? 'hidden md:flex' : ''}`}>
                     {/* DESKTOP TABS */}
                     {mode !== 'menu_only' && (
                         <div className="hidden md:flex bg-gray-100 p-1 rounded-lg overflow-x-auto">
@@ -432,18 +434,46 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     )}
                 </div>
 
-                {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
-                    <button
-                        onClick={() => handleCreate()}
-                        className={`w-full md:w-auto px-4 py-3 md:py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors
-                            ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
-                                activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                    'bg-blue-600 hover:bg-blue-700'}`}
-                    >
-                        <Plus size={18} />
-                        {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
-                    </button>
-                )}
+                {/* SEARCH AND ACTION BAR */}
+                <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+                    {/* Search Bar */}
+                    {activeTab !== 'menu_options' && (
+                        <div className="relative w-full sm:w-64">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                <Search size={18} />
+                            </span>
+                            <input
+                                type="text"
+                                placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : "Buscar producto..."}
+                                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Action Button */}
+                    {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
+                        <button
+                            onClick={() => handleCreate()}
+                            className={`w-full sm:w-auto px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors whitespace-nowrap
+                                ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
+                                    activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                        'bg-blue-600 hover:bg-blue-700'}`}
+                        >
+                            <Plus size={18} />
+                            {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* ADJUSTMENT MODAL */}
@@ -527,7 +557,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
             {/* CONTENT */}
             {activeTab === 'ingredients' ? (
-                <IngredientManager readOnly={readOnly} user={user} />
+                <IngredientManager readOnly={readOnly} user={user} searchQuery={searchQuery} />
             ) : (
                 <>
                     {/* General Create Form Modal (For standard products) */}
@@ -1469,6 +1499,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     return !product.isStockManaged && !product.requiresPreparation && !excludedTypes.includes(product.type);
                                                 }
                                                 return true;
+                                            }).filter(product => {
+                                                if (!searchQuery) return true;
+                                                return product.name.toLowerCase().includes(searchQuery.toLowerCase());
                                             }).map(product => {
                                                 const variants = product.ProductVariants || [];
                                                 const hasMultipleVariants = variants.length > 1;
@@ -1721,41 +1754,65 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                             if (activeTab === 'free') return !p.isStockManaged && !p.requiresPreparation && !excludedTypes.includes(p.type);
                                             if (activeTab === 'menu_options') return ['daily_entry', 'daily_main', 'daily_option'].includes(p.type);
                                             return true;
-                                        }).map(product => (
-                                            <div key={product.id} className="bg-white p-4 rounded-lg shadow border flex justify-between items-center">
-                                                <div>
-                                                    <div className="font-bold text-lg text-gray-800">{product.name}</div>
-                                                    <div className="text-sm text-gray-500 mb-1">
-                                                        <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'daily_option' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                            {product.type === 'daily_option' ? 'Opción Menú' : product.type}
-                                                        </span>
-                                                        <span>S/ {Number(parseFloat(product.price).toFixed(1))}</span>
-                                                    </div>
-                                                    {!readOnly && !product.isStockManaged && (
-                                                        <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
-                                                    )}
-                                                    {product.isStockManaged ? (
-                                                        <div className="mt-2.5">
-                                                            <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                                                                Stock: {product.stock}
+                                        }).filter(p => {
+                                            if (!searchQuery) return true;
+                                            return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                                        }).map(product => {
+                                            const variants = product.ProductVariants || [];
+                                            const hasMultipleVariants = variants.length > 1;
+                                            const totalStock = variants.reduce((sum, v) => sum + parseInt(v.stock || 0), 0);
+                                            const singleVariant = variants[0] || {};
+                                            const displayStock = variants.length > 0
+                                                ? (hasMultipleVariants ? totalStock : (singleVariant.stock !== undefined ? singleVariant.stock : 0))
+                                                : (product.stock || 0);
+
+                                            return (
+                                                <div key={product.id} className="bg-white p-4 rounded-lg shadow border flex justify-between items-center">
+                                                    <div>
+                                                        <div className="font-bold text-lg text-gray-800">{product.name}</div>
+                                                        <div className="text-sm text-gray-500 mb-1">
+                                                            <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'daily_option' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                {product.type === 'daily_option' ? 'Opción Menú' : product.type}
+                                                            </span>
+                                                            <span>
+                                                                {hasMultipleVariants 
+                                                                    ? 'Precio Variable' 
+                                                                    : `S/ ${Number(parseFloat(singleVariant.price || product.price || 0).toFixed(1))}`
+                                                                }
                                                             </span>
                                                         </div>
-                                                    ) : (
-                                                        <div className="mt-2.5">
-                                                            <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                                                                Libre
-                                                            </span>
+                                                        {!readOnly && !product.isStockManaged && (
+                                                            <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
+                                                        )}
+                                                        {product.isStockManaged ? (
+                                                            <div className="mt-2.5">
+                                                                {hasMultipleVariants ? (
+                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                        Stock: {totalStock} ({variants.length} Pres.)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                        Stock: {displayStock} {singleVariant.name && singleVariant.name !== 'Estándar' ? `(${singleVariant.name})` : ''}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-2.5">
+                                                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                    Libre
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {!readOnly && (
+                                                        <div className="flex flex-col gap-2">
+                                                            <button onClick={() => handleEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded"><Edit2 size={18} /></button>
+                                                            <button onClick={() => handleDelete(product.id)} className="p-2 bg-red-50 text-red-600 rounded"><Trash2 size={18} /></button>
                                                         </div>
                                                     )}
                                                 </div>
-                                                {!readOnly && (
-                                                    <div className="flex flex-col gap-2">
-                                                        <button onClick={() => handleEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded"><Edit2 size={18} /></button>
-                                                        <button onClick={() => handleDelete(product.id)} className="p-2 bg-red-50 text-red-600 rounded"><Trash2 size={18} /></button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )
                             }

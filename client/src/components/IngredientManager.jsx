@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Package, Plus, Trash2, Edit2, Save, X, Minus, History, TrendingUp, TrendingDown } from 'lucide-react';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
 
-export default function IngredientManager({ readOnly = false, user }) {
+export default function IngredientManager({ readOnly = false, user, searchQuery = '' }) {
     const isWaiter = user?.role === 'waiter';
     const [activeTab, setActiveTab] = useState(isWaiter ? 'movements' : 'stock'); // 'stock' or 'movements'
     const [ingredients, setIngredients] = useState([]);
@@ -194,7 +194,7 @@ export default function IngredientManager({ readOnly = false, user }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {ingredients.map(item => (
+                                {ingredients.filter(item => !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase())).map(item => (
                                     <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
                                         {isEditing === item.id ? (
                                             <>
