@@ -1705,6 +1705,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         {groupedOrders.map(o => {
                                             let pName = "Producto desconocido";
                                             let displayNotes = o.notes;
+                                            let originalP = null;
 
                                             if (o.Product && o.Product.name) {
                                                 pName = o.Product.name;
@@ -1712,13 +1713,46 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 const localP = products.find(p => p.id === o.ProductId);
                                                 if (localP) pName = localP.name;
                                             }
+
+                                            if (products.length > 0 && o.ProductId) {
+                                                const localP = products.find(p => p.id === o.ProductId);
+                                                if (localP) {
+                                                    if (o.presentation) {
+                                                        if (localP.ProductVariants && localP.ProductVariants.length > 0) {
+                                                            const v = localP.ProductVariants.find(v => v.name === o.presentation);
+                                                            if (v) originalP = v.price;
+                                                        } else if (localP.presentations) {
+                                                            try {
+                                                                const vars = typeof localP.presentations === 'string' ? JSON.parse(localP.presentations) : localP.presentations;
+                                                                const v = vars.find(v => v.name === o.presentation);
+                                                                if (v) originalP = v.price;
+                                                            } catch (e) { }
+                                                        }
+                                                    }
+                                                    if (originalP === null) originalP = localP.price;
+                                                }
+                                            }
+
+                                            const isStaff = account?.accountType === 'staff';
                                             return (
                                                 <div key={o.key} className="flex justify-between items-center text-sm border-b border-dashed pb-2 last:border-b-0 last:pb-0">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-gray-700">
                                                             {o.quantity}x {pName}
                                                             <span className="text-blue-600 ml-1">
-                                                                (S/ {Number(parseFloat(o.priceAtOrder).toFixed(1))})
+                                                                {isStaff ? (
+                                                                    o.quantity > 1 ? (
+                                                                        <span className="text-orange-600">({o.quantity}x <span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> = <span className="line-through text-gray-400">S/ {Number((o.quantity * parseFloat(originalP || 0)).toFixed(1))}</span> a costo S/ 0)</span>
+                                                                    ) : (
+                                                                        <span className="text-orange-600">(<span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> a costo S/ 0)</span>
+                                                                    )
+                                                                ) : (
+                                                                    o.quantity > 1 ? (
+                                                                        `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
+                                                                    ) : (
+                                                                        `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
+                                                                    )
+                                                                )}
                                                             </span>
                                                         </span>
                                                         {o.presentation && <span className="text-xs text-blue-500">({o.presentation})</span>}
@@ -2833,7 +2867,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                             )
                                                         ) : (
                                                             o.quantity > 1 ? (
-                                                                `(${o.quantity}x${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
+                                                                `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
                                                             ) : (
                                                                 `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
                                                             )
