@@ -492,6 +492,18 @@ export default function TableControl({ tableId, accountId, onClose }) {
         }
     };
 
+    // Autocomplete client billing data when issuing electronic invoice
+    useEffect(() => {
+        if (!issueInvoice) return;
+        const doc = (clientForm.dni || '').trim();
+        const isRucPrefix = ['10', '15', '17', '20'].some(p => doc.startsWith(p));
+        if (invoiceType === 'boleta' && doc.length === 8 && !isRucPrefix) {
+            searchClientData();
+        } else if (invoiceType === 'factura' && doc.length === 11) {
+            searchClientData();
+        }
+    }, [clientForm.dni, invoiceType, issueInvoice]);
+
     // Menu Daily State
     const [viewMode, setViewMode] = useState('products'); // 'products' | 'menu_builder'
     const [dailyMenu, setDailyMenu] = useState({ entries: [], mains: [], activeGroups: [] });
@@ -3405,9 +3417,10 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                                 placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
                                                                 value={clientForm.dni}
                                                                 onChange={e => {
-                                                                    setClientForm({...clientForm, dni: e.target.value});
-                                                                    if (e.target.value.length === 11) setInvoiceType('factura');
-                                                                    else if (e.target.value.length === 8) setInvoiceType('boleta');
+                                                                    const val = e.target.value;
+                                                                    setClientForm({...clientForm, dni: val});
+                                                                    if (val.length === 11) setInvoiceType('factura');
+                                                                    else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
                                                                 }}
                                                                 disabled={isConfirmingPayment}
                                                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"

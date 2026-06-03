@@ -164,6 +164,18 @@ export default function AccountManagementView() {
         }
     };
 
+    // Autocomplete client billing data when issuing electronic invoice
+    useEffect(() => {
+        if (!issueInvoice) return;
+        const doc = (invoiceClientDoc || '').trim();
+        const isRucPrefix = ['10', '15', '17', '20'].some(p => doc.startsWith(p));
+        if (invoiceType === 'boleta' && doc.length === 8 && !isRucPrefix) {
+            searchInvoiceClientData();
+        } else if (invoiceType === 'factura' && doc.length === 11) {
+            searchInvoiceClientData();
+        }
+    }, [invoiceClientDoc, invoiceType, issueInvoice]);
+
     const handlePartialPayment = async () => {
         if (!payAccount || !payAmount || isNaN(payAmount) || Number(payAmount) <= 0) {
             alert("Ingrese un monto válido mayor a 0.");
@@ -832,9 +844,10 @@ export default function AccountManagementView() {
                                                                 placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
                                                                 value={invoiceClientDoc}
                                                                 onChange={e => {
-                                                                    setInvoiceClientDoc(e.target.value);
-                                                                    if (e.target.value.length === 11) setInvoiceType('factura');
-                                                                    else if (e.target.value.length === 8) setInvoiceType('boleta');
+                                                                    const val = e.target.value;
+                                                                    setInvoiceClientDoc(val);
+                                                                    if (val.length === 11) setInvoiceType('factura');
+                                                                    else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
                                                                 }}
                                                                 disabled={isPaying}
                                                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
