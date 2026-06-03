@@ -436,7 +436,7 @@ router.post('/accounts/:id/cancel', async (req, res) => {
         }
 
         // Audit log
-        const cancelUserId = req.body.userId || null;
+        const cancelUserId = req.body?.userId || req.query?.userId || null;
         await logAction(req, 'CANCEL_ACCOUNT', 'Account', id, { userId: cancelUserId, tableId: account.TableId, ordersCount: account.Orders ? account.Orders.length : 0 });
 
         res.json({ success: true, account });

@@ -771,7 +771,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
         // Even if there are items in the local cart, they will be lost anyway.
         if (account && (!account.Orders || account.Orders.length === 0)) {
             try {
-                await axios.post(`/api/accounts/${account.id}/cancel`);
+                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id });
             } catch (err) {
                 console.error("Error auto-cancelling empty account on close:", err);
             }
@@ -1114,7 +1114,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
     const handleDeleteOrder = async (orderId) => {
         setDeleteConfirmId(null); // Clear inline confirmation
         try {
-            await axios.delete(`/api/orders/${orderId}`);
+            await axios.delete(`/api/orders/${orderId}?userId=${user?.id}`);
             // Force reload manually to see price update immediately
             const accRes = await axios.get(`/api/accounts/table/${tableId}`);
             setAccount(accRes.data);
@@ -1131,7 +1131,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
 
     const handleDecrementOrder = async (orderId) => {
         try {
-            await axios.put(`/api/orders/${orderId}/decrement`);
+            await axios.put(`/api/orders/${orderId}/decrement`, { userId: user?.id });
             // Force reload manually to see price update immediately
             const accRes = await axios.get(`/api/accounts/table/${tableId}`);
             setAccount(accRes.data);
@@ -1162,7 +1162,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
         if (!account.Orders || account.Orders.length === 0) {
             if (!confirm("¿Liberar mesa y cancelar cuenta vacía?")) return;
             try {
-                await axios.post(`/api/accounts/${account.id}/cancel`);
+                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id });
                 // Refresh table status in background or just close
                 onClose();
             } catch (e) {

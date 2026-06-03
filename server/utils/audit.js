@@ -10,7 +10,7 @@ const { AuditLog } = require('../models');
  */
 async function logAction(req, action, entity, entityId, details = null) {
     try {
-        const userId = req.user ? req.user.id : (req.body.userId || null); // Try to get from auth middleware or body
+        const userId = req.user ? req.user.id : (req.body?.userId || req.query?.userId || null); // Try to get from auth middleware, body, or query params
         const ipAddress = req.ip || req.connection.remoteAddress;
 
         // Ensure details is a string if it's an object, or null
