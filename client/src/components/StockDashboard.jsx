@@ -478,7 +478,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
             {/* ADJUSTMENT MODAL */}
             {adjustmentItem && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 animate-in fade-in">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                             {adjustmentItem.type === 'add' ? <Plus className="text-green-600" /> : <Minus className="text-red-600" />}
@@ -1584,7 +1584,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                             <td className="p-4 font-medium">
                                                                 <div className="flex items-center gap-2">
                                                                     {/* Only show Expand button if multiple variants exist */}
-                                                                    {(activeTab === 'finished' || activeTab === 'prepared') && hasMultipleVariants && (
+                                                                    {(activeTab === 'finished' || activeTab === 'prepared' || activeTab === 'free') && hasMultipleVariants && (
                                                                         <button
                                                                             onClick={() => setCreatingSection(isExpanded ? null : `expand-${product.id}`)}
                                                                             className="p-1 rounded hover:bg-gray-200 text-gray-500"
@@ -1615,6 +1615,25 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                             // SINGLE VARIANT: Show its stock + specific presentation name
                                                                             <span className={`font-bold text-lg ${singleVariant.stock < 10 ? 'text-red-500' : 'text-green-600'}`}>
                                                                                 {singleVariant.stock} <span className="text-xs text-gray-400 font-normal">un. ({singleVariant.name})</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : !product.requiresPreparation ? (
+                                                                    // LIBRE/ILIMITADO PRODUCTS
+                                                                    <div className="flex items-center justify-between">
+                                                                        {hasMultipleVariants ? (
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-sm font-bold text-gray-700">{variants.length} Variantes</span>
+                                                                                <button
+                                                                                    onClick={() => setCreatingSection(isExpanded ? null : `expand-${product.id}`)}
+                                                                                    className="text-emerald-600 hover:text-emerald-800 text-xs text-left font-semibold"
+                                                                                >
+                                                                                    {isExpanded ? 'Ocultar' : 'Ver Variantes'}
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm uppercase tracking-wider bg-gray-50 text-gray-500 border border-gray-200">
+                                                                                Libre
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -1733,7 +1752,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                 <tr>
                                                                                     <th className="p-3 text-left pl-4">Presentación</th>
                                                                                     <th className="p-3 text-left">
-                                                                                        {product.isStockManaged ? 'Stock' : 'Receta'}
+                                                                                        {product.isStockManaged ? 'Stock' : product.requiresPreparation ? 'Receta' : 'Detalle'}
                                                                                     </th>
                                                                                     <th className="p-3 text-left">Precio</th>
                                                                                     {!readOnly && <th className="p-3 text-right pr-4">Acciones</th>}
@@ -1750,7 +1769,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                                         {v.stock}
                                                                                                     </div>
                                                                                                 </div>
-                                                                                            ) : (
+                                                                                            ) : product.requiresPreparation ? (
                                                                                                 <button
                                                                                                     onClick={() => setRecipeProduct(product)}
                                                                                                     className="text-orange-600 hover:bg-orange-50 p-1 rounded flex items-center gap-1 text-xs font-bold border border-orange-100"
@@ -1758,6 +1777,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                                 >
                                                                                                     <ChefHat size={14} /> Configurar
                                                                                                 </button>
+                                                                                            ) : (
+                                                                                                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm uppercase tracking-wider bg-gray-50 text-gray-500 border border-gray-200">
+                                                                                                    Libre
+                                                                                                </span>
                                                                                             )}
                                                                                         </td>
                                                                                         <td className="p-3 font-mono text-gray-600">S/ {Number(parseFloat(v.price).toFixed(1))}</td>
@@ -1844,7 +1867,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 }
                                                             </span>
                                                         </div>
-                                                        {!readOnly && !product.isStockManaged && (
+                                                        {!readOnly && !product.isStockManaged && product.requiresPreparation && (
                                                             <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
                                                         )}
                                                         {product.isStockManaged ? (
@@ -1899,10 +1922,18 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 )}
                                                             </div>
                                                         ) : (
-                                                            <div className="mt-2.5">
-                                                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                                                                    Libre
+                                                            <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                                                                <span className={`inline-block border text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm
+                                                                    ${product.requiresPreparation 
+                                                                        ? 'bg-orange-50 text-orange-700 border-orange-200' 
+                                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                                                    {product.requiresPreparation ? 'Preparado' : 'Libre'}
                                                                 </span>
+                                                                {hasMultipleVariants && (
+                                                                    <span className="inline-block bg-gray-50 text-gray-500 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                        {variants.length} Variantes
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
