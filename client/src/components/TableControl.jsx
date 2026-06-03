@@ -492,12 +492,38 @@ export default function TableControl({ tableId, accountId, onClose }) {
     const [menuSelection, setMenuSelection] = useState({ entry: '', main: '' });
     const [pendingMenuProduct, setPendingMenuProduct] = useState(null);
     const [pendingVariantProduct, setPendingVariantProduct] = useState(null); // For aggregating variant selection
+    const [variantQuantities, setVariantQuantities] = useState({}); // local quantities state for variant selection
     const [deleteConfirmId, setDeleteConfirmId] = useState(null); // For inline delete confirmation
 
     // 2x1 Drink Promotions State
     const [drinkPromotions, setDrinkPromotions] = useState([]);
     const [pendingComboPromo, setPendingComboPromo] = useState(null); // promo being built
     const [comboSelection, setComboSelection] = useState([]); // array of up to 2 selected items
+
+    // Helpers for 2x1 promotions quantities and counters
+    const getComboItemCount = (itemId, promoId) => {
+        return comboSelection.filter(s => s.id === itemId && s.promoId === promoId).length;
+    };
+
+    const handleIncrementComboItem = (item, promo) => {
+        if (comboSelection.length >= 2) return;
+        const instanceId = `${promo.id}:${item.id}:${Date.now()}:${Math.random()}`;
+        setComboSelection(prev => [...prev, {
+            ...item,
+            promoId: promo.id,
+            _uid: instanceId,
+            _promoPrice: parseFloat(promo.price),
+            _originalPrice: parseFloat(item.individualPrice || 0)
+        }]);
+    };
+
+    const handleDecrementComboItem = (itemId, promoId) => {
+        setComboSelection(prev => {
+            const idx = prev.findIndex(s => s.id === itemId && s.promoId === promoId);
+            if (idx === -1) return prev;
+            return prev.filter((_, i) => i !== idx);
+        });
+    };
 
     // Helper to group identical orders (Optimized O(N))
     const groupOrders = (orders) => {
@@ -831,6 +857,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
             }
 
             setPendingVariantProduct({ ...product, parsedVariants: allOptions });
+            setVariantQuantities({});
             return;
         }
 
@@ -846,6 +873,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                         stock: getEffectiveStock(product, v.name)
                     }));
                     setPendingVariantProduct({ ...product, parsedVariants: allOptions });
+                    setVariantQuantities({});
                     return;
                 }
             } catch (e) { console.error("Error parsing variants", e); }
@@ -855,7 +883,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
         addToCart(product);
     };
 
-    const addToCart = (product, specificNotes = '', subItems = [], presentationName = null, overridePrice = null) => {
+    const addToCart = (product, specificNotes = '', subItems = [], presentationName = null, overridePrice = null, quantityToAdd = 1) => {
         // Intercept Menu Type -> Switch to Inline Builder
         if (product.type === 'menu' && !specificNotes) {
             setPendingMenuProduct(product);
@@ -910,7 +938,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 const newCart = [...prev];
                 newCart[existingIndex] = {
                     ...newCart[existingIndex],
-                    quantity: newCart[existingIndex].quantity + 1
+                    quantity: newCart[existingIndex].quantity + quantityToAdd
                 };
                 return newCart;
             }
@@ -919,12 +947,22 @@ export default function TableControl({ tableId, accountId, onClose }) {
                 name: finalName,
                 price: finalPriceCalc,
                 originalPrice: originalPriceCalc,
-                quantity: 1,
+                quantity: quantityToAdd,
                 notes: specificNotes || '',
                 subItems: subItems,
                 presentation: presentationName // Important: Send this to backend
             }];
         });
+    };
+
+    const handleConfirmVariants = () => {
+        if (!pendingVariantProduct) return;
+        Object.entries(variantQuantities).forEach(([presentationName, qty]) => {
+            if (qty > 0) {
+                addToCart(pendingVariantProduct, '', [], presentationName, null, qty);
+            }
+        });
+        setPendingVariantProduct(null);
     };
 
     const confirmMenuSelection = () => {
@@ -1806,44 +1844,110 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                     <button onClick={() => setPendingVariantProduct(null)} className="p-2 hover:bg-gray-200 rounded-full"><X size={20} /></button>
                                 </div>
                                 <div className="p-6">
-                                    <p className="text-sm text-gray-500 mb-4">Selecciona la presentación:</p>
-                                    <div className="space-y-3">
-                                        {/* Base Product Option? Usually integrated into variants list if configured properly. 
-                                        If user wants Base + Variants, he should probably add "Standard" as a variant or just allow base click. 
-                                        For now, assume Variants replace Base if they exist. */}
-                                        {pendingVariantProduct.parsedVariants.map((v, idx) => (
-                                            <button
-                                                key={idx}
-                                                // Disable if stock is 0
-                                                disabled={v.stock <= 0}
-                                                onClick={() => {
-                                                    addToCart(pendingVariantProduct, '', [], v.name);
-                                                    setPendingVariantProduct(null);
-                                                }}
-                                                className={`w-full text-center p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group flex justify-between items-center ${v.stock <= 0 ? 'opacity-60 grayscale' : ''}`}
-                                            >
-                                                <span className="font-bold text-xl text-blue-700 group-hover:text-blue-800">
-                                                    {v.name === 'Normal'
-                                                        ? `Base`
-                                                        : v.name}
-                                                </span>
-                                                <div className="text-right">
-                                                    {v.happyHourPrice && isHappyHourActive(v.happyHourStart, v.happyHourEnd) ? (
-                                                        <div className="flex flex-col items-end">
-                                                            <div className="text-xs text-gray-400 line-through">S/ {Number(parseFloat(v.price).toFixed(1))}</div>
-                                                            <div className="font-bold text-yellow-600">S/ {Number(parseFloat(v.happyHourPrice).toFixed(1))}</div>
+                                    <p className="text-sm text-gray-500 mb-4">Selecciona las cantidades para cada presentación:</p>
+                                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                        {pendingVariantProduct.parsedVariants.map((v, idx) => {
+                                            const currentQty = variantQuantities[v.name] || 0;
+                                            const qtyInCart = cart.reduce((acc, item) => 
+                                                (item.productId === pendingVariantProduct.id && item.presentation === v.name) ? acc + item.quantity : acc
+                                            , 0);
+                                            const isAddDisabled = v.stock !== undefined && (qtyInCart + currentQty) >= v.stock;
+                                            
+                                            const handleIncrement = () => {
+                                                if (isAddDisabled) return;
+                                                setVariantQuantities(prev => ({
+                                                    ...prev,
+                                                    [v.name]: (prev[v.name] || 0) + 1
+                                                }));
+                                            };
+                                            
+                                            const handleDecrement = () => {
+                                                if (currentQty <= 0) return;
+                                                setVariantQuantities(prev => ({
+                                                    ...prev,
+                                                    [v.name]: Math.max(0, (prev[v.name] || 0) - 1)
+                                                }));
+                                            };
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl transition-all ${v.stock <= 0 ? 'opacity-50 grayscale' : ''}`}
+                                                >
+                                                    <div className="flex flex-col text-left">
+                                                        <span className="font-bold text-base text-gray-800">
+                                                            {v.name === 'Normal' ? `Base` : v.name}
+                                                        </span>
+                                                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            {v.happyHourPrice && isHappyHourActive(v.happyHourStart, v.happyHourEnd) ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-[10px] text-gray-400 line-through">S/ {Number(parseFloat(v.price).toFixed(1))}</span>
+                                                                    <span className="font-bold text-yellow-600 text-sm">S/ {Number(parseFloat(v.happyHourPrice).toFixed(1))}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="font-bold text-gray-700 text-sm">S/ {Number(parseFloat(v.price).toFixed(1))}</span>
+                                                            )}
+                                                            {v.stock !== undefined && (pendingVariantProduct.isStockManaged || pendingVariantProduct.requiresPreparation || pendingVariantProduct.type === 'menu') && (
+                                                                <span className={`text-[10px] ${v.stock <= 0 ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
+                                                                    Stock: {v.stock} {qtyInCart > 0 ? `(${qtyInCart} en cart)` : ''}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Quantity Controls */}
+                                                    {v.stock > 0 ? (
+                                                        <div className="flex items-center gap-2.5">
+                                                            {currentQty > 0 && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={handleDecrement}
+                                                                        className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 border border-blue-200 rounded-full font-black text-lg hover:bg-blue-100 transition-colors"
+                                                                    >
+                                                                        -
+                                                                    </button>
+                                                                    <span className="font-bold text-blue-700 w-4 text-center">
+                                                                        {currentQty}
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                            <button
+                                                                onClick={handleIncrement}
+                                                                disabled={isAddDisabled}
+                                                                className={`w-8 h-8 flex items-center justify-center rounded-full font-black text-lg transition-all
+                                                                    ${isAddDisabled
+                                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                                        : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                                            >
+                                                                +
+                                                            </button>
                                                         </div>
                                                     ) : (
-                                                        <div className="font-bold text-gray-800">S/ {Number(parseFloat(v.price).toFixed(1))}</div>
-                                                    )}
-                                                    {v.stock !== undefined && (pendingVariantProduct.isStockManaged || pendingVariantProduct.requiresPreparation || pendingVariantProduct.type === 'menu') && (
-                                                        <div className={`text-xs ${v.stock <= 0 ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
-                                                            Stock: {v.stock}
-                                                        </div>
+                                                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded">Agotado</span>
                                                     )}
                                                 </div>
-                                            </button>
-                                        ))}
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    {/* Action Buttons at bottom of modal */}
+                                    <div className="mt-5 pt-3 border-t flex gap-3">
+                                        <button
+                                            onClick={() => setPendingVariantProduct(null)}
+                                            className="flex-1 py-3 text-gray-600 bg-gray-100 font-bold hover:bg-gray-200 rounded-xl transition-colors text-sm"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={handleConfirmVariants}
+                                            disabled={Object.values(variantQuantities).reduce((a, b) => a + b, 0) === 0}
+                                            className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow transition-all text-sm
+                                                ${Object.values(variantQuantities).reduce((a, b) => a + b, 0) === 0
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                        >
+                                            Confirmar ({Object.values(variantQuantities).reduce((a, b) => a + b, 0)})
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -2182,40 +2286,47 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                         );
 
                                         return allItems.map(item => {
-                                            const isSelected = comboSelection.some(s => s._uid === item._uid);
-                                            const isDisabled = !isSelected && comboSelection.length >= 2;
+                                            const count = getComboItemCount(item.id, item._promo.id);
                                             return (
-                                                <button
+                                                <div
                                                     key={item._uid}
-                                                    disabled={isDisabled}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setComboSelection(s => s.filter(x => x._uid !== item._uid));
-                                                        } else if (comboSelection.length < 2) {
-                                                            setComboSelection(s => [...s, {
-                                                                ...item,
-                                                                _uid: item._uid,
-                                                                _promoPrice: parseFloat(item._promo.price),
-                                                                _originalPrice: parseFloat(item.individualPrice || 0)
-                                                            }]);
-                                                        }
-                                                    }}
-                                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all border-2 shadow-sm
-                                                    ${isSelected
-                                                            ? 'bg-purple-600 border-purple-600 text-white font-bold scale-[1.02]'
-                                                            : isDisabled
-                                                                ? 'opacity-30 bg-gray-50 border-gray-100 cursor-not-allowed shadow-none'
-                                                                : 'bg-white border-white hover:border-purple-200 text-gray-700'}`}
+                                                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all border bg-white border-gray-150 shadow-sm"
                                                 >
                                                     <div className="flex flex-col text-left">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-base font-bold">{item.name}</span>
-                                                            <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full uppercase font-black tracking-tight">{item._promo.name}</span>
+                                                            <span className="text-base font-bold text-gray-800">{item.name}</span>
+                                                            <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full uppercase font-black tracking-tight shrink-0">{item._promo.name}</span>
                                                         </div>
-                                                        <span className={`text-xs ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>S/ {Number(parseFloat(item.individualPrice || 0).toFixed(2))}</span>
+                                                        <span className="text-xs text-gray-400 mt-0.5">S/ {Number(parseFloat(item.individualPrice || 0).toFixed(1))} individual</span>
                                                     </div>
-                                                    {isSelected && <CheckCircle size={24} className="text-white" />}
-                                                </button>
+                                                    
+                                                    {/* Quantity Selector Counter */}
+                                                    <div className="flex items-center gap-2.5">
+                                                        {count > 0 && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleDecrementComboItem(item.id, item._promo.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center bg-purple-100 text-purple-700 rounded-full font-black text-sm hover:bg-purple-200 transition-colors"
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                <span className="font-bold text-purple-700 w-4 text-center">
+                                                                    {count}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleIncrementComboItem(item, item._promo)}
+                                                            disabled={comboSelection.length >= 2}
+                                                            className={`w-7 h-7 flex items-center justify-center rounded-full font-black text-sm transition-all
+                                                                ${comboSelection.length >= 2
+                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                    : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             );
                                         });
                                     })()}
@@ -2249,41 +2360,44 @@ export default function TableControl({ tableId, accountId, onClose }) {
                                                 </div>
                                             ) : (
                                                 items.map(item => {
-                                                    const uid = `${pendingComboPromo.id}:${item.id}`;
-                                                    const isSelected = comboSelection.some(s => s._uid === uid);
-                                                    const isDisabled = !isSelected && comboSelection.length >= 2;
+                                                    const count = getComboItemCount(item.id, pendingComboPromo.id);
                                                     return (
-                                                        <button
+                                                        <div
                                                             key={item.id}
-                                                            disabled={isDisabled}
-                                                            onClick={() => {
-                                                                if (isSelected) {
-                                                                    setComboSelection(s => s.filter(x => x._uid !== uid));
-                                                                } else if (comboSelection.length < 2) {
-                                                                    setComboSelection(s => [...s, {
-                                                                        ...item,
-                                                                        _uid: uid,
-                                                                        _promoPrice: parseFloat(pendingComboPromo.price)
-                                                                    }]);
-                                                                }
-                                                            }}
-                                                            className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all border-2 shadow-sm
-                                                            ${isSelected
-                                                                    ? 'bg-purple-600 border-purple-600 text-white font-bold scale-[1.02]'
-                                                                    : isDisabled
-                                                                        ? 'opacity-30 bg-gray-50 border-gray-100 cursor-not-allowed shadow-none'
-                                                                        : 'bg-white border-white hover:border-purple-200 text-gray-700'}`}
+                                                            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all border bg-white border-gray-150 shadow-sm"
                                                         >
-                                                            <div className="flex items-center gap-3">
-                                                                {isSelected ? <CheckCircle size={18} /> : (
-                                                                    <div className="w-5 h-5 rounded-full border-2 border-purple-200"></div>
-                                                                )}
-                                                                <span className="text-base">{item.name}</span>
+                                                            <div className="flex flex-col text-left">
+                                                                <span className="text-base font-bold text-gray-800">{item.name}</span>
+                                                                <span className="text-xs text-gray-400 mt-0.5">S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(1))} individual</span>
                                                             </div>
-                                                            <span className={`text-sm ${isSelected ? 'text-purple-100' : 'text-gray-400'} font-bold`}>
-                                                                S/ {Number(parseFloat(item.individualPrice ?? 0).toFixed(2))}
-                                                            </span>
-                                                        </button>
+                                                            
+                                                            {/* Quantity Selector Counter */}
+                                                            <div className="flex items-center gap-2.5">
+                                                                {count > 0 && (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleDecrementComboItem(item.id, pendingComboPromo.id)}
+                                                                            className="w-7 h-7 flex items-center justify-center bg-purple-100 text-purple-700 rounded-full font-black text-sm hover:bg-purple-200 transition-colors"
+                                                                        >
+                                                                            -
+                                                                        </button>
+                                                                        <span className="font-bold text-purple-700 w-4 text-center">
+                                                                            {count}
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleIncrementComboItem(item, pendingComboPromo)}
+                                                                    disabled={comboSelection.length >= 2}
+                                                                    className={`w-7 h-7 flex items-center justify-center rounded-full font-black text-sm transition-all
+                                                                        ${comboSelection.length >= 2
+                                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                            : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     );
                                                 })
                                             )}
@@ -2451,44 +2565,44 @@ export default function TableControl({ tableId, accountId, onClose }) {
                             };
 
                             return (
-                                <div className="border-t border-purple-100 pt-4 mt-2 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white z-20">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between md:justify-start gap-2 md:gap-6 min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <span className="text-xs text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full ring-1 ring-purple-100 shrink-0">
+                                <div className="border-t border-purple-100 pt-3 mt-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white z-20">
+                                    <div className="flex flex-row items-center justify-between sm:justify-start gap-3 sm:gap-6 min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-1.5 py-0.5 rounded-full ring-1 ring-purple-100 shrink-0">
                                                 {comboSelection.length}/2
                                             </span>
-                                            <span className="text-xs text-gray-700 truncate font-semibold md:max-w-xs">
+                                            <span className="text-xs text-gray-700 truncate font-semibold max-w-[120px] sm:max-w-xs">
                                                 {comboSelection.map(s => s.name).join(' + ')}
                                             </span>
                                         </div>
-                                        <div className="flex items-baseline gap-2 shrink-0">
-                                            <span className="text-purple-700 font-black text-2xl tracking-tight">
-                                                S/ {Number(displayPrice.toFixed(2))}
+                                        <div className="flex items-baseline gap-1.5 shrink-0">
+                                            <span className="text-purple-700 font-black text-lg sm:text-2xl tracking-tight">
+                                                S/ {Number(displayPrice.toFixed(1))}
                                             </span>
-                                            <span className="text-[9px] text-gray-400 uppercase font-bold tracking-widest leading-none">{priceLabel}</span>
+                                            <span className="text-[8px] text-gray-400 uppercase font-bold tracking-wider leading-none">{priceLabel}</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             onClick={() => setComboSelection([])}
-                                            className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100 text-center"
+                                            className="px-3 py-2 rounded-xl bg-gray-50 text-gray-500 text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-colors border text-center"
                                         >
                                             Limpiar
                                         </button>
                                         <button
                                             onClick={handleAdd}
-                                            className={`flex-[2] md:flex-none px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 
+                                            className={`px-4 py-2 rounded-xl font-black text-xs transition-all shadow active:scale-95 flex items-center justify-center gap-1.5 
                                             ${comboSelection.length === 2
-                                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-purple-200'
+                                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
                                                     : 'bg-white border-2 border-purple-600 text-purple-700 hover:bg-purple-50 shadow-sm'}`}
                                         >
                                             {comboSelection.length === 2 ? (
                                                 <>
-                                                    <CheckCircle size={16} />
-                                                    ¡Listo, agregar!
+                                                    <CheckCircle size={14} />
+                                                    Agregar Combo
                                                 </>
                                             ) : (
-                                                'Falta 1 trago...'
+                                                'Llevar 1 Individual'
                                             )}
                                         </button>
                                     </div>
