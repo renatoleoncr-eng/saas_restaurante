@@ -1784,15 +1784,54 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                             <button onClick={() => setRecipeProduct(product)} className="text-orange-600 font-bold flex items-center gap-1 mt-1.5 text-xs"><ChefHat size={12} /> Receta</button>
                                                         )}
                                                         {product.isStockManaged ? (
-                                                            <div className="mt-2.5">
+                                                            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                                                                 {hasMultipleVariants ? (
-                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
                                                                         Stock: {totalStock} ({variants.length} Pres.)
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                                    <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
                                                                         Stock: {displayStock} {singleVariant.name && singleVariant.name !== 'Estándar' ? `(${singleVariant.name})` : ''}
                                                                     </span>
+                                                                )}
+
+                                                                {!readOnly && (
+                                                                    <div className="flex gap-1 items-center">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (hasMultipleVariants) {
+                                                                                    openAdjustment(product, 'add');
+                                                                                } else {
+                                                                                    openAdjustment({
+                                                                                        ...product,
+                                                                                        variantId: singleVariant.id,
+                                                                                        stock: singleVariant.stock
+                                                                                    }, 'add');
+                                                                                }
+                                                                            }}
+                                                                            className="bg-green-50 text-green-700 hover:bg-green-100 p-1 rounded-md border border-green-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                            title="Agregar Stock"
+                                                                        >
+                                                                            <Plus size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (hasMultipleVariants) {
+                                                                                    openAdjustment(product, 'remove');
+                                                                                } else {
+                                                                                    openAdjustment({
+                                                                                        ...product,
+                                                                                        variantId: singleVariant.id,
+                                                                                        stock: singleVariant.stock
+                                                                                    }, 'remove');
+                                                                                }
+                                                                            }}
+                                                                            className="bg-red-50 text-red-700 hover:bg-red-100 p-1 rounded-md border border-red-200 w-7 h-7 flex items-center justify-center transition-colors active:scale-95 shadow-sm"
+                                                                            title="Quitar Stock"
+                                                                        >
+                                                                            <Minus size={14} />
+                                                                        </button>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         ) : (
