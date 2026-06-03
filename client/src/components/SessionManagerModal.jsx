@@ -140,8 +140,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             const user = userString ? JSON.parse(userString) : null;
             await axios.post('/api/expenses', {
                 ...expenseForm,
-                userId: user?.id,
-                date: new Date().toISOString().split('T')[0]
+                userId: user?.id
             });
             setShowExpenseModal(false);
             setExpenseForm({ description: '', amount: '', paymentMethod: 'efectivo', category: 'Insumos', notes: '' });

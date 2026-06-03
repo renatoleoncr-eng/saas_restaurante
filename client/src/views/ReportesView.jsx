@@ -12,6 +12,9 @@ export default function ReportesView() {
     const [loading, setLoading] = useState(true);
     const getLocalDate = () => {
         const d = new Date();
+        if (d.getHours() < 7) {
+            d.setDate(d.getDate() - 1);
+        }
         const offset = d.getTimezoneOffset();
         return new Date(d.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
     };

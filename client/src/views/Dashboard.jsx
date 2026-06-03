@@ -33,7 +33,7 @@ export default function Dashboard() {
     // Role-based view protection
     useEffect(() => {
         const restrictedViews = {
-            waiter: ['drink_promos', 'qr_management', 'audit'],
+            waiter: ['drink_promos', 'audit'],
             cashier: ['drink_promos', 'audit'], 
             kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management', 'audit']
         };
@@ -407,15 +407,15 @@ export default function Dashboard() {
                                         <Users size={16} /> Gestionar Usuarios
                                     </button>
                                 )}
-                                {user.role === 'admin' && (
+                                {['admin', 'waiter', 'cashier'].includes(user.role) && (
                                     <button
                                         onClick={() => { setShowBillingConfig(true); setShowUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <CreditCard size={16} /> Config. Facturación
+                                        <CreditCard size={16} /> Facturación Electrónica
                                     </button>
                                 )}
-                                {['admin', 'cashier'].includes(user.role) && (
+                                {['admin', 'cashier', 'waiter'].includes(user.role) && (
                                     <button
                                         onClick={() => { setCurrentView('qr_management'); setShowUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -480,15 +480,15 @@ export default function Dashboard() {
                                         <Users size={16} /> Gestionar Usuarios
                                     </button>
                                 )}
-                                {user?.role === 'admin' && (
+                                {['admin', 'waiter', 'cashier'].includes(user?.role) && (
                                     <button
                                         onClick={() => { setShowBillingConfig(true); setShowMobileUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <CreditCard size={16} /> Config. Facturación
+                                        <CreditCard size={16} /> Facturación Electrónica
                                     </button>
                                 )}
-                                {['admin', 'cashier'].includes(user?.role) && (
+                                {['admin', 'cashier', 'waiter'].includes(user?.role) && (
                                     <button
                                         onClick={() => { setCurrentView('qr_management'); setShowMobileUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"

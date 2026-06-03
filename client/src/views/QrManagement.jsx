@@ -689,7 +689,9 @@ export default function QrManagement() {
             {/* Main tabs: Gestión QR / Publicidad / Ruleta */}
             <div className="bg-white border-b border-gray-200 px-6">
                 <div className="flex">
-                    {[{id:'qr',label:'Gestión QR'},{id:'ads',label:'Publicidad'},{id:'roulette',label:'Ruleta'}].map(t => (
+                    {[{id:'qr',label:'Gestión QR'},{id:'ads',label:'Publicidad'},{id:'roulette',label:'Ruleta'}]
+                        .filter(t => user?.role === 'admin' || user?.role === 'cashier' || t.id === 'qr')
+                        .map(t => (
                         <button
                             key={t.id}
                             onClick={() => setActiveTab(t.id)}
@@ -709,29 +711,35 @@ export default function QrManagement() {
                 <div className="flex flex-col flex-1">
                     {/* Sub-tabs row: Configuración / Movimientos + Agregar QR button */}
                     <div className="bg-white border-b border-gray-200 px-6 flex items-center justify-between">
-                        <div className="flex">
-                            <button
-                                onClick={() => setQrSubTab('config')}
-                                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
-                                    qrSubTab === 'config'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                Configuración
-                            </button>
-                            <button
-                                onClick={() => setQrSubTab('movements')}
-                                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
-                                    qrSubTab === 'movements'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                Movimientos
-                            </button>
-                        </div>
-                        {qrSubTab === 'config' && (
+                        {user?.role !== 'waiter' ? (
+                            <div className="flex">
+                                <button
+                                    onClick={() => setQrSubTab('config')}
+                                    className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                        qrSubTab === 'config'
+                                            ? 'border-blue-600 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Configuración
+                                </button>
+                                <button
+                                    onClick={() => setQrSubTab('movements')}
+                                    className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                        qrSubTab === 'movements'
+                                            ? 'border-blue-600 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Movimientos
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex px-5 py-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600">
+                                Gestión QR
+                            </div>
+                        )}
+                        {qrSubTab === 'config' && user?.role !== 'waiter' && (
                             <button
                                 onClick={openQrCreate}
                                 className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-semibold my-2"
@@ -759,10 +767,14 @@ export default function QrManagement() {
                                             <th className="py-3 px-4 w-16">QR</th>
                                             <th className="py-3 px-4">Nombre</th>
                                             <th className="py-3 px-4">Celular</th>
-                                            <th className="py-3 px-4">Límite</th>
-                                            <th className="py-3 px-4">Acumulado</th>
-                                            <th className="py-3 px-4 text-center">Ilimitado</th>
-                                            <th className="py-3 px-4 text-right">Acciones</th>
+                                            {user?.role !== 'waiter' && (
+                                                <>
+                                                    <th className="py-3 px-4">Límite</th>
+                                                    <th className="py-3 px-4">Acumulado</th>
+                                                    <th className="py-3 px-4 text-center">Ilimitado</th>
+                                                    <th className="py-3 px-4 text-right">Acciones</th>
+                                                </>
+                                            )}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -834,102 +846,106 @@ export default function QrManagement() {
                                                         )}
                                                     </td>
 
-                                                    {/* Límite */}
-                                                    <td className="py-3 px-4">
-                                                        <span className="text-gray-700 font-mono">
-                                                            {qr.isUnlimited ? '—' : `S/ ${parseFloat(qr.limitAmount || 0).toFixed(2)}`}
-                                                        </span>
-                                                    </td>
+                                                    {user?.role !== 'waiter' && (
+                                                        <>
+                                                            {/* Límite */}
+                                                            <td className="py-3 px-4">
+                                                                <span className="text-gray-700 font-mono">
+                                                                    {qr.isUnlimited ? '—' : `S/ ${parseFloat(qr.limitAmount || 0).toFixed(2)}`}
+                                                                </span>
+                                                            </td>
 
-                                                    {/* Acumulado */}
-                                                    <td className="py-3 px-4">
-                                                        <div>
-                                                            <span className={`font-bold font-mono text-sm ${
-                                                                isExceeded ? 'text-red-600' : 'text-blue-600'
-                                                            }`}>
-                                                                S/ {parseFloat(qr.accumulated_month_sum || 0).toFixed(2)}
-                                                            </span>
-                                                            {isVigente && !isExceeded && (
-                                                                <div className="text-[10px] text-green-600 font-semibold uppercase">VIGENTE</div>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                                            {/* Acumulado */}
+                                                            <td className="py-3 px-4">
+                                                                <div>
+                                                                    <span className={`font-bold font-mono text-sm ${
+                                                                        isExceeded ? 'text-red-600' : 'text-blue-600'
+                                                                    }`}>
+                                                                        S/ {parseFloat(qr.accumulated_month_sum || 0).toFixed(2)}
+                                                                    </span>
+                                                                    {isVigente && !isExceeded && (
+                                                                        <div className="text-[10px] text-green-600 font-semibold uppercase">VIGENTE</div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
 
-                                                    {/* Ilimitado */}
-                                                    <td className="py-3 px-4 text-center">
-                                                        {qr.isUnlimited
-                                                            ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">Sí</span>
-                                                            : <span className="text-gray-400">—</span>
-                                                        }
-                                                    </td>
+                                                            {/* Ilimitado */}
+                                                            <td className="py-3 px-4 text-center">
+                                                                {qr.isUnlimited
+                                                                    ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">Sí</span>
+                                                                    : <span className="text-gray-400">—</span>
+                                                                }
+                                                            </td>
 
-                                                    {/* Acciones */}
-                                                    <td className="py-3 px-4">
-                                                        <div className="flex items-center gap-1 justify-end flex-wrap">
-                                                            {/* Flechas orden */}
-                                                            <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
-                                                                <button
-                                                                    onClick={() => reorderQr(index, 'up')}
-                                                                    disabled={index === 0}
-                                                                    title="Subir orden"
-                                                                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
-                                                                >
-                                                                    <ArrowUp className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <div className="w-px h-4 bg-gray-200" />
-                                                                <button
-                                                                    onClick={() => reorderQr(index, 'down')}
-                                                                    disabled={index === qrs.length - 1}
-                                                                    title="Bajar orden"
-                                                                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
-                                                                >
-                                                                    <ArrowDown className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
+                                                            {/* Acciones */}
+                                                            <td className="py-3 px-4">
+                                                                <div className="flex items-center gap-1 justify-end flex-wrap">
+                                                                    {/* Flechas orden */}
+                                                                    <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                                                                        <button
+                                                                            onClick={() => reorderQr(index, 'up')}
+                                                                            disabled={index === 0}
+                                                                            title="Subir orden"
+                                                                            className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                                        >
+                                                                            <ArrowUp className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                        <div className="w-px h-4 bg-gray-200" />
+                                                                        <button
+                                                                            onClick={() => reorderQr(index, 'down')}
+                                                                            disabled={index === qrs.length - 1}
+                                                                            title="Bajar orden"
+                                                                            className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                                        >
+                                                                            <ArrowDown className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
 
-                                                            {/* +SALDO */}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedQrForAdjust(qr);
-                                                                    setAdjustmentData({ type: 'income', amount: '', description: '' });
-                                                                    setShowAdjustModal(true);
-                                                                }}
-                                                                className="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-md transition-all"
-                                                            >
-                                                                + SALDO
-                                                            </button>
+                                                                    {/* +SALDO */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedQrForAdjust(qr);
+                                                                            setAdjustmentData({ type: 'income', amount: '', description: '' });
+                                                                            setShowAdjustModal(true);
+                                                                        }}
+                                                                        className="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-md transition-all"
+                                                                    >
+                                                                        + SALDO
+                                                                    </button>
 
-                                                            {/* -SALDO */}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedQrForAdjust(qr);
-                                                                    setAdjustmentData({ type: 'expense', amount: '', description: '' });
-                                                                    setShowAdjustModal(true);
-                                                                }}
-                                                                className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-md border border-gray-200 transition-all"
-                                                            >
-                                                                - SALDO
-                                                            </button>
+                                                                    {/* -SALDO */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedQrForAdjust(qr);
+                                                                            setAdjustmentData({ type: 'expense', amount: '', description: '' });
+                                                                            setShowAdjustModal(true);
+                                                                        }}
+                                                                        className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-md border border-gray-200 transition-all"
+                                                                    >
+                                                                        - SALDO
+                                                                    </button>
 
-                                                            {/* Editar */}
-                                                            <button
-                                                                onClick={() => openQrEdit(qr)}
-                                                                title="Editar"
-                                                                className="w-8 h-8 flex items-center justify-center text-blue-500 hover:text-blue-700 hover:bg-blue-50 border border-gray-200 rounded-md transition-all"
-                                                            >
-                                                                <Edit2 className="w-3.5 h-3.5" />
-                                                            </button>
+                                                                    {/* Editar */}
+                                                                    <button
+                                                                        onClick={() => openQrEdit(qr)}
+                                                                        title="Editar"
+                                                                        className="w-8 h-8 flex items-center justify-center text-blue-500 hover:text-blue-700 hover:bg-blue-50 border border-gray-200 rounded-md transition-all"
+                                                                    >
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </button>
 
-                                                            {/* Eliminar */}
-                                                            <button
-                                                                onClick={() => deleteQr(qr.id)}
-                                                                title="Eliminar"
-                                                                className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-md transition-all"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                                                    {/* Eliminar */}
+                                                                    <button
+                                                                        onClick={() => deleteQr(qr.id)}
+                                                                        title="Eliminar"
+                                                                        className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-md transition-all"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </>
+                                                    )}
                                                 </tr>
                                             );
                                         })}

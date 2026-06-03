@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import AccountDetailsModal from './AccountDetailsModal';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -15,6 +16,7 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
 );
 
 const BillingConfigModal = ({ onClose }) => {
+    const { user } = useRestaurant();
     const [activeTab, setActiveTab] = useState('history');
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState({
@@ -744,12 +746,14 @@ const BillingConfigModal = ({ onClose }) => {
                     >
                         <Plus size={18} /> Nueva Emisión
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('config')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
-                    >
-                        <Settings size={18} /> Configuración
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button 
+                            onClick={() => setActiveTab('config')}
+                            className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            <Settings size={18} /> Configuración
+                        </button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -1131,7 +1135,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </div>
                     )}
 
-                    {activeTab === 'config' && (
+                    {activeTab === 'config' && user?.role === 'admin' && (
                         <form onSubmit={handleSaveConfig} className="max-w-2xl mx-auto space-y-8 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">

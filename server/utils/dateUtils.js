@@ -10,7 +10,13 @@ const getHotelDayRange = (startDateString, endDateString) => {
     // If no dates provided, use current day's hotel day
     if (!startDateString) {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        // Lima timezone is UTC-5
+        const limaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        // If before 7 AM local time, operational day is yesterday
+        if (limaTime.getUTCHours() < 7) {
+            limaTime.setUTCDate(limaTime.getUTCDate() - 1);
+        }
+        const todayStr = limaTime.toISOString().split('T')[0];
         startDateString = todayStr;
         endDateString = todayStr;
     }
