@@ -667,7 +667,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0">
+                <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0 session-modal-footer">
                     <button 
                         type="button"
                         onClick={(e) => {

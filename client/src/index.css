@@ -27,23 +27,24 @@ input[type=number] {
 
 @media (max-height: 600px) {
   .session-modal-overlay {
-    padding: 0 !important;
+    padding: 0.75rem !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
   }
   .session-modal-container {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    border-radius: 0 !important;
+    height: auto !important;
+    max-height: 90dvh !important;
+    width: 95vw !important;
+    max-width: 580px !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
   }
-  /* Add safe area inset paddings for mobile horizontal/notch/home indicator */
-  .session-modal-container > div:last-child {
-    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important;
-    padding-right: calc(1.25rem + env(safe-area-inset-right)) !important;
-    padding-left: calc(1.25rem + env(safe-area-inset-left)) !important;
+  .session-modal-footer {
+    display: none !important;
   }
   .session-modal-container > div:first-child {
-    padding-top: calc(1.5rem + env(safe-area-inset-top)) !important;
+    padding-top: calc(0.75rem + env(safe-area-inset-top)) !important;
     padding-right: calc(1rem + env(safe-area-inset-right)) !important;
     padding-left: calc(1rem + env(safe-area-inset-left)) !important;
   }
