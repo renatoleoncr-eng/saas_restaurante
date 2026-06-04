@@ -26,6 +26,9 @@ input[type=number] {
 }
 
 @media (max-height: 600px) {
+  .session-modal-overlay {
+    padding: 0 !important;
+  }
   .session-modal-container {
     height: 100dvh !important;
     max-height: 100dvh !important;

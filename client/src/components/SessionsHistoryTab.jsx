@@ -263,7 +263,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
         : allMovements.filter(m => m.method === selectedMethodFilter);
 
     return createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 session-modal-overlay">
             {/* Backdrop click to close */}
             <div className="fixed inset-0 z-0" onClick={onClose}></div>
             
