@@ -21,8 +21,8 @@ async function run() {
     const logs = await AuditLog.findAll({
         where: {
             [Op.or]: [
-                { modelName: 'Account', recordId: 257 },
-                { modelName: 'Table', recordId: 30 }
+                { entity: 'Account', entityId: '257' },
+                { entity: 'Table', entityId: '30' }
             ]
         },
         order: [['createdAt', 'ASC']]
