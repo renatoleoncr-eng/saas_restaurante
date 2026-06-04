@@ -1607,11 +1607,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     type="checkbox"
                                                     id="staff_toggle_edit_mobile"
                                                     checked={clientForm.accountType === 'staff'}
-                                                    onChange={(e) => {
+                                                    onChange={async (e) => {
                                                         if (e.target.checked) {
                                                             setShowStaffConfirm(true); // Open custom modal
                                                         } else {
-                                                            setClientForm({ ...clientForm, accountType: 'standard' });
+                                                            const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '' };
+                                                            setClientForm(newClientForm);
+                                                            if (account) {
+                                                                try {
+                                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                                        customerName: newClientForm.name,
+                                                                        clientDni: newClientForm.dni,
+                                                                        clientAddress: newClientForm.direccion,
+                                                                        accountType: newClientForm.accountType
+                                                                    });
+                                                                    setAccount(res.data);
+                                                                    setIsEditingClient(false);
+                                                                } catch (err) {
+                                                                    console.error("Error setting account to standard:", err);
+                                                                    alert('Error al actualizar la cuenta a consumo estándar');
+                                                                }
+                                                            }
                                                         }
                                                     }}
                                                     className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
@@ -2738,11 +2754,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             type="checkbox"
                                             id="staff_toggle_edit"
                                             checked={clientForm.accountType === 'staff'}
-                                            onChange={(e) => {
+                                            onChange={async (e) => {
                                                 if (e.target.checked) {
                                                     setShowStaffConfirm(true); // Open custom modal
                                                 } else {
-                                                    setClientForm({ ...clientForm, accountType: 'standard' });
+                                                    const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '' };
+                                                    setClientForm(newClientForm);
+                                                    if (account) {
+                                                        try {
+                                                            const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                                customerName: newClientForm.name,
+                                                                clientDni: newClientForm.dni,
+                                                                clientAddress: newClientForm.direccion,
+                                                                accountType: newClientForm.accountType
+                                                            });
+                                                            setAccount(res.data);
+                                                            setIsEditingClient(false);
+                                                        } catch (err) {
+                                                            console.error("Error setting account to standard:", err);
+                                                            alert('Error al actualizar la cuenta a consumo estándar');
+                                                        }
+                                                    }
                                                 }
                                             }}
                                             className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
@@ -3049,8 +3081,24 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setClientForm({ ...clientForm, accountType: 'staff', name: '', dni: '' });
+                                    onClick={async () => {
+                                        const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '' };
+                                        setClientForm(newClientForm);
+                                        if (account) {
+                                            try {
+                                                const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                    customerName: newClientForm.name,
+                                                    clientDni: newClientForm.dni,
+                                                    clientAddress: newClientForm.direccion,
+                                                    accountType: newClientForm.accountType
+                                                });
+                                                setAccount(res.data);
+                                                setIsEditingClient(false);
+                                            } catch (err) {
+                                                console.error("Error setting account to staff:", err);
+                                                alert('Error al actualizar la cuenta a consumo de trabajador');
+                                            }
+                                        }
                                         setShowStaffConfirm(false);
                                     }}
                                     className="flex-1 px-4 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/30"

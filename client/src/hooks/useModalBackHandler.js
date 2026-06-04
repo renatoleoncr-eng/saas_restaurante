@@ -25,7 +25,12 @@ export function useModalBackHandler(isOpen, onClose) {
 
         const handlePopState = (event) => {
             // When popstate is fired, the browser has already popped the state.
-            onCloseRef.current();
+            // Only trigger onClose if the new active state is NOT our own state.
+            // If the new active state's modalId matches our stateId, it means we went back TO this modal
+            // (e.g. a nested child modal was closed), so this parent modal should remain open.
+            if (window.history.state?.modalId !== stateId) {
+                onCloseRef.current();
+            }
         };
 
         window.addEventListener('popstate', handlePopState);
