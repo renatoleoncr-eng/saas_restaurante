@@ -669,8 +669,13 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                 {/* Footer */}
                 <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0">
                     <button 
-                        onClick={onClose} 
-                        className="bg-gray-800 hover:bg-gray-950 text-white font-bold px-6 py-2 rounded-xl shadow active:scale-95 transition-all text-xs"
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="bg-gray-800 hover:bg-gray-955 active:bg-gray-990 text-white font-bold px-6 py-3 rounded-xl shadow active:scale-95 transition-all text-xs cursor-pointer relative z-50 pointer-events-auto shrink-0 flex items-center justify-center"
                     >
                         Cerrar
                     </button>

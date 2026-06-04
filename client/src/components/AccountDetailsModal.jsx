@@ -82,7 +82,15 @@ const AccountDetailsModal = ({
                     </div>
                     <p className="text-gray-800 font-bold text-lg">Error</p>
                     <p className="text-gray-600">{error}</p>
-                    <button onClick={onClose} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 transition-colors relative z-50 pointer-events-auto"
+                    >
                         Cerrar
                     </button>
                 </div>

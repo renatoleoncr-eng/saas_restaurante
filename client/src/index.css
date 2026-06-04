@@ -38,12 +38,12 @@ input[type=number] {
   }
   /* Add safe area inset paddings for mobile horizontal/notch/home indicator */
   .session-modal-container > div:last-child {
-    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important;
     padding-right: calc(1.25rem + env(safe-area-inset-right)) !important;
     padding-left: calc(1.25rem + env(safe-area-inset-left)) !important;
   }
   .session-modal-container > div:first-child {
-    padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+    padding-top: calc(1.5rem + env(safe-area-inset-top)) !important;
     padding-right: calc(1rem + env(safe-area-inset-right)) !important;
     padding-left: calc(1rem + env(safe-area-inset-left)) !important;
   }
