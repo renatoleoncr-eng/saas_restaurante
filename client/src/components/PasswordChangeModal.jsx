@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { X, Lock, Save } from 'lucide-react';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function PasswordChangeModal({ targetUser, onClose }) {
     const { user } = useRestaurant();
+    
+    useModalBackHandler(true, onClose);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

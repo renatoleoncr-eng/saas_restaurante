@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import AccountDetailsModal from './AccountDetailsModal';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">

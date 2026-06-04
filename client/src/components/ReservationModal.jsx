@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { X, Calendar, User, Phone, Clock } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function ReservationModal({ tableId, onClose }) {
+    useModalBackHandler(true, onClose);
+
     const { refreshData, socket } = useRestaurant();
 
     useEffect(() => {

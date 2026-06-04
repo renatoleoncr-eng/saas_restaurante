@@ -3,9 +3,11 @@ import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { X, ArrowRightLeft, CheckCircle } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function TableTransferModal({ account, currentTable, onClose, onSuccess }) {
     const { refreshData } = useRestaurant();
+    useModalBackHandler(true, onClose);
     const [availableTables, setAvailableTables] = useState([]);
     const [selectedTableId, setSelectedTableId] = useState('');
     const [loading, setLoading] = useState(false);

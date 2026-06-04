@@ -4,6 +4,7 @@ import { X, Loader2, FileText, Receipt } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import InvoiceManagementModal from './InvoiceManagementModal';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const AccountDetailsModal = ({
     account: initialAccount,
@@ -15,12 +16,18 @@ const AccountDetailsModal = ({
     totalToDisplay = null,
     amountToDisplay = null
 }) => {
+    useModalBackHandler(true, onClose);
+
     const { socket } = useRestaurant();
     const [account, setAccount] = useState(initialAccount);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
+    // Handle nested back buttons
+    useModalBackHandler(showInvoiceModal, () => setShowInvoiceModal(false));
+    useModalBackHandler(!!previewImage, () => setPreviewImage(null));
 
     useEffect(() => {
         if (socket) {

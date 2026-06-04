@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function RecipeModal({ product, onClose }) {
+    useModalBackHandler(true, onClose);
     const [ingredients, setIngredients] = useState([]);
     const [recipes, setRecipes] = useState([]);
     const [expandedSections, setExpandedSections] = useState({}); // { "Base": true, "Variant 1": false }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee, MinusCircle } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
     const [loading, setLoading] = useState(true);
@@ -27,6 +28,10 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         yape: '',
         transferencia: ''
     });
+
+    useModalBackHandler(true, onClose);
+    useModalBackHandler(showExpenseModal, () => setShowExpenseModal(false));
+    useModalBackHandler(showConfirmCloseModal, () => setShowConfirmCloseModal(false));
 
     const displayNames = {
         efectivo: 'Efectivo',

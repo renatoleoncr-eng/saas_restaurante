@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, Plus, Edit, Trash2, Key, UserPlus, X } from 'lucide-react';
 import PasswordChangeModal from './PasswordChangeModal';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function UserManagementModal({ onClose }) {
+    useModalBackHandler(true, onClose);
+
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -12,6 +15,13 @@ export default function UserManagementModal({ onClose }) {
 
     // Form State
     const [formData, setFormData] = useState({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
+
+    // Handle back button for nested showForm modal
+    useModalBackHandler(showForm, () => {
+        setShowForm(false);
+        setEditingUser(null);
+        setFormData({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
+    });
 
     useEffect(() => {
         loadUsers();

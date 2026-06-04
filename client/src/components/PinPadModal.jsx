@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { X, Delete } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
     const [pin, setPin] = useState('');
+
+    useModalBackHandler(isOpen, () => {
+        setPin('');
+        onClose();
+    });
 
     if (!isOpen) return null;
 

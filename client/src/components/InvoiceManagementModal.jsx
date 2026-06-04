@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -56,7 +57,26 @@ const getSunatUrls = (sunatResp) => {
 };
 
 const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
+    useModalBackHandler(true, onClose);
+
     const { socket, user } = useRestaurant();
+    const [loading, setLoading] = useState(false);
+    const [history, setHistory] = useState([]);
+    const [expandedGroups, setExpandedGroups] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [activeTab, setActiveTab] = useState('emit');
+    const [selectedDocId, setSelectedDocId] = useState(null);
+
+    const [isSearchLoading, setIsSearchLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [lastIssuedUrl, setLastIssuedUrl] = useState(null);
+    const [successType, setSuccessType] = useState('invoice'); // 'invoice' or 'nc'
+    const [isExonerado, setIsExonerado] = useState(false);
+    const [igvRateInput, setIgvRateInput] = useState(10.5);
+    const [errorMsg, setErrorMsg] = useState(null);
+
+    // Handle back button for inline success view
+    useModalBackHandler(isSuccess, () => setIsSuccess(false));
 
     useEffect(() => {
         if (socket) {
