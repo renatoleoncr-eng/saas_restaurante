@@ -33,6 +33,7 @@ export default function AccountManagementView() {
 
     // Table Control Modal
     const [selectedTableId, setSelectedTableId] = useState(null);
+    const [tableControlShowCart, setTableControlShowCart] = useState(false);
     const [viewingHistoryAccount, setViewingHistoryAccount] = useState(null);
 
     // Edit Name Modal
@@ -465,6 +466,7 @@ export default function AccountManagementView() {
                                                         if (isComplete || acc.status === 'cancelled') {
                                                             handleViewHistory(acc.id);
                                                         } else if (acc.TableId) {
+                                                            setTableControlShowCart(false);
                                                             setSelectedTableId(acc.TableId);
                                                         } else {
                                                             handleViewHistory(acc.id);
@@ -511,8 +513,11 @@ export default function AccountManagementView() {
                                                             onClick={() => {
                                                                 if (isComplete || acc.status === 'cancelled') {
                                                                     handleViewHistory(acc.id);
-                                                                } else {
+                                                                } else if (acc.TableId) {
+                                                                    setTableControlShowCart(true);
                                                                     setSelectedTableId(acc.TableId);
+                                                                } else {
+                                                                    handleViewHistory(acc.id);
                                                                 }
                                                             }}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -564,7 +569,8 @@ export default function AccountManagementView() {
             {selectedTableId && (
                 <TableControl
                     tableId={selectedTableId}
-                    onClose={() => { setSelectedTableId(null); loadAccounts(); }}
+                    initialShowCart={tableControlShowCart}
+                    onClose={() => { setSelectedTableId(null); setTableControlShowCart(false); loadAccounts(); }}
                 />
             )}
 

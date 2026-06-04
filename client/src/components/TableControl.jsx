@@ -7,7 +7,7 @@ import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
 
-export default function TableControl({ tableId, accountId, onClose }) {
+export default function TableControl({ tableId, accountId, onClose, initialShowCart = false }) {
     const { user, refreshTrigger, refreshData } = useRestaurant();
     const [account, setAccount] = useState(null);
     const [tableData, setTableData] = useState(null);
@@ -16,7 +16,7 @@ export default function TableControl({ tableId, accountId, onClose }) {
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState('dish'); // Default to 'dish'
     const [searchTerm, setSearchTerm] = useState('');
-    const [showMobileCart, setShowMobileCart] = useState(false);
+    const [showMobileCart, setShowMobileCart] = useState(initialShowCart);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false); // New State for Transfer
 
