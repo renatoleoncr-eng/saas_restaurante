@@ -12,11 +12,34 @@ console.log('Layout Routes Loaded.');
 // Get all areas with tables
 router.get('/areas', async (req, res) => {
     try {
-        const { Area, Table } = getModels();
+        const { Area, Table, Account } = getModels();
+
+        // Fetch all open accounts
+        const openAccounts = await Account.findAll({ where: { status: 'open' } });
+        const openTableIds = openAccounts.map(a => a.TableId);
+
         const areas = await Area.findAll({
             include: [{ model: Table }],
             order: [['sortOrder', 'ASC']]
         });
+
+        // Self-healing: Ensure table status matches open accounts
+        for (const area of areas) {
+            if (area.Tables) {
+                for (const table of area.Tables) {
+                    const hasOpenAccount = openTableIds.includes(table.id);
+                    if (hasOpenAccount && table.status !== 'occupied') {
+                        table.status = 'occupied';
+                        await table.save();
+                        console.log(`[Heal] Table ${table.number} (ID: ${table.id}) status healed to occupied (has open account)`);
+                    } else if (!hasOpenAccount && table.status === 'occupied') {
+                        table.status = 'free';
+                        await table.save();
+                        console.log(`[Heal] Table ${table.number} (ID: ${table.id}) status healed to free (no open account)`);
+                    }
+                }
+            }
+        }
 
         // Sort tables numerically by number (since it's a string)
         const areasWithSortedTables = areas.map(area => {

@@ -12,6 +12,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const { user, refreshTrigger, refreshData } = useRestaurant();
     const [account, setAccount] = useState(null);
     const [tableData, setTableData] = useState(null);
+    const [isAccountLoaded, setIsAccountLoaded] = useState(false);
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -705,6 +706,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             }
         } catch (aErr) {
             console.error("Error loading account:", aErr);
+        } finally {
+            setIsAccountLoaded(true);
         }
     };
 
@@ -729,6 +732,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     // Initial Load & Context Trigger
     useEffect(() => {
+        setIsAccountLoaded(false);
         if (tableId) loadTableData();
         fetchProducts();
         fetchAccount();
@@ -798,7 +802,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             } catch (err) {
                 console.error("Error auto-cancelling empty account on close:", err);
             }
-        } else if (!account && tableData && tableData.status !== 'free') {
+        } else if (isAccountLoaded && !account && tableData && tableData.status !== 'free') {
             // Self-healing: Table is marked occupied or reserved in UI but has no active account
             try {
                 await axios.put(`/api/tables/${tableId}`, { status: 'free' });
