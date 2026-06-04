@@ -212,6 +212,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             });
 
             setAdjustmentItem(null);
+            setCreatingSection(null);
+            setEditForm({});
             loadProducts(); // Refresh stock
             if (activeTab === 'finished' && finishedTab === 'movements') loadMovements('drink,other');
             if (activeTab === 'prepared' && preparedTab === 'movements') loadMovements('dish');

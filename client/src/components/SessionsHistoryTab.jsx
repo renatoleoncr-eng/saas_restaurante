@@ -183,13 +183,32 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
 
-    // Reset expanded category on modal open
+    // Reset expanded category on modal open, lock scroll, and listen for Escape key
     useEffect(() => {
         if (isOpen) {
             setExpandedCategory(null);
             setSelectedMethodFilter('todos');
+            
+            // Lock background body scroll to prevent coordinate shifting on mobile
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
         }
-    }, [isOpen]);
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+        };
+    }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
@@ -263,11 +282,14 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
         : allMovements.filter(m => m.method === selectedMethodFilter);
 
     return createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 session-modal-overlay">
-            {/* Backdrop click to close */}
-            <div className="fixed inset-0 z-0" onClick={onClose}></div>
-            
-            <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 z-10 relative animate-duration-200 session-modal-container">
+        <div 
+            onClick={onClose} 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 session-modal-overlay"
+        >
+            <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 z-10 relative animate-duration-200 session-modal-container"
+            >
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-5 text-white flex justify-between items-center shrink-0 shadow-md">
                     <div className="flex items-center gap-3">
