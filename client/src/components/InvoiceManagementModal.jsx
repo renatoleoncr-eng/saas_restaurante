@@ -90,22 +90,6 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             }
         };
     }, [socket]);
-    // Core logic state
-    const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState([]);
-    const [expandedGroups, setExpandedGroups] = useState([]);
-    const [selectedItems, setSelectedItems] = useState([]);
-    const [activeTab, setActiveTab] = useState('emit');
-    const [selectedDocId, setSelectedDocId] = useState(null);
-
-    const [isSearchLoading, setIsSearchLoading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [lastIssuedUrl, setLastIssuedUrl] = useState(null);
-    const [successType, setSuccessType] = useState('invoice'); // 'invoice' or 'nc'
-    const [isExonerado, setIsExonerado] = useState(false);
-    const [igvRateInput, setIgvRateInput] = useState(10.5);
-    const [errorMsg, setErrorMsg] = useState(null);
-
     // Form fields
     const [docType, setDocType] = useState('03'); // 03 = Boleta
     const [docNumber, setDocNumber] = useState('');
