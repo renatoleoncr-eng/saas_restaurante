@@ -21,18 +21,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     const [creatingSection, setCreatingSection] = useState(null); // 'entries', 'mains', 'general', null
     // REMOVED isCreating
     const [editForm, setEditForm] = useState({});
-    const [entriesCollapsed, setEntriesCollapsed] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 640;
-        }
-        return false;
-    });
-    const [mainsCollapsed, setMainsCollapsed] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 640;
-        }
-        return false;
-    });
+    const [entriesCollapsed, setEntriesCollapsed] = useState(false);
+    const [mainsCollapsed, setMainsCollapsed] = useState(false);
 
     const [recipeProduct, setRecipeProduct] = useState(null); // Product selected for recipe editing
     const [selectedAccountId, setSelectedAccountId] = useState(null); // Account selected from movements
@@ -443,98 +433,100 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     products={products} // Pass all products to find ingredients
                 />
             )}
-            <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4`}>
+            {mode !== 'menu_only' && (
+                <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4`}>
 
-                {/* TABS CONTROLLERS */}
-                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                    {/* MOBILE TABS (TOP) */}
-                    {mode !== 'menu_only' && (
-                        <div className="md:hidden w-full">
-                            <MobileTabMenu
-                                tabs={[
-                                    { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
-                                    { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
-                                    { id: 'free', label: `Libres (${countFree})`, icon: Zap },
-                                    { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
-                                ]}
-                                activeTab={activeTab}
-                                onTabChange={setActiveTab}
-                            />
-                        </div>
-                    )}
+                    {/* TABS CONTROLLERS */}
+                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                        {/* MOBILE TABS (TOP) */}
+                        {mode !== 'menu_only' && (
+                            <div className="md:hidden w-full">
+                                <MobileTabMenu
+                                    tabs={[
+                                        { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                                        { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
+                                        { id: 'free', label: `Libres (${countFree})`, icon: Zap },
+                                        { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                    ]}
+                                    activeTab={activeTab}
+                                    onTabChange={setActiveTab}
+                                />
+                            </div>
+                        )}
 
-                    {/* DESKTOP TABS */}
-                    {mode !== 'menu_only' && (
-                        <div className="hidden md:flex bg-gray-100 p-1 rounded-lg overflow-x-auto">
-                            <button
-                                onClick={() => setActiveTab('finished')}
-                                className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                Terminados ({countFinished})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('prepared')}
-                                className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                Preparados ({countPrepared})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('free')}
-                                className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                Libres ({countFree})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('ingredients')}
-                                className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                Insumos ({countIngredients})
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* SEARCH AND ACTION BAR */}
-                <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
-                    {/* Search Bar */}
-                    {activeTab !== 'menu_options' && (
-                        <div className="relative w-full sm:w-64">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
-                                <Search size={18} />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : "Buscar producto..."}
-                                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                            />
-                            {searchQuery && (
+                        {/* DESKTOP TABS */}
+                        {mode !== 'menu_only' && (
+                            <div className="hidden md:flex bg-gray-100 p-1 rounded-lg overflow-x-auto">
                                 <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                    onClick={() => setActiveTab('finished')}
+                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
-                                    <X size={16} />
+                                    Terminados ({countFinished})
                                 </button>
-                            )}
-                        </div>
-                    )}
+                                <button
+                                    onClick={() => setActiveTab('prepared')}
+                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    Preparados ({countPrepared})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('free')}
+                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    Libres ({countFree})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('ingredients')}
+                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    Insumos ({countIngredients})
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
-                    {/* Action Button */}
-                    {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
-                        <button
-                            onClick={() => handleCreate()}
-                            className={`w-full sm:w-auto px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors whitespace-nowrap
-                                ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
-                                    activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                        'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                            <Plus size={18} />
-                            {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
-                        </button>
-                    )}
+                    {/* SEARCH AND ACTION BAR */}
+                    <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+                        {/* Search Bar */}
+                        {activeTab !== 'menu_options' && (
+                            <div className="relative w-full sm:w-64">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                    <Search size={18} />
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : "Buscar producto..."}
+                                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Action Button */}
+                        {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
+                            <button
+                                onClick={() => handleCreate()}
+                                className={`w-full sm:w-auto px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors whitespace-nowrap
+                                    ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
+                                        activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                            'bg-blue-600 hover:bg-blue-700'}`}
+                            >
+                                <Plus size={18} />
+                                {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
+                            </button>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* ADJUSTMENT MODAL */}
             {adjustmentItem && (

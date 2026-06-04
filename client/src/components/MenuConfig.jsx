@@ -502,12 +502,7 @@ const ItemList = ({
     addItem,
     getTheoreticalMaxStock,
 }) => {
-    const [collapsed, setCollapsed] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 640;
-        }
-        return false;
-    });
+    const [collapsed, setCollapsed] = useState(false);
 
     const validProducts = products.filter(p => {
         if (category === 'entries') {
