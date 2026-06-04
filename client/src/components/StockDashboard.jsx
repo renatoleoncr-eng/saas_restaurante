@@ -120,6 +120,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         // Only switch tabs if the search query has changed (user is typing)
         if (searchQuery === prevSearchQuery) return;
         if (!searchQuery) return;
+        if (activeTab === 'menu_options') return;
 
         const query = searchQuery.toLowerCase();
         const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
@@ -488,28 +489,26 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     {/* SEARCH AND ACTION BAR */}
                     <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
                         {/* Search Bar */}
-                        {activeTab !== 'menu_options' && (
-                            <div className="relative w-full sm:w-64">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
-                                    <Search size={18} />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : "Buscar producto..."}
-                                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => setSearchQuery('')}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
-                        )}
+                        <div className="relative w-full sm:w-64">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                <Search size={18} />
+                            </span>
+                            <input
+                                type="text"
+                                placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : activeTab === 'menu_options' ? "Buscar opción..." : "Buscar producto..."}
+                                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
 
                         {/* Action Button */}
                         {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
@@ -1114,60 +1113,27 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         <div className="bg-purple-50 p-3 rounded border border-purple-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
                                             <div className="font-bold text-sm text-purple-900 mb-1">{editForm.id ? 'Editar Entrada' : 'Nueva Entrada'}</div>
                                             <div className="flex gap-2 items-center">
-                                                {editForm.isStockManaged ? (
-                                                    <select
-                                                        className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none font-medium"
-                                                        value={editForm.linkedProductId || ''}
-                                                        onChange={e => {
-                                                            const prodId = e.target.value;
-                                                            const prod = products.find(p => p.id === parseInt(prodId));
+                                                {(editForm.isStockManaged || editForm.requiresPreparation) ? (
+                                                    <SearchableProductSelect
+                                                        products={products}
+                                                        requiresPreparation={editForm.requiresPreparation}
+                                                        isStockManaged={editForm.isStockManaged}
+                                                        value={editForm.linkedProductId}
+                                                        onChange={prod => {
                                                             if (prod) {
-                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prodId, stock: 0 });
+                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prod.id, stock: 0 });
                                                             } else {
                                                                 setEditForm({ ...editForm, name: '', linkedProductId: null, stock: 0 });
                                                             }
                                                         }}
-                                                        autoFocus
-                                                    >
-                                                        <option value="">{editForm.requiresPreparation ? '-- Seleccionar Receta --' : '-- Seleccionar Producto Terminado --'}</option>
-                                                        {products.filter(p => {
-                                                            if (editForm.requiresPreparation) return p.Recipes && p.Recipes.length > 0;
-                                                            return p.isStockManaged && (!p.Recipes || p.Recipes.length === 0);
-                                                        }).map(p => {
-                                                            let stockText = '';
-                                                            if (editForm.requiresPreparation) {
-                                                                // Calculate recipe max
-                                                                let min = 999999;
-                                                                let hasIng = false;
-                                                                if (p.Recipes) {
-                                                                    p.Recipes.forEach(r => {
-                                                                        if (r.Ingredient) {
-                                                                            hasIng = true;
-                                                                            const avail = Math.floor(parseFloat(r.Ingredient.stock) / parseFloat(r.quantity));
-                                                                            if (avail < min) min = avail;
-                                                                        }
-                                                                    });
-                                                                }
-                                                                stockText = hasIng ? `Receta: ${min}` : 'Sin Insumos';
-                                                            } else {
-                                                                let s = parseInt(p.stock || 0);
-                                                                if (p.ProductVariants && p.ProductVariants.length > 0) {
-                                                                    s = p.ProductVariants.reduce((sum, v) => sum + parseInt(v.stock || 0), 0);
-                                                                }
-                                                                stockText = `Stock: ${s}`;
-                                                            }
-                                                            return (
-                                                                <option key={p.id} value={p.id}>
-                                                                    {p.name} ({stockText})
-                                                                </option>
-                                                            );
-                                                        })}
-                                                    </select>
+                                                        colorTheme="purple"
+                                                        placeholder={editForm.requiresPreparation ? 'Buscar receta/plato...' : 'Buscar producto terminado...'}
+                                                    />
                                                 ) : (
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre de la Entrada"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none w-full"
+                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none w-full bg-white font-medium text-sm"
                                                             value={editForm.name || ''}
                                                             onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                                             autoFocus
@@ -1253,33 +1219,40 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         </div>
                                     )}
 
-                                    {products.filter(p => p.type === 'daily_entry').map(product => (
-                                        <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded border-b last:border-0">
-                                            <div>
-                                                <div className="flex gap-2 items-center">
-                                                    <span className="font-medium text-gray-800">{product.name}</span>
-                                                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-bold">
-                                                        S/ {Number(product.price || 0).toFixed(2)}
-                                                    </span>
+                                    {(() => {
+                                        const filteredEntries = products.filter(p => p.type === 'daily_entry' && (!searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())));
+                                        if (filteredEntries.length === 0) {
+                                            return (
+                                                <p className="text-gray-400 text-sm italic text-center py-4 font-medium">
+                                                    {searchQuery ? 'No se encontraron entradas para esta búsqueda' : 'No hay entradas registradas'}
+                                                </p>
+                                            );
+                                        }
+                                        return filteredEntries.map(product => (
+                                            <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded border-b last:border-0">
+                                                <div>
+                                                    <div className="flex gap-2 items-center">
+                                                        <span className="font-semibold text-gray-800">{product.name}</span>
+                                                        <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                                                            S/ {Number(product.price || 0).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    {!product.isStockManaged && product.requiresPreparation && (
+                                                        <button
+                                                            onClick={() => setRecipeProduct(product)}
+                                                            className="text-orange-600 text-xs font-bold flex items-center gap-1 mt-1 hover:underline"
+                                                        >
+                                                            <ChefHat size={12} /> Receta
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {!product.isStockManaged && product.requiresPreparation && (
-                                                    <button
-                                                        onClick={() => setRecipeProduct(product)}
-                                                        className="text-orange-600 text-xs font-bold flex items-center gap-1 mt-1 hover:underline"
-                                                    >
-                                                        <ChefHat size={12} /> Receta
-                                                    </button>
-                                                )}
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEdit(product)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={16} /></button>
+                                                    <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleEdit(product)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={16} /></button>
-                                                <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {products.filter(p => p.type === 'daily_entry').length === 0 && (
-                                        <p className="text-gray-400 text-sm italic text-center py-4">No hay entradas registradas</p>
-                                    )}
+                                        ));
+                                    })()}
                                 </div>
                                 )}
                             </div>
@@ -1316,60 +1289,27 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         <div className="bg-pink-50 p-3 rounded border border-pink-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
                                             <div className="font-bold text-sm text-pink-900 mb-1">{editForm.id ? 'Editar Segundo' : 'Nuevo Segundo'}</div>
                                             <div className="flex gap-2 items-center">
-                                                {editForm.isStockManaged ? (
-                                                    <select
-                                                        className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none font-medium"
-                                                        value={editForm.linkedProductId || ''}
-                                                        onChange={e => {
-                                                            const prodId = e.target.value;
-                                                            const prod = products.find(p => p.id === parseInt(prodId));
+                                                {(editForm.isStockManaged || editForm.requiresPreparation) ? (
+                                                    <SearchableProductSelect
+                                                        products={products}
+                                                        requiresPreparation={editForm.requiresPreparation}
+                                                        isStockManaged={editForm.isStockManaged}
+                                                        value={editForm.linkedProductId}
+                                                        onChange={prod => {
                                                             if (prod) {
-                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prodId, stock: 0 });
+                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prod.id, stock: 0 });
                                                             } else {
                                                                 setEditForm({ ...editForm, name: '', linkedProductId: null, stock: 0 });
                                                             }
                                                         }}
-                                                        autoFocus
-                                                    >
-                                                        <option value="">{editForm.requiresPreparation ? '-- Seleccionar Receta --' : '-- Seleccionar Producto Terminado --'}</option>
-                                                        {products.filter(p => {
-                                                            if (editForm.requiresPreparation) return p.Recipes && p.Recipes.length > 0;
-                                                            return p.isStockManaged && (!p.Recipes || p.Recipes.length === 0);
-                                                        }).map(p => {
-                                                            let stockText = '';
-                                                            if (editForm.requiresPreparation) {
-                                                                // Calculate recipe max
-                                                                let min = 999999;
-                                                                let hasIng = false;
-                                                                if (p.Recipes) {
-                                                                    p.Recipes.forEach(r => {
-                                                                        if (r.Ingredient) {
-                                                                            hasIng = true;
-                                                                            const avail = Math.floor(parseFloat(r.Ingredient.stock) / parseFloat(r.quantity));
-                                                                            if (avail < min) min = avail;
-                                                                        }
-                                                                    });
-                                                                }
-                                                                stockText = hasIng ? `Receta: ${min}` : 'Sin Insumos';
-                                                            } else {
-                                                                let s = parseInt(p.stock || 0);
-                                                                if (p.ProductVariants && p.ProductVariants.length > 0) {
-                                                                    s = p.ProductVariants.reduce((sum, v) => sum + parseInt(v.stock || 0), 0);
-                                                                }
-                                                                stockText = `Stock: ${s}`;
-                                                            }
-                                                            return (
-                                                                <option key={p.id} value={p.id}>
-                                                                    {p.name} ({stockText})
-                                                                </option>
-                                                            );
-                                                        })}
-                                                    </select>
+                                                        colorTheme="pink"
+                                                        placeholder={editForm.requiresPreparation ? 'Buscar receta/plato...' : 'Buscar producto terminado...'}
+                                                    />
                                                 ) : (
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre del Segundo"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none w-full"
+                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none w-full bg-white font-medium text-sm"
                                                             value={editForm.name || ''}
                                                             onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                                             autoFocus
@@ -1455,33 +1395,40 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         </div>
                                     )}
 
-                                    {products.filter(p => p.type === 'daily_main').map(product => (
-                                        <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded border-b last:border-0">
-                                            <div>
-                                                <div className="flex gap-2 items-center">
-                                                    <span className="font-medium text-gray-800">{product.name}</span>
-                                                    <span className="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full font-bold">
-                                                        S/ {Number(product.price || 0).toFixed(2)}
-                                                    </span>
+                                    {(() => {
+                                        const filteredMains = products.filter(p => p.type === 'daily_main' && (!searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())));
+                                        if (filteredMains.length === 0) {
+                                            return (
+                                                <p className="text-gray-400 text-sm italic text-center py-4 font-medium">
+                                                    {searchQuery ? 'No se encontraron segundos para esta búsqueda' : 'No hay segundos registrados'}
+                                                </p>
+                                            );
+                                        }
+                                        return filteredMains.map(product => (
+                                            <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded border-b last:border-0">
+                                                <div>
+                                                    <div className="flex gap-2 items-center">
+                                                        <span className="font-semibold text-gray-800">{product.name}</span>
+                                                        <span className="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                                                            S/ {Number(product.price || 0).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    {!product.isStockManaged && product.requiresPreparation && (
+                                                        <button
+                                                            onClick={() => setRecipeProduct(product)}
+                                                            className="text-orange-600 text-xs font-bold flex items-center gap-1 mt-1 hover:underline"
+                                                        >
+                                                            <ChefHat size={12} /> Receta
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {!product.isStockManaged && product.requiresPreparation && (
-                                                    <button
-                                                        onClick={() => setRecipeProduct(product)}
-                                                        className="text-orange-600 text-xs font-bold flex items-center gap-1 mt-1 hover:underline"
-                                                    >
-                                                        <ChefHat size={12} /> Receta
-                                                    </button>
-                                                )}
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEdit(product)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={16} /></button>
+                                                    <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleEdit(product)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={16} /></button>
-                                                <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {products.filter(p => p.type === 'daily_main').length === 0 && (
-                                        <p className="text-gray-400 text-sm italic text-center py-4">No hay segundos registrados</p>
-                                    )}
+                                        ));
+                                    })()}
                                 </div>
                                 )}
                             </div>
@@ -2106,3 +2053,159 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         </div>
     );
 }
+
+// Local helper component for searchable product/recipe selection in menu configuration forms
+const SearchableProductSelect = ({
+    products,
+    requiresPreparation,
+    isStockManaged,
+    value,
+    onChange,
+    colorTheme = 'purple',
+    placeholder = '-- Seleccionar --'
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+
+    const themeClasses = {
+        purple: {
+            ring: 'focus-within:ring-purple-500 border-purple-300',
+            bgHover: 'hover:bg-purple-50',
+            textHover: 'hover:text-purple-700',
+            activeBg: 'bg-purple-50 text-purple-700',
+        },
+        pink: {
+            ring: 'focus-within:ring-pink-500 border-pink-300',
+            bgHover: 'hover:bg-pink-50',
+            textHover: 'hover:text-pink-700',
+            activeBg: 'bg-pink-50 text-pink-700',
+        }
+    };
+
+    const theme = themeClasses[colorTheme] || themeClasses.purple;
+
+    const options = products.filter(p => {
+        if (requiresPreparation) return p.Recipes && p.Recipes.length > 0;
+        return p.isStockManaged && (!p.Recipes || p.Recipes.length === 0);
+    });
+
+    const selectedProduct = products.find(p => p.id === parseInt(value));
+
+    useEffect(() => {
+        if (selectedProduct) {
+            setSearchTerm(selectedProduct.name);
+        } else {
+            setSearchTerm('');
+        }
+    }, [value, selectedProduct]);
+
+    const filteredOptions = options.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+                if (selectedProduct) {
+                    setSearchTerm(selectedProduct.name);
+                } else {
+                    setSearchTerm('');
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [selectedProduct]);
+
+    const getStockText = (p) => {
+        if (requiresPreparation) {
+            let min = 999999;
+            let hasIng = false;
+            if (p.Recipes) {
+                p.Recipes.forEach(r => {
+                    if (r.Ingredient) {
+                        hasIng = true;
+                        const avail = Math.floor(parseFloat(r.Ingredient.stock) / parseFloat(r.quantity));
+                        if (avail < min) min = avail;
+                    }
+                });
+            }
+            return hasIng ? `Receta: ${min}` : 'Sin Insumos';
+        } else {
+            let s = parseInt(p.stock || 0);
+            if (p.ProductVariants && p.ProductVariants.length > 0) {
+                s = p.ProductVariants.reduce((sum, v) => sum + parseInt(v.stock || 0), 0);
+            }
+            return `Stock: ${s}`;
+        }
+    };
+
+    return (
+        <div ref={containerRef} className="relative flex-1">
+            <div className={`flex items-center gap-1.5 border rounded bg-white px-2 focus-within:ring-2 focus-within:outline-none transition-all ${theme.ring}`}>
+                <Search size={16} className="text-gray-400 shrink-0" />
+                <input
+                    type="text"
+                    className="w-full py-2 border-none outline-none font-medium text-sm bg-transparent text-gray-800"
+                    placeholder={placeholder}
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                />
+                {(searchTerm || value) && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onChange(null);
+                            setSearchTerm('');
+                            setIsOpen(false);
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+
+            {isOpen && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50 animate-in fade-in slide-in-from-top-1">
+                    {filteredOptions.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500 italic text-center">
+                            No se encontraron resultados
+                        </div>
+                    ) : (
+                        filteredOptions.map(p => {
+                            const isSelected = selectedProduct && selectedProduct.id === p.id;
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(p);
+                                        setSearchTerm(p.name);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2.5 text-sm flex justify-between items-center transition-all ${
+                                        isSelected ? theme.activeBg : `text-gray-700 ${theme.bgHover} ${theme.textHover}`
+                                    }`}
+                                >
+                                    <span className="font-bold truncate pr-2">{p.name}</span>
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                                        isSelected ? 'bg-white/60 text-current' : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        {getStockText(p)}
+                                    </span>
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};

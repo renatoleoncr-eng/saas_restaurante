@@ -29,6 +29,9 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
     }); // 'config' | 'movements'
     const [movements, setMovements] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null); // Account selected from movements
+    const [searchingCategory, setSearchingCategory] = useState(null); // 'entries' | 'mains' | null
+    const [editItemIndex, setEditItemIndex] = useState(null); // number | null
+    const [menuSearchQuery, setMenuSearchQuery] = useState('');
 
     useEffect(() => {
         if (activeTab && !forcedTab) {
@@ -376,11 +379,13 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                     category="entries"
                                     icon={List}
                                     colorClass="bg-blue-50 border-blue-100"
-                                    products={products}
                                     updateItem={updateItem}
                                     deleteItem={deleteItem}
-                                    addItem={addItem}
                                     getTheoreticalMaxStock={getTheoreticalMaxStock}
+                                    openSearchModal={(cat, idx) => {
+                                        setSearchingCategory(cat);
+                                        setEditItemIndex(idx);
+                                    }}
                                 />
                                 <ItemList
                                     title="Segundos"
@@ -388,11 +393,13 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                     category="mains"
                                     icon={Utensils}
                                     colorClass="bg-orange-50 border-orange-100"
-                                    products={products}
                                     updateItem={updateItem}
                                     deleteItem={deleteItem}
-                                    addItem={addItem}
                                     getTheoreticalMaxStock={getTheoreticalMaxStock}
+                                    openSearchModal={(cat, idx) => {
+                                        setSearchingCategory(cat);
+                                        setEditItemIndex(idx);
+                                    }}
                                 />
                             </div>
 
@@ -485,6 +492,121 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                     onClose={() => setSelectedAccountId(null)}
                 />
             )}
+
+            {/* PLATOS SELECTION MODAL */}
+            {searchingCategory && (
+                <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95">
+                        {/* Modal Header */}
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg text-gray-800">
+                                Seleccionar {searchingCategory === 'entries' ? 'Entrada' : 'Segundo'}
+                            </h3>
+                            <button 
+                                onClick={() => {
+                                    setSearchingCategory(null);
+                                    setEditItemIndex(null);
+                                    setMenuSearchQuery('');
+                                }} 
+                                className="p-1.5 hover:bg-gray-200 rounded-full text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="p-4 border-b bg-white">
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                    <Search size={18} />
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="Buscar plato o producto..."
+                                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                                    value={menuSearchQuery}
+                                    onChange={e => setMenuSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                                {menuSearchQuery && (
+                                    <button
+                                        onClick={() => setMenuSearchQuery('')}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Options List */}
+                        <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-1">
+                            {(() => {
+                                const validOptions = products.filter(p => {
+                                    if (searchingCategory === 'entries') {
+                                        return p.type === 'daily_entry' || p.type === 'product' || p.type === 'finished';
+                                    } else {
+                                        return p.type === 'daily_main' || p.type === 'product' || p.type === 'finished';
+                                    }
+                                });
+                                const searchResults = validOptions.filter(p =>
+                                    p.name.toLowerCase().includes(menuSearchQuery.toLowerCase())
+                                );
+
+                                if (searchResults.length === 0) {
+                                    return (
+                                        <div className="text-gray-400 text-sm italic py-8 text-center bg-white rounded-lg border">
+                                            No se encontraron platos o productos.
+                                        </div>
+                                    );
+                                }
+
+                                return searchResults.map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => {
+                                            if (editItemIndex !== null) {
+                                                // Replace existing
+                                                updateItem(searchingCategory, editItemIndex, 'linkId', p.id);
+                                            } else {
+                                                // Add new item
+                                                setMenuGroups(prev => prev.map(g => {
+                                                    if (g.id === activeGroupId) {
+                                                        return {
+                                                            ...g,
+                                                            [searchingCategory]: [...g[searchingCategory], { id: generateId(), name: p.name, stock: 9999, linkId: p.id }]
+                                                        };
+                                                    }
+                                                    return g;
+                                                }));
+                                            }
+                                            // Close modal
+                                            setSearchingCategory(null);
+                                            setEditItemIndex(null);
+                                            setMenuSearchQuery('');
+                                        }}
+                                        className="w-full text-left p-3 rounded-lg bg-white border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 transition-all flex justify-between items-center group"
+                                    >
+                                        <div>
+                                            <span className="font-bold text-gray-800 text-sm group-hover:text-blue-700 transition-colors">
+                                                {p.name}
+                                            </span>
+                                            <div className="text-[10px] text-gray-500 mt-1 uppercase font-semibold">
+                                                {p.type === 'finished' || p.type === 'product' ? 'Producto Terminado' : 'Plato del Día'}
+                                            </div>
+                                        </div>
+                                        {p.price !== undefined && (
+                                            <span className="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded font-bold group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
+                                                S/ {Number(p.price).toFixed(2)}
+                                            </span>
+                                        )}
+                                    </button>
+                                ));
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -496,23 +618,12 @@ const ItemList = ({
     category,
     icon: Icon,
     colorClass,
-    products,
     updateItem,
     deleteItem,
-    addItem,
     getTheoreticalMaxStock,
+    openSearchModal,
 }) => {
     const [collapsed, setCollapsed] = useState(false);
-
-    const validProducts = products.filter(p => {
-        if (category === 'entries') {
-            return p.type === 'daily_entry' || p.type === 'product' || p.type === 'finished';
-        }
-        if (category === 'mains') {
-            return p.type === 'daily_main' || p.type === 'product' || p.type === 'finished';
-        }
-        return false;
-    });
 
     return (
         <div className={`p-3 md:p-4 rounded-xl border ${colorClass} h-full`}>
@@ -538,18 +649,14 @@ const ItemList = ({
                             className="bg-white p-2 md:p-3 rounded-lg border shadow-sm group hover:border-blue-300 transition-colors"
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <select
-                                    className="w-full sm:flex-1 min-w-0 border p-2 rounded text-sm font-bold text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none truncate pr-6"
-                                    value={item.linkId || ''}
-                                    onChange={e => updateItem(category, idx, 'linkId', e.target.value)}
+                                <button
+                                    type="button"
+                                    onClick={() => openSearchModal(category, idx)}
+                                    className="w-full sm:flex-1 min-w-0 border p-2 rounded text-sm font-bold text-left text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors truncate flex items-center justify-between"
                                 >
-                                    <option value="">-- Seleccionar --</option>
-                                    {validProducts.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <span>{item.name || '-- Seleccionar Plato --'}</span>
+                                    <Search size={14} className="text-gray-400 shrink-0 ml-2" />
+                                </button>
                                 <div className="flex items-center justify-between sm:justify-center gap-2 sm:shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
                                     <div className="flex justify-center items-center w-24 h-[38px] border border-dashed border-gray-100 rounded-lg sm:border-0 bg-gray-50/50 sm:bg-transparent px-2">
                                         {item.linkId ? (
@@ -589,7 +696,7 @@ const ItemList = ({
             )}
 
             <button
-                onClick={() => addItem(category)}
+                onClick={() => openSearchModal(category, null)}
                 className="w-full py-2 bg-white border border-dashed border-gray-400 text-gray-500 rounded hover:bg-gray-50 flex items-center justify-center gap-2 text-sm font-bold"
             >
                 <Plus size={16} /> Agregar Opción
