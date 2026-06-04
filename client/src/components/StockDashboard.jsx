@@ -434,7 +434,32 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     products={products} // Pass all products to find ingredients
                 />
             )}
-            {mode !== 'menu_only' && (
+            {mode === 'menu_only' ? (
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+                    <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-500 pl-2">Opciones de Menú Registradas</h2>
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-64">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                            <Search size={18} />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Buscar opción..."
+                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            ) : (
                 <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4`}>
 
                     {/* TABS CONTROLLERS */}
