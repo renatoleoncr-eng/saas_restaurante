@@ -19,14 +19,10 @@ async function run() {
 
     console.log("\n=== AUDIT LOGS FOR ACCOUNT 257 OR TABLE 30 ===");
     const logs = await AuditLog.findAll({
-        where: {
-            [Op.or]: [
-                { entity: 'Account', entityId: '257' },
-                { entity: 'Table', entityId: '30' }
-            ]
-        },
-        order: [['createdAt', 'ASC']]
+        limit: 50,
+        order: [['createdAt', 'DESC']]
     });
+    logs.reverse();
     logs.forEach(l => {
         console.log(`Log ID: ${l.id} | Action: ${l.action} | Model: ${l.modelName} | Record: ${l.recordId} | Details: ${l.details} | CreatedAt: ${l.createdAt}`);
     });
