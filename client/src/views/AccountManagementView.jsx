@@ -6,6 +6,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
 import SessionsHistoryTab from '../components/SessionsHistoryTab';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -116,6 +117,12 @@ export default function AccountManagementView() {
     // View Payments Modal
     const [viewPaymentsAccount, setViewPaymentsAccount] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
+
+    useModalBackHandler(!!editingAccount, () => setEditingAccount(null));
+    useModalBackHandler(!!payAccount, () => setPayAccount(null));
+    useModalBackHandler(!!previewImage, () => setPreviewImage(null));
+    useModalBackHandler(!!viewPaymentsAccount, () => setViewPaymentsAccount(null));
+    useModalBackHandler(!!invoiceResult, () => setInvoiceResult(null));
 
     const openPayModal = (acc) => {
         setPayAccount(acc);

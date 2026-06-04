@@ -4,6 +4,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { Search, Calendar, Filter, ChevronDown, ChevronRight, CheckCircle, FileText, Download, X, DollarSign, TrendingUp, TrendingDown, Receipt, Plus, ArrowUpRight, ArrowDownLeft, Trash2 } from 'lucide-react';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function ReportesView() {
     const { socket, user } = useRestaurant();
@@ -30,6 +31,9 @@ export default function ReportesView() {
     // EXPENSE MODAL
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', paymentMethod: 'efectivo', category: 'otros' });
+
+    useModalBackHandler(!!previewImage, () => setPreviewImage(null));
+    useModalBackHandler(showExpenseModal, () => setShowExpenseModal(false));
 
 
 

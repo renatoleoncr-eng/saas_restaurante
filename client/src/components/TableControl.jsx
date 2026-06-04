@@ -6,6 +6,7 @@ import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, 
 import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function TableControl({ tableId, accountId, onClose, initialShowCart = false }) {
     const { user, refreshTrigger, refreshData } = useRestaurant();
@@ -782,6 +783,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     // --- NEW: Custom Staff Confirmation ---
     const [showStaffConfirm, setShowStaffConfirm] = useState(false);
     // --------------------------------------
+
+    useModalBackHandler(true, onClose);
+    useModalBackHandler(showPaymentModal, () => setShowPaymentModal(false));
+    useModalBackHandler(showStaffConfirm, () => setShowStaffConfirm(false));
 
     // --- 2x1 & MENU LOGIC START ---
     const handleClose = async () => {

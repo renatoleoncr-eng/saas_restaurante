@@ -6,6 +6,7 @@ import {
     X, Calculator, AlertCircle, CheckCircle, List, Package, 
     Coffee, Utensils, Sparkles, Clock, Receipt 
 } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function SessionsHistoryTab() {
     const [sessions, setSessions] = useState([]);
@@ -182,6 +183,8 @@ export default function SessionsHistoryTab() {
 function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
+
+    useModalBackHandler(isOpen, onClose);
 
     // Reset expanded category on modal open, lock scroll, and listen for Escape key
     useEffect(() => {

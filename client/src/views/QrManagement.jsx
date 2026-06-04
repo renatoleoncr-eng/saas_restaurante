@@ -7,6 +7,7 @@ import {
     ArrowUpRight, ArrowDownLeft, Sliders, ToggleLeft, ToggleRight, List, Image,
     Eye, X, ArrowUp, ArrowDown, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, Gift, History
 } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const getMediaUrl = (url) => {
     if (!url) return '';
@@ -88,6 +89,11 @@ export default function QrManagement() {
     });
     const [rouletteLogs, setRouletteLogs] = useState([]); // Real-time notification of spins
     const [selectedWinnerId, setSelectedWinnerId] = useState('random');
+
+    useModalBackHandler(showQrModal, () => setShowQrModal(false));
+    useModalBackHandler(showAdjustModal, () => setShowAdjustModal(false));
+    useModalBackHandler(showGroupModal, () => setShowGroupModal(false));
+    useModalBackHandler(showSlideModal, () => setShowSlideModal(false));
 
     const showAlert = (message, type = 'success') => {
         setAlert({ message, type });

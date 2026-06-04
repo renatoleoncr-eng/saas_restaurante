@@ -6,6 +6,7 @@ import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     const { user, refreshTrigger, socket } = useRestaurant(); // Get socket
@@ -46,6 +47,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     // Adjustment State (Reuse pattern from IngredientManager)
     const [adjustmentItem, setAdjustmentItem] = useState(null); // { id, name, type: 'add'|'remove' }
     const [adjustmentForm, setAdjustmentForm] = useState({ amount: '', reason: '' });
+
+    useModalBackHandler(!!adjustmentItem, () => setAdjustmentItem(null));
+    useModalBackHandler(!!creatingSection && !creatingSection.startsWith('expand-'), () => setCreatingSection(null));
 
     // Fetch data
     useEffect(() => {
