@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext'; // Import context
-import { Calendar, Save, List, Info, Plus, Trash2, Utensils, X, Search } from 'lucide-react';
+import { Calendar, Save, List, Info, Plus, Trash2, Utensils, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
 
 // Helper to generate unique IDs
@@ -490,9 +490,25 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
 }
 
 // Extracted Component
-const ItemList = ({ title, list, category, icon: Icon, colorClass, products, updateItem, deleteItem, addItem, getTheoreticalMaxStock }) => {
-    // Filter products valid for this specific list (Entrada vs Segundo)
-    // Include all products but maintain the original category filter for organization
+const ItemList = ({
+    title,
+    list,
+    category,
+    icon: Icon,
+    colorClass,
+    products,
+    updateItem,
+    deleteItem,
+    addItem,
+    getTheoreticalMaxStock,
+}) => {
+    const [collapsed, setCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 640;
+        }
+        return false;
+    });
+
     const validProducts = products.filter(p => {
         if (category === 'entries') {
             return p.type === 'daily_entry' || p.type === 'product' || p.type === 'finished';
@@ -506,14 +522,26 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
     return (
         <div className={`p-3 md:p-4 rounded-xl border ${colorClass} h-full`}>
             <h3 className="font-bold text-gray-800 mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-2"><Icon size={18} /> {title}</span>
-                <span className="text-xs font-normal text-gray-500"></span>
+                <span className="flex items-center gap-2">
+                    <Icon size={18} /> {title}
+                </span>
+                <button
+                    onClick={() => setCollapsed(!collapsed)}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label={collapsed ? 'Expandir lista' : 'Contraer lista'}
+                >
+                    {collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                </button>
             </h3>
 
-            <div className="space-y-3 mb-3">
-                {list.map((item, idx) => {
-                    return (
-                        <div key={idx} className="bg-white p-2 md:p-3 rounded-lg border shadow-sm group hover:border-blue-300 transition-colors">
+            {/* List items, show only when expanded */}
+            {!collapsed && (
+                <div className="space-y-3 mb-3">
+                    {list.map((item, idx) => (
+                        <div
+                            key={idx}
+                            className="bg-white p-2 md:p-3 rounded-lg border shadow-sm group hover:border-blue-300 transition-colors"
+                        >
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                 <select
                                     className="w-full sm:flex-1 min-w-0 border p-2 rounded text-sm font-bold text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none truncate pr-6"
@@ -558,10 +586,12 @@ const ItemList = ({ title, list, category, icon: Icon, colorClass, products, upd
                                 </div>
                             </div>
                         </div>
-                    );
-                })}
-                {list.length === 0 && <div className="text-gray-400 text-sm italic py-2 text-center">Sin opciones</div>}
-            </div>
+                    ))}
+                    {list.length === 0 && (
+                        <div className="text-gray-400 text-sm italic py-2 text-center">Sin opciones</div>
+                    )}
+                </div>
+            )}
 
             <button
                 onClick={() => addItem(category)}

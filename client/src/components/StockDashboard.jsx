@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
@@ -21,6 +21,18 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     const [creatingSection, setCreatingSection] = useState(null); // 'entries', 'mains', 'general', null
     // REMOVED isCreating
     const [editForm, setEditForm] = useState({});
+    const [entriesCollapsed, setEntriesCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 640;
+        }
+        return false;
+    });
+    const [mainsCollapsed, setMainsCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 640;
+        }
+        return false;
+    });
 
     const [recipeProduct, setRecipeProduct] = useState(null); // Product selected for recipe editing
     const [selectedAccountId, setSelectedAccountId] = useState(null); // Account selected from movements
@@ -1081,17 +1093,30 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                             {/* ENTRADAS COLUMN */}
                             <div className="bg-white rounded-lg shadow border p-4">
                                 <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                                    <h3 className="font-bold text-lg text-purple-800">Entradas</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg text-purple-800">Entradas</h3>
+                                        <button
+                                            onClick={() => setEntriesCollapsed(!entriesCollapsed)}
+                                            className="text-purple-600 hover:text-purple-800 transition-colors p-1 hover:bg-purple-50 rounded"
+                                            aria-label={entriesCollapsed ? 'Expandir lista' : 'Contraer lista'}
+                                        >
+                                            {entriesCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                                        </button>
+                                    </div>
                                     {!readOnly && (
                                         <button
-                                            onClick={() => handleCreate('daily_entry')}
+                                            onClick={() => {
+                                                setEntriesCollapsed(false);
+                                                handleCreate('daily_entry');
+                                            }}
                                             className="bg-purple-100 hover:bg-purple-200 text-purple-800 p-2 rounded-full"
                                         >
                                             <Plus size={18} />
                                         </button>
                                     )}
                                 </div>
-                                <div className="space-y-2">
+                                {!entriesCollapsed && (
+                                    <div className="space-y-2">
                                     {/* INLINE FORM FOR ENTRIES */}
                                     {creatingSection === 'entries' && (
                                         <div className="bg-purple-50 p-3 rounded border border-purple-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
@@ -1264,22 +1289,36 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         <p className="text-gray-400 text-sm italic text-center py-4">No hay entradas registradas</p>
                                     )}
                                 </div>
+                                )}
                             </div>
 
                             {/* SEGUNDOS COLUMN */}
                             <div className="bg-white rounded-lg shadow border p-4">
                                 <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                                    <h3 className="font-bold text-lg text-pink-800">Segundos</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg text-pink-800">Segundos</h3>
+                                        <button
+                                            onClick={() => setMainsCollapsed(!mainsCollapsed)}
+                                            className="text-pink-600 hover:text-pink-800 transition-colors p-1 hover:bg-pink-50 rounded"
+                                            aria-label={mainsCollapsed ? 'Expandir lista' : 'Contraer lista'}
+                                        >
+                                            {mainsCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                                        </button>
+                                    </div>
                                     {!readOnly && (
                                         <button
-                                            onClick={() => handleCreate('daily_main')}
+                                            onClick={() => {
+                                                setMainsCollapsed(false);
+                                                handleCreate('daily_main');
+                                            }}
                                             className="bg-pink-100 hover:bg-pink-200 text-pink-800 p-2 rounded-full"
                                         >
                                             <Plus size={18} />
                                         </button>
                                     )}
                                 </div>
-                                <div className="space-y-2">
+                                {!mainsCollapsed && (
+                                    <div className="space-y-2">
                                     {/* INLINE FORM FOR MAINS */}
                                     {creatingSection === 'mains' && (
                                         <div className="bg-pink-50 p-3 rounded border border-pink-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
@@ -1452,6 +1491,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         <p className="text-gray-400 text-sm italic text-center py-4">No hay segundos registrados</p>
                                     )}
                                 </div>
+                                )}
                             </div>
                         </div>
                     ) : (
