@@ -2712,7 +2712,18 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <h2 className="text-lg font-bold text-gray-800">
                                 {account ? `Cuenta #${account.id}` : <span className="text-green-600">Nueva Cuenta</span>}
                             </h2>
-                            <button onClick={handleClose} className="p-1 hover:bg-gray-200 rounded-full"><X /></button>
+                            <button 
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleClose();
+                                }} 
+                                className="p-2.5 hover:bg-gray-200 active:bg-gray-300 rounded-full text-gray-500 hover:text-gray-800 transition-all duration-200 relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1"
+                                aria-label="Cerrar"
+                            >
+                                <X size={24} />
+                            </button>
                         </div>
                         {/* Show Client Edit only if Account Exists OR allow pre-fill? 
                         Acc doesn't exist yet, so we can't update it via API.

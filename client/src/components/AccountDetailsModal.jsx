@@ -124,7 +124,16 @@ const AccountDetailsModal = ({
                                 )}
                             </button>
                         )}
-                        <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors">
+                        <button 
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onClose();
+                            }} 
+                            className="p-2.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1.5"
+                            aria-label="Cerrar"
+                        >
                             <X size={24} strokeWidth={2} />
                         </button>
                     </div>

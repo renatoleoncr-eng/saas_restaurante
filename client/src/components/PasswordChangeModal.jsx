@@ -55,7 +55,18 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                     <h3 className="font-bold flex items-center gap-2">
                         <Lock size={18} /> Cambiar Contraseña: {targetUser.username}
                     </h3>
-                    <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded"><X size={20} /></button>
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }} 
+                        className="p-2 hover:bg-blue-700 rounded transition relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1"
+                        aria-label="Cerrar"
+                    >
+                        <X size={24} />
+                    </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">

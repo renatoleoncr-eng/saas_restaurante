@@ -94,7 +94,16 @@ export default function TableTransferModal({ account, currentTable, onClose, onS
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <ArrowRightLeft size={24} /> Cambiar de Mesa
                     </h2>
-                    <button onClick={onClose} className="p-1 hover:bg-blue-700 rounded-full transition-colors">
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }} 
+                        className="p-2 hover:bg-blue-700 rounded transition relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1"
+                        aria-label="Cerrar"
+                    >
                         <X size={24} />
                     </button>
                 </div>

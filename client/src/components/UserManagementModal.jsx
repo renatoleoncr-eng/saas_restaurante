@@ -93,7 +93,16 @@ export default function UserManagementModal({ onClose }) {
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         <Users size={24} /> Gestión de Usuarios
                     </h1>
-                    <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded transition">
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }} 
+                        className="p-2 hover:bg-blue-700 rounded transition relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1"
+                        aria-label="Cerrar"
+                    >
                         <X size={24} />
                     </button>
                 </div>

@@ -181,7 +181,16 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-colors">
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="p-3 hover:bg-white/10 active:bg-white/20 rounded-full text-white/80 hover:text-white transition-all duration-200 relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-2"
+                        aria-label="Cerrar modal"
+                    >
                         <X size={24} />
                     </button>
                 </div>
