@@ -32,6 +32,7 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
     const [searchingCategory, setSearchingCategory] = useState(null); // 'entries' | 'mains' | null
     const [editItemIndex, setEditItemIndex] = useState(null); // number | null
     const [menuSearchQuery, setMenuSearchQuery] = useState('');
+    const [configSearchQuery, setConfigSearchQuery] = useState('');
 
     useEffect(() => {
         if (activeTab && !forcedTab) {
@@ -371,6 +372,29 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                 )}
                             </div>
 
+                            {/* Transversal Search Bar */}
+                            <div className="mb-6">
+                                <div className="relative w-full max-w-md">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                        <Search size={18} />
+                                    </span>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar en el menú configurado (entradas/segundos)..."
+                                        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-bold text-gray-700 shadow-sm"
+                                        value={configSearchQuery}
+                                        onChange={e => setConfigSearchQuery(e.target.value)}
+                                    />
+                                    {configSearchQuery && (
+                                        <button
+                                            onClick={() => setConfigSearchQuery('')}
+                                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650 font-bold"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
                                 <ItemList
@@ -386,6 +410,7 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                         setSearchingCategory(cat);
                                         setEditItemIndex(idx);
                                     }}
+                                    searchQuery={configSearchQuery}
                                 />
                                 <ItemList
                                     title="Segundos"
@@ -400,6 +425,7 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                                         setSearchingCategory(cat);
                                         setEditItemIndex(idx);
                                     }}
+                                    searchQuery={configSearchQuery}
                                 />
                             </div>
 
@@ -622,8 +648,16 @@ const ItemList = ({
     deleteItem,
     getTheoreticalMaxStock,
     openSearchModal,
+    searchQuery,
 }) => {
     const [collapsed, setCollapsed] = useState(false);
+
+    const filteredList = list
+        .map((item, originalIndex) => ({ item, originalIndex }))
+        .filter(({ item }) => {
+            if (!searchQuery) return true;
+            return item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        });
 
     return (
         <div className={`p-3 md:p-4 rounded-xl border ${colorClass} h-full transition-all duration-200`}>
@@ -636,7 +670,7 @@ const ItemList = ({
                             ? 'bg-blue-100 text-blue-700 border-blue-200'
                             : 'bg-orange-100 text-orange-700 border-orange-200'
                     }`}>
-                        {list.length}
+                        {searchQuery ? `${filteredList.length}/${list.length}` : list.length}
                     </span>
                 </span>
                 <button
@@ -651,7 +685,7 @@ const ItemList = ({
             {/* Comma-separated preview of items when collapsed */}
             {collapsed && list.length > 0 && (
                 <div className="text-xs text-gray-500 font-semibold truncate bg-white/50 p-2 rounded-lg border border-gray-200/50 mt-1 select-none">
-                    {list.map(item => item.name || '---').join(', ')}
+                    {filteredList.map(({ item }) => item.name || '---').join(', ') || <span className="italic text-gray-400">Ninguna coincidencia</span>}
                 </div>
             )}
 
@@ -659,15 +693,15 @@ const ItemList = ({
             {!collapsed && (
                 <>
                     <div className="space-y-3 mb-3">
-                        {list.map((item, idx) => (
+                        {filteredList.map(({ item, originalIndex }) => (
                             <div
-                                key={idx}
+                                key={item.id || originalIndex}
                                 className="bg-white p-2 md:p-3 rounded-lg border shadow-sm group hover:border-blue-300 transition-colors"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => openSearchModal(category, idx)}
+                                        onClick={() => openSearchModal(category, originalIndex)}
                                         className="w-full sm:flex-1 min-w-0 border p-2 rounded text-sm font-bold text-left text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors truncate flex items-center justify-between"
                                     >
                                         <span>{item.name || '-- Seleccionar Plato --'}</span>
@@ -696,7 +730,7 @@ const ItemList = ({
                                             )}
                                         </div>
                                         <button
-                                            onClick={() => deleteItem(category, idx)}
+                                            onClick={() => deleteItem(category, originalIndex)}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded h-[38px] flex items-center justify-center border sm:border-0 border-gray-100 px-3 sm:px-2"
                                         >
                                             <Trash2 size={16} />
@@ -705,11 +739,15 @@ const ItemList = ({
                                 </div>
                             </div>
                         ))}
-                        {list.length === 0 && (
+                        {list.length === 0 ? (
                             <div className="text-gray-400 text-sm italic py-4 text-center border border-dashed border-gray-300 rounded-lg bg-white/40 select-none">
                                 Sin opciones registradas
                             </div>
-                        )}
+                        ) : filteredList.length === 0 ? (
+                            <div className="text-gray-400 text-sm italic py-4 text-center border border-dashed border-gray-300 rounded-lg bg-white/40 select-none">
+                                Ninguna opción coincide con la búsqueda
+                            </div>
+                        ) : null}
                     </div>
 
                     <button

@@ -137,7 +137,7 @@ export default function WaiterMap() {
                                         )}
                                     >
                                         <span className="text-2xl font-bold">
-                                            {formatTableName(table, area)}
+                                            {table.number}
                                         </span>
                                         <span className="text-xs uppercase font-semibold mt-1">
                                             {status === 'free' ? 'Libre' : status === 'occupied' ? 'Ocupada' : 'Reservada'}
