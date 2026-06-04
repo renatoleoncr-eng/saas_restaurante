@@ -207,7 +207,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 type: adjustmentItem.type,
                 amount: adjustmentForm.amount,
                 reason: adjustmentForm.reason || (adjustmentItem.type === 'add' ? 'Compra Manual' : 'Ajuste Manual'),
-                userId: null,
+                userId: user?.id || null,
                 variantId: adjustmentForm.variantId || adjustmentItem.variantId || null // Pass selected variant
             });
 
@@ -287,7 +287,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 }
             }
 
-            const payload = { ...editForm };
+            const payload = { ...editForm, userId: user?.id };
             if (payload.presentationsList) {
                 // payload.presentations = JSON.stringify(payload.presentationsList); 
             }
@@ -400,7 +400,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         if (readOnly) return;
         if (confirm('¿Eliminar producto?')) {
             try {
-                await axios.delete(`/api/products/${id}`);
+                await axios.delete(`/api/products/${id}?userId=${user?.id}`);
                 loadProducts();
             } catch (error) {
                 console.error("Error deleting product", error);

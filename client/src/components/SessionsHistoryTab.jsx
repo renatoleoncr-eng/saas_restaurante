@@ -265,9 +265,9 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop click to close */}
-            <div className="fixed inset-0" onClick={onClose}></div>
+            <div className="fixed inset-0 z-0" onClick={onClose}></div>
             
-            <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 z-10 relative animate-duration-200">
+            <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 z-10 relative animate-duration-200 session-modal-container">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-5 text-white flex justify-between items-center shrink-0 shadow-md">
                     <div className="flex items-center gap-3">
