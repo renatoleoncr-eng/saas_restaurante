@@ -10,7 +10,7 @@ const { logAction } = require('../utils/audit');
 router.get('/users', async (req, res) => {
     try {
         const users = await User.findAll({
-            attributes: ['id', 'username', 'displayName', 'role', 'pin', 'requirePinPrompt'] // Exclude password
+            attributes: ['id', 'username', 'displayName', 'role', 'pin', 'requirePinPrompt', 'active'] // Exclude password
         });
         res.json(users);
     } catch (err) {
@@ -82,9 +82,23 @@ router.delete('/users/:id', async (req, res) => {
         const user = await User.findByPk(req.params.id);
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        await user.destroy();
-        await logAction(req, 'DELETE_USER', 'User', req.params.id, { username: user.username });
-        res.json({ message: 'Usuario eliminado' });
+        await user.update({ active: false });
+        await logAction(req, 'DELETE_USER', 'User', req.params.id, { username: user.username, active: false });
+        res.json({ message: 'Usuario desactivado' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// REACTIVATE USER (Admin)
+router.put('/users/:id/reactivate', async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        await user.update({ active: true });
+        await logAction(req, 'REACTIVATE_USER', 'User', user.id, { username: user.username });
+        res.json({ message: 'Usuario reactivado' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

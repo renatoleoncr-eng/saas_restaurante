@@ -171,6 +171,11 @@ const User = sequelize.define('User', {
     requirePinPrompt: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
+    },
+    active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false
     }
 });
 

@@ -65,7 +65,8 @@ async function runAutomaticFix() {
 
         // USERS
         { table: 'Users', column: 'pin', type: 'VARCHAR(4)' },
-        { table: 'Users', column: 'requirePinPrompt', type: 'BOOLEAN DEFAULT 0' }
+        { table: 'Users', column: 'requirePinPrompt', type: 'BOOLEAN DEFAULT 0' },
+        { table: 'Users', column: 'active', type: 'BOOLEAN DEFAULT 1' }
     ];
 
     for (const m of migrations) {

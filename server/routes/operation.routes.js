@@ -1001,9 +1001,9 @@ router.post('/orders', async (req, res) => {
 
         if (authorPin) {
             const pinUser = await User.findOne({ where: { pin: authorPin } });
-            if (!pinUser) {
+            if (!pinUser || pinUser.active === false) {
                 await t.rollback();
-                return res.status(400).json({ error: 'PIN incorrecto o no asignado' });
+                return res.status(400).json({ error: 'PIN incorrecto o usuario inactivo' });
             }
             userId = pinUser.id; // Override order creator with the actual mozo
         }

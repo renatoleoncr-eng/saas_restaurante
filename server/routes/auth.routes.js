@@ -15,6 +15,10 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        if (user.active === false) {
+            return res.status(401).json({ error: 'Usuario desactivado. Contacte al administrador.' });
+        }
+
         // Log Login
         req.user = user; // Hack to pass user to logAction helper if needed, or just pass ID
         await logAction(req, 'LOGIN', 'User', user.id, { username });

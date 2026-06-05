@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, Plus, Edit, Trash2, Key, UserPlus, X } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Key, UserPlus, X, RotateCcw } from 'lucide-react';
 import PasswordChangeModal from './PasswordChangeModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -30,7 +30,16 @@ export default function UserManagementModal({ onClose }) {
     const loadUsers = async () => {
         try {
             const res = await axios.get('/api/users');
-            setUsers(res.data);
+            const data = Array.isArray(res.data) ? res.data : [];
+            const sortedUsers = data.sort((a, b) => {
+                if (!!a.active === !!b.active) {
+                    const nameA = a.displayName || '';
+                    const nameB = b.displayName || '';
+                    return nameA.localeCompare(nameB);
+                }
+                return a.active ? -1 : 1;
+            });
+            setUsers(sortedUsers);
         } catch (err) {
             console.error(err);
         } finally {
@@ -39,12 +48,21 @@ export default function UserManagementModal({ onClose }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('¿Eliminar usuario permanentemente?')) return;
+        if (!confirm('¿Desactivar este usuario?')) return;
         try {
             await axios.delete(`/api/users/${id}`);
             loadUsers();
         } catch (err) {
-            alert('Error eliminando usuario');
+            alert('Error desactivando usuario');
+        }
+    };
+
+    const handleReactivate = async (id) => {
+        try {
+            await axios.put(`/api/users/${id}/reactivate`);
+            loadUsers();
+        } catch (err) {
+            alert('Error reactivando usuario');
         }
     };
 
@@ -241,8 +259,8 @@ export default function UserManagementModal({ onClose }) {
                             )}
 
                             {/* USER TABLE */}
-                            <div className="bg-white rounded-lg shadow overflow-hidden">
-                                <table className="w-full text-left">
+                            <div className="bg-white rounded-lg shadow overflow-x-auto">
+                                <table className="w-full text-left min-w-[750px]">
                                     <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                                         <tr>
                                             <th className="px-6 py-4">Usuario</th>
@@ -250,14 +268,15 @@ export default function UserManagementModal({ onClose }) {
                                             <th className="px-6 py-4">Rol</th>
                                             <th className="px-6 py-4">PIN</th>
                                             <th className="px-6 py-4">Terminal</th>
+                                            <th className="px-6 py-4">Estado</th>
                                             <th className="px-6 py-4 text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {users.map(u => (
-                                            <tr key={u.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
-                                                <td className="px-6 py-4 text-gray-600">{u.displayName}</td>
+                                            <tr key={u.id} className={`hover:bg-gray-50 ${u.active === false ? 'opacity-60 bg-gray-50/50' : ''}`}>
+                                                <td className={`px-6 py-4 font-medium text-gray-900 ${u.active === false ? 'line-through text-gray-400' : ''}`}>{u.username}</td>
+                                                <td className={`px-6 py-4 text-gray-600 ${u.active === false ? 'line-through text-gray-400' : ''}`}>{u.displayName}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'kitchen' ? 'bg-orange-100 text-orange-700' : u.role === 'cashier' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                                         {u.role}
@@ -275,28 +294,45 @@ export default function UserManagementModal({ onClose }) {
                                                         </span>
                                                     )}
                                                 </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.active === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                        {u.active === false ? 'Inactivo' : 'Activo'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                                    <button
-                                                        onClick={() => setPasswordModalTarget(u)}
-                                                        title="Cambiar Contraseña"
-                                                        className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded"
-                                                    >
-                                                        <Key size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => startEdit(u)}
-                                                        title="Editar"
-                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                    >
-                                                        <Edit size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(u.id)}
-                                                        title="Eliminar"
-                                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                    {u.active !== false ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setPasswordModalTarget(u)}
+                                                                title="Cambiar Contraseña"
+                                                                className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded"
+                                                            >
+                                                                <Key size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => startEdit(u)}
+                                                                title="Editar"
+                                                                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                            >
+                                                                <Edit size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(u.id)}
+                                                                title="Desactivar"
+                                                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleReactivate(u.id)}
+                                                            title="Reactivar"
+                                                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+                                                        >
+                                                            <RotateCcw size={18} />
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
