@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Loader2, FileText, Receipt } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
@@ -63,18 +64,19 @@ const AccountDetailsModal = ({
     };
 
     if (loading) {
-        return (
+        return createPortal(
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 flex flex-col items-center gap-4">
                     <Loader2 className="animate-spin text-blue-600" size={48} />
                     <p className="text-gray-600 font-medium">Cargando detalles...</p>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
     if (error) {
-        return (
+        return createPortal(
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center gap-4 text-center">
                     <div className="bg-red-100 text-red-600 p-3 rounded-full">
@@ -94,7 +96,8 @@ const AccountDetailsModal = ({
                         Cerrar
                     </button>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
@@ -104,11 +107,14 @@ const AccountDetailsModal = ({
         return `S/ ${Number(amount || 0).toFixed(2)}`;
     };
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/50 z-[60] flex sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in">
             <div className="bg-white shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-xl overflow-hidden flex flex-col">
                 {/* HEADER */}
-                <div className="p-4 sm:p-6 border-b flex justify-between items-center bg-white gap-4">
+                <div 
+                    className="p-4 sm:p-6 border-b flex justify-between items-center bg-white gap-4 sm:!pt-6"
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+                >
                     <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-lg sm:text-xl text-gray-800 truncate">{title}</h3>
                         <div className="text-xs sm:text-sm text-blue-600 font-medium mt-1 truncate">
@@ -148,7 +154,10 @@ const AccountDetailsModal = ({
                 </div>
 
                 {/* CONTENT LIST */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 bg-white">
+                <div 
+                    className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 bg-white sm:!pb-6"
+                    style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+                >
 
                     {/* CONSUMOS SECTION */}
                     <section>
@@ -300,7 +309,10 @@ const AccountDetailsModal = ({
 
                 {/* FOOTER TOTALS (Optional, only for ReportesView) */}
                 {totalToDisplay !== null && amountToDisplay !== null && (
-                    <div className="p-4 bg-gray-50 border-t flex justify-between items-center text-sm">
+                    <div 
+                        className="p-4 bg-gray-50 border-t flex justify-between items-center text-sm sm:!pb-4"
+                        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+                    >
                         <div>
                             <div className="text-gray-500">Total Cuenta</div>
                             <div className="font-bold text-gray-800">{formatCurrency(totalToDisplay)}</div>
@@ -340,7 +352,8 @@ const AccountDetailsModal = ({
                     onRefresh={() => fetchAccount(account.id)}
                 />
             )}
-        </div>
+        </div>,
+        document.body
     );
 };
 
