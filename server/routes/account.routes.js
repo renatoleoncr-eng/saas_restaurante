@@ -16,8 +16,13 @@ router.get('/accounts/all', async (req, res) => {
         // Use Hotel Day Logic (7 AM to 6:59:59 AM next day)
         // If no startDate provided, getHotelDayRange defaults to today's hotel day
         const [start, end] = getHotelDayRange(startDate, startDate);
-        // SQLite date comparison requires space instead of T for lexicographical match with Sequelize stored format ('YYYY-MM-DD HH:MM:SS.SSS +00:00')
-        const startStr = start.toISOString().replace('T', ' ').replace('Z', '');
+        // MySQL (production) uses timezone: '-05:00' (Lima) per db.js config, so dates are
+        // stored in Lima local time. We must compare against Lima-formatted time strings,
+        // NOT UTC. Convert: start is e.g. 12:00 UTC (= 7:00 AM Lima), subtract 5h → 07:00 UTC
+        // so toISOString gives '2026-06-05 07:00:00.000' which matches Lima-stored values.
+        const LIMA_OFFSET_MS = 5 * 60 * 60 * 1000;
+        const startLima = new Date(start.getTime() - LIMA_OFFSET_MS);
+        const startStr = startLima.toISOString().replace('T', ' ').replace('Z', '');
 
         // Build date filter (Allow 'open' accounts to bypass the date filter so they are never hidden)
         let dateFilter = `AND (a.createdAt >= '${startStr}' OR a.status = 'open')`;
