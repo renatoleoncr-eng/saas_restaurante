@@ -105,30 +105,30 @@ const AccountDetailsModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in">
+            <div className="bg-white shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-xl overflow-hidden flex flex-col">
                 {/* HEADER */}
-                <div className="p-6 border-b flex justify-between items-start bg-white">
-                    <div>
-                        <h3 className="font-bold text-xl text-gray-800">{title}</h3>
-                        <div className="text-sm text-blue-600 font-medium mt-1">
+                <div className="p-4 sm:p-6 border-b flex justify-between items-center bg-white gap-4">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-lg sm:text-xl text-gray-800 truncate">{title}</h3>
+                        <div className="text-xs sm:text-sm text-blue-600 font-medium mt-1 truncate">
                             {subtitle || `#${account.id} - ${account.Table ? formatTableName(account.Table) : `Mesa #${account.TableId}`}`}
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         {account.status === 'closed' && (
                             <button
                                 onClick={() => setShowInvoiceModal(true)}
-                                className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors ${
+                                className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors ${
                                     account.Invoices?.some(i => i.status !== 'anulado') 
                                         ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                                         : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/30'
                                 }`}
                             >
                                 {account.Invoices?.some(i => i.status !== 'anulado') ? (
-                                    <><FileText size={18} /> Comprobantes</>
+                                    <><FileText size={16} className="sm:w-[18px] sm:h-[18px]" /> <span>Comprobantes</span></>
                                 ) : (
-                                    <><Receipt size={18} /> Facturar</>
+                                    <><Receipt size={16} className="sm:w-[18px] sm:h-[18px]" /> <span>Facturar</span></>
                                 )}
                             </button>
                         )}
@@ -139,16 +139,16 @@ const AccountDetailsModal = ({
                                 e.stopPropagation();
                                 onClose();
                             }} 
-                            className="p-2.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1.5"
+                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center"
                             aria-label="Cerrar"
                         >
-                            <X size={24} strokeWidth={2} />
+                            <X size={20} className="sm:w-[24px] sm:h-[24px]" strokeWidth={2} />
                         </button>
                     </div>
                 </div>
 
                 {/* CONTENT LIST */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 bg-white">
 
                     {/* CONSUMOS SECTION */}
                     <section>
@@ -161,7 +161,7 @@ const AccountDetailsModal = ({
                                     const displayNotes = isCombo ? null : ord.notes;
 
                                     return (
-                                        <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-4 flex justify-between items-start">
+                                        <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4">
                                             <div>
                                                 <div className="font-bold text-gray-800 text-sm">Venta Productos</div>
                                                 <div className="text-sm text-gray-600 mt-1">
@@ -193,7 +193,7 @@ const AccountDetailsModal = ({
                                 account.Payments.map((payment, idx) => {
                                     const isCurrentPayment = currentPaymentId && payment.id === currentPaymentId;
                                     return (
-                                        <div key={idx} className={`border rounded-lg p-4 flex justify-between items-start ${isCurrentPayment ? 'bg-green-100/50 border-green-300' : 'bg-green-50/50 border-green-100/50'}`}>
+                                        <div key={idx} className={`border rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4 ${isCurrentPayment ? 'bg-green-100/50 border-green-300' : 'bg-green-50/50 border-green-100/50'}`}>
                                             <div>
                                                 <div className="font-bold text-gray-800 text-sm">Pago consumo</div>
                                                 <div className="text-xs text-gray-400 mt-2">
@@ -219,7 +219,7 @@ const AccountDetailsModal = ({
                             <h4 className="text-sm font-bold text-gray-500 mb-3">Comprobantes Emitidos</h4>
                             <div className="space-y-3">
                                 {account.Invoices.map((inv, idx) => (
-                                    <div key={idx} className="bg-blue-50/50 border border-blue-100/50 rounded-lg p-4 flex justify-between items-center">
+                                    <div key={idx} className="bg-blue-50/50 border border-blue-100/50 rounded-lg p-3 sm:p-4 flex justify-between items-center gap-4">
                                         <div>
                                             <div className="font-bold text-blue-800 text-sm uppercase">
                                                 {inv.tipo === 'factura' ? 'Factura' : 'Boleta'} Electrónica
