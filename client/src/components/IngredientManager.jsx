@@ -284,15 +284,16 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                                         ${mov.type === 'add' ? 'bg-green-50 text-green-700 border-green-200' : ''}
                                                         ${mov.type === 'remove' ? 'bg-red-50 text-red-700 border-red-200' : ''}
                                                         ${mov.type === 'sale' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
+                                                        ${!['add', 'remove', 'sale'].includes(mov.type) ? 'bg-gray-100 text-gray-800 border-gray-200' : ''}
                                                     `}>
                                                         {mov.type === 'add' && <TrendingUp size={12} />}
                                                         {mov.type === 'remove' && <TrendingDown size={12} />}
                                                         {mov.type === 'sale' && <Package size={12} />}
-                                                        {mov.type === 'add' ? 'Ingreso' : mov.type === 'remove' ? 'Salida' : mov.type === 'sale' ? 'Venta' : mov.type}
+                                                        {mov.type === 'add' ? 'Ingreso' : mov.type === 'remove' ? 'Salida' : mov.type === 'sale' ? 'Venta' : mov.type === 'correction' ? 'Corrección' : mov.type}
                                                     </span>
                                                 </td>
                                                 <td className="p-3 text-right font-mono text-sm">
-                                                    {mov.type === 'add' ? '+' : '-'}{Number(parseFloat(mov.amount).toFixed(1))} {mov.Ingredient?.unit}
+                                                    {isAdd ? '+' : '-'}{Number(parseFloat(mov.amount).toFixed(1))} {mov.Ingredient?.unit}
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     {mov.AccountId || mov.Account ? (

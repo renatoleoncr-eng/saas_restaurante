@@ -110,16 +110,18 @@ export default function ReportesView() {
     // PREPARE TRANSACTIONS LIST (MERGE INCOME & EXPENSES)
     const transactions = [
         ...report.movements.map(p => {
+            const isDeletedAccount = !p.AccountId;
             return {
                 id: p.id,
                 type: 'income',
                 date: p.createdAt,
                 amount: p.amount,
-                description: `Abono Cuenta #${p.AccountId || '?'}`,
+                description: isDeletedAccount ? 'Cuenta/Mesa eliminada' : `Abono Cuenta #${p.AccountId}`,
                 details: p.Account || {}, // Store full account obj
                 paymentDetails: p, // Store specific payment obj
                 user: p.User ? (p.User.displayName || p.User.username) : 'N/A',
-                method: p.method
+                method: p.method,
+                isDeletedAccount
             };
         }),
         ...report.expenses.map(e => ({
@@ -252,9 +254,13 @@ export default function ReportesView() {
                                         </td>
                                         <td className="px-6 py-4">
                                             {t.type === 'income' ? (
-                                                <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline font-bold">
-                                                    #{t.details?.id || t.id} <span className="text-xs font-normal text-gray-500 block">{formatTableName(t.details?.Table || { number: t.details?.TableId })}</span>
-                                                </button>
+                                                t.isDeletedAccount ? (
+                                                    <span className="text-gray-500 italic font-medium">Cuenta/Mesa eliminada</span>
+                                                ) : (
+                                                    <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline font-bold">
+                                                        #{t.details?.id || t.id} <span className="text-xs font-normal text-gray-500 block">{formatTableName(t.details?.Table || { number: t.details?.TableId })}</span>
+                                                    </button>
+                                                )
                                             ) : (
                                                 <span className="text-gray-400">-</span>
                                             )}
@@ -264,7 +270,15 @@ export default function ReportesView() {
                                         </td>
                                         <td className="px-6 py-4 text-gray-600 capitalize">{t.method}</td>
                                         <td className="px-6 py-4 text-gray-500 max-w-xs truncate" title={t.description}>
-                                            {t.type === 'income' ? `${t.description} - ${t.details?.customerName || 'Cliente'}` : t.description}
+                                            {t.type === 'income' ? (
+                                                t.isDeletedAccount ? (
+                                                    'Cuenta/Mesa eliminada'
+                                                ) : (
+                                                    `${t.description} - ${t.details?.customerName || 'Cliente'}`
+                                                )
+                                            ) : (
+                                                t.description
+                                            )}
                                         </td>
                                         {user?.role === 'admin' && (
                                             <td className="px-6 py-4 text-right">
@@ -300,9 +314,13 @@ export default function ReportesView() {
                                         <div className="min-w-0">
                                             <div className="font-bold text-gray-800 text-sm truncate">
                                                 {isIncome ? (
-                                                    <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline text-left font-bold">
-                                                        Mesa {t.details?.Table?.number || '?'} • #{t.details?.id || t.id}
-                                                    </button>
+                                                    t.isDeletedAccount ? (
+                                                        <span className="text-gray-500 italic font-medium">Cuenta/Mesa eliminada</span>
+                                                    ) : (
+                                                        <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline text-left font-bold">
+                                                            Mesa {t.details?.Table?.number || '?'} • #{t.details?.id || t.id}
+                                                        </button>
+                                                    )
                                                 ) : (
                                                     t.description
                                                 )}

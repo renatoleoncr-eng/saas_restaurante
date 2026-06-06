@@ -335,7 +335,7 @@ export default function AccountManagementView() {
     };
 
     const handleDelete = async (account) => {
-        if (!window.confirm(`¿Estás seguro de eliminar la cuenta #${account.id}?\nEsta acción eliminará pedidos y pagos asociados.`)) {
+        if (!window.confirm(`¿Estás seguro de eliminar la cuenta #${account.id}?\nEsta acción eliminará los pedidos asociados. Los pagos registrados en caja NO se eliminarán.`)) {
             return;
         }
         try {

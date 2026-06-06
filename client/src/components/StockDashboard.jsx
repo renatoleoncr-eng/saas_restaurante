@@ -1550,7 +1550,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 {mov.type === 'add' && <TrendingUp size={12} />}
                                                                 {mov.type === 'remove' && <TrendingDown size={12} />}
                                                                 {mov.type === 'sale' && <Package size={12} />}
-                                                                {mov.type === 'add' ? 'Ingreso' : mov.type === 'remove' ? 'Salida' : mov.type === 'sale' ? 'Venta' : mov.type}
+                                                                {mov.type === 'add' ? 'Ingreso' : mov.type === 'remove' ? 'Salida' : mov.type === 'sale' ? 'Venta' : mov.type === 'correction' ? 'Corrección' : mov.type}
                                                             </span>
                                                         </td>
                                                         <td className="p-4 text-right font-medium">
