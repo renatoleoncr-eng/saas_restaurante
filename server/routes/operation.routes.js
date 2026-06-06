@@ -1685,4 +1685,5 @@ router.delete('/payments/:id', async (req, res) => {
     }
 });
 
+router.restoreOrderStock = restoreOrderStock;
 module.exports = router;

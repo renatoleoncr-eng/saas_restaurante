@@ -1620,6 +1620,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const accountTotal = account ? parseFloat(account.total) : 0;
+    const totalPaid = account?.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+    const remaining = account ? Math.max(0, accountTotal - totalPaid) : 0;
 
     if (loading) {
         return createPortal(
@@ -1732,7 +1734,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         <div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-600 text-sm">Cuenta #{account.id}</span>
-                                                <span className="font-bold text-lg text-blue-800">Total: S/ {Number(accountTotal.toFixed(1))}</span>
+                                                <div className="flex flex-col items-end">
+                                                    {totalPaid > 0 ? (
+                                                        <>
+                                                            <span className="text-xs text-gray-500 line-through">Total: S/ {accountTotal.toFixed(2)}</span>
+                                                            <span className="font-bold text-lg text-blue-800">Saldo: S/ {remaining.toFixed(2)}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="font-bold text-lg text-blue-800">Total: S/ {Number(accountTotal.toFixed(1))}</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex justify-between items-start mt-2">
                                                 <div className="flex flex-col">
@@ -1932,9 +1943,21 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         </div>
 
                         <div className="p-4 border-t bg-gray-50">
+                            {account?.accountType !== 'staff' && totalPaid > 0 && (
+                                <div className="space-y-1 text-xs border-b pb-2 mb-2 text-gray-500">
+                                    <div className="flex justify-between">
+                                        <span>Total consumido:</span>
+                                        <span className="font-semibold">S/ {accountTotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-green-600">
+                                        <span>Abonado:</span>
+                                        <span className="font-semibold">- S/ {totalPaid.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center mb-4">
-                                <span className="font-bold text-gray-600">Total a Pagar</span>
-                                <span className="text-2xl font-bold text-blue-800">S/ {Number((cartTotal + (accountTotal || 0)).toFixed(1))}</span>
+                                <span className="font-bold text-gray-600">{totalPaid > 0 ? 'Saldo Pendiente' : 'Total a Pagar'}</span>
+                                <span className="text-2xl font-bold text-blue-800">S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
                             </div>
                             <button
                                 onClick={() => setShowMobileCart(false)}
@@ -2759,7 +2782,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     <ShoppingCart size={20} />
                                     <span>{cart.length > 0 ? 'Ver Carrito' : 'Ver Cuenta'}</span>
                                 </div>
-                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (accountTotal || 0))).toFixed(1))}</span>
+                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
                             </button>
                         </div>
                     )}
@@ -3079,13 +3102,25 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                     </div>
 
                     <div className="p-4 border-t bg-gray-50">
+                        {account?.accountType !== 'staff' && totalPaid > 0 && (
+                            <div className="space-y-1 text-sm border-b pb-2 mb-2 text-gray-500">
+                                <div className="flex justify-between">
+                                    <span>Total consumido:</span>
+                                    <span className="font-semibold">S/ {accountTotal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-green-600">
+                                    <span>Abonado:</span>
+                                    <span className="font-semibold">- S/ {totalPaid.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
                         <div className="flex justify-between text-xl font-bold text-gray-800 mb-4 items-center">
-                            <span>Total</span>
+                            <span>{totalPaid > 0 ? 'Saldo Pendiente' : 'Total'}</span>
                             <div className="flex flex-col items-end">
                                 {account?.accountType === 'staff' && (
                                     <span className="text-[10px] text-orange-600 uppercase font-bold bg-orange-50 px-2 py-0.5 rounded -mb-1">Consumo Personal</span>
                                 )}
-                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (accountTotal || 0))).toFixed(1))}</span>
+                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
                             </div>
                         </div>
                         {cart.length > 0 ? (

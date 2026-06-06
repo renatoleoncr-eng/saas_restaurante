@@ -101,7 +101,10 @@ router.delete('/accounts/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const account = await Account.findByPk(id, { transaction: t });
+        const account = await Account.findByPk(id, {
+            include: [{ model: Order }],
+            transaction: t
+        });
         if (!account) {
             await t.rollback();
             return res.status(404).json({ error: "Cuenta no encontrada" });
@@ -113,6 +116,16 @@ router.delete('/accounts/:id', async (req, res) => {
             if (table && table.status === 'occupied') {
                 table.status = 'free';
                 await table.save({ transaction: t });
+            }
+        }
+
+        // Restore stock for all non-cancelled orders in this account before deleting
+        if (account.Orders && account.Orders.length > 0) {
+            const operationRoutes = require('./operation.routes');
+            for (const order of account.Orders) {
+                if (order.status !== 'cancelled') {
+                    await operationRoutes.restoreOrderStock(order);
+                }
             }
         }
 
