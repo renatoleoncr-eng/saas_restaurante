@@ -111,6 +111,8 @@ router.post('/config/printers/test', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
 // GET pending print jobs for local print agent
 router.get('/config/printers/pending', (req, res) => {
     try {
