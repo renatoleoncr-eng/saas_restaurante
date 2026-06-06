@@ -1,6 +1,11 @@
 const { execFile } = require('child_process');
 const path = require('path');
 
+// In-memory print queue for local print agent when server is running in the cloud (Linux/Docker)
+const pendingJobs = [];
+let jobCounter = 0;
+const isWindows = process.platform === 'win32';
+
 // Helper to remove accents and special Spanish characters for 100% printer compatibility
 function cleanSpanishChars(str) {
     if (typeof str !== 'string') return '';
@@ -134,11 +139,24 @@ async function getPrintersConfig() {
     };
 }
 
-// Execute powershell script to print raw bytes
 async function sendToPrinter(printerConfig, hexData) {
     if (!printerConfig || printerConfig.type === 'disabled') {
         console.log("Printer is disabled or not configured.");
         return { success: false, error: 'disabled' };
+    }
+
+    if (!isWindows) {
+        // Queue the job for local print agent polling from the restaurant PC
+        jobCounter++;
+        const job = {
+            id: jobCounter,
+            printerConfig,
+            hexData,
+            createdAt: new Date()
+        };
+        pendingJobs.push(job);
+        console.log(`[Printer Queue] Queued print job #${job.id} for local print agent.`);
+        return { success: true, queued: true, jobId: job.id };
     }
 
     return new Promise((resolve) => {
@@ -454,6 +472,12 @@ async function triggerInvoicePrint(invoice, account) {
     return await printTicket('caja', builder);
 }
 
+function getPendingJobs() {
+    const jobs = [...pendingJobs];
+    pendingJobs.length = 0;
+    return jobs;
+}
+
 module.exports = {
     cleanSpanishChars,
     EscPosBuilder,
@@ -465,5 +489,6 @@ module.exports = {
     triggerCierrePrint,
     triggerPreCuentaPrint,
     triggerComandaPrint,
-    triggerInvoicePrint
+    triggerInvoicePrint,
+    getPendingJobs
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs } = require('../utils/printer');
 
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
@@ -108,6 +108,14 @@ router.post('/config/printers/test', async (req, res) => {
         } else {
             res.status(500).json({ error: 'Fallo el envio a la impresora.', details: result.error || result.stderr });
         }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+// GET pending print jobs for local print agent
+router.get('/config/printers/pending', (req, res) => {
+    try {
+        const jobs = getPendingJobs();
+        res.json(jobs);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

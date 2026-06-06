@@ -4,7 +4,6 @@ import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download, Camera, Image } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
-import { printLocalPreCuenta, printLocalComanda } from '../utils/printUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
@@ -1111,13 +1110,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 products: cart,
                 userId: user?.id || null,
                 authorPin: authorPin,
-                printComanda: false
+                printComanda: printComanda
             });
-
-            if (printComanda) {
-                printLocalComanda(tableData, cart, user?.displayName || 'Staff');
-            }
-
             setCart([]);
 
             const accRes = await axios.get(`/api/accounts/table/${tableId}`);
@@ -1144,11 +1138,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const handlePrintPreCuenta = async (accountId) => {
         if (!accountId) return;
         try {
-            const res = await axios.get(`/api/accounts/specific/${accountId}`);
-            const fullAccount = res.data;
-            printLocalPreCuenta(fullAccount, billingConfig, user);
+            const res = await axios.post(`/api/accounts/${accountId}/print-pre-cuenta`);
+            if (res.data.success) {
+                alert("Pre-cuenta enviada a la impresora.");
+            } else {
+                alert("Error al enviar pre-cuenta a la impresora.");
+            }
         } catch (err) {
-            alert("Error al obtener los datos de la cuenta para imprimir.");
+            alert(err.response?.data?.error || "Error al imprimir la pre-cuenta");
             console.error(err);
         }
     };
@@ -3420,7 +3417,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                                     window.open(pdf, '_blank');
                                                                 }
                                                             } else {
-                                                                handlePrintLocalInvoice(successInvoice.invoice);
+                                                                axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`).catch(() => {});
                                                             }
                                                         }}
                                                         className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200"
@@ -3429,7 +3426,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                         Ver PDF
                                                     </button>
                                                     <button
-                                                        onClick={() => handlePrintLocalInvoice(successInvoice.invoice)}
+                                                        onClick={async () => {
+                                                            try {
+                                                                await axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`);
+                                                                alert("Comprobante enviado a la cola de impresión.");
+                                                            } catch (err) {
+                                                                alert("Error al enviar a la impresora.");
+                                                            }
+                                                        }}
                                                         className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
                                                     >
                                                         <Printer size={16} />
