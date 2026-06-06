@@ -1278,7 +1278,6 @@ router.delete('/orders/:id', async (req, res) => {
         await account.save();
 
         // 3. Audit log
-        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
         await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: order.quantity, accountId: order.AccountId, tableId: account.TableId });
 
         // 4. Respond FAST so UI stops loading
@@ -1343,7 +1342,6 @@ router.put('/orders/:id/decrement', async (req, res) => {
         await account.save();
 
         // 3. Audit log
-        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
         await logAction(req, 'CANCEL_ORDER', 'Order', id, { 
             userId: cancelOrderUserId, 
             productId: order.ProductId, 
