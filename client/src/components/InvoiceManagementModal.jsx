@@ -159,10 +159,20 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
                 const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? parseFloat(ord.priceAtOrder) : (ord.Product?.price || 0);
 
+                let pName = "Producto";
+                let displayNotes = ord.notes;
+                if (!ord.ProductId && ord.notes) {
+                    pName = `2x1: ${ord.notes}`;
+                    displayNotes = null;
+                } else if (ord.Product && ord.Product.name) {
+                    pName = ord.Product.name;
+                }
+                const fullDesc = `${pName} ${ord.presentation ? `(${ord.presentation})` : ''} ${displayNotes ? `- ${displayNotes}` : ''}`.trim().replace(/\s+/g, ' ');
+
                 items.push({
                     id: `ord-${ord.id || idx}`,
                     group: 'Consumos',
-                    description: ord.Product?.name || 'Producto',
+                    description: fullDesc,
                     amount: parseFloat((price * (ord.quantity || 1)).toFixed(2)),
                     qty: ord.quantity || 1,
                     icon: <ShoppingCart size={16} />,
@@ -332,6 +342,18 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             setIsSearchLoading(false);
         }
     };
+
+    // Auto-search when docNumber has 8 or 11 digits
+    useEffect(() => {
+        const cleanDoc = docNumber.trim();
+        if (cleanDoc.length === 8 || cleanDoc.length === 11) {
+            const timer = setTimeout(() => {
+                handleSearchCustomer();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [docNumber]);
 
     // Submit Invoice
     const handleSubmit = async () => {
@@ -764,7 +786,9 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             <div className="space-y-2">
                                 {docItems.map((it, i) => (
                                     <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50/50 rounded-lg">
-                                        <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">{it.description || it.name}</span>
+                                        <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">
+                                            {it.quantity || it.qty || 1} x {it.description || it.name}
+                                        </span>
                                         <span className="text-[10px] font-black text-slate-800 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
                                     </div>
                                 ))}

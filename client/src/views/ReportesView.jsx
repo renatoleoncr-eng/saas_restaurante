@@ -411,7 +411,6 @@ export default function ReportesView() {
                 <AccountDetailsModal
                     account={selectedTransaction.details}
                     onClose={() => setSelectedTransaction(null)}
-                    title="Detalle de Reserva"
                     subtitle={`#${selectedTransaction.details?.id || selectedTransaction.id} - ${formatTableName(selectedTransaction.details?.Table || { number: selectedTransaction.details?.TableId })}`}
                     currentPaymentId={selectedTransaction.paymentDetails?.id}
                 />

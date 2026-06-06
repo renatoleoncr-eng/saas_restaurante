@@ -45,7 +45,12 @@ const BillingConfigModal = ({ onClose }) => {
 
     const [invoices, setInvoices] = useState([]);
     const [accounts, setAccounts] = useState([]);
-    const [filters, setFilters] = useState({ documento: '', desde: '', hasta: '' });
+    const [filters, setFilters] = useState(() => {
+        const todayLocal = new Date();
+        const offset = todayLocal.getTimezoneOffset();
+        const localDateStr = new Date(todayLocal.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+        return { documento: '', desde: localDateStr, hasta: localDateStr };
+    });
     const [selectedAccountId, setSelectedAccountId] = useState(null);
 
     // Derived helpers
@@ -947,15 +952,15 @@ const BillingConfigModal = ({ onClose }) => {
                     )}
 
                     {activeTab === 'new' && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-4">
                             <div className="md:col-span-2 space-y-6">
                                 {config.billingMode === 'reserva' && (
-                                    <section className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <section className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                             🏢 Vincular a Reserva / Mesa
                                         </h3>
                                         <select
-                                            className="w-full px-4 py-2 border rounded-lg text-sm bg-white"
+                                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
                                             value={newInvoice.accountId || ''}
                                             onChange={(e) => handleSelectAccount(e.target.value)}
                                         >
@@ -969,68 +974,79 @@ const BillingConfigModal = ({ onClose }) => {
                                     </section>
                                 )}
 
-                                <section className="space-y-4">
-                                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                                        <Building2 size={16} /> Datos del Cliente
+                                <section className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
+                                    <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide border-b pb-3">
+                                        <Building2 size={16} className="text-blue-600" /> Datos del Cliente
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-gray-500 uppercase">Tipo Documento</label>
-                                            <div className="flex gap-1 p-1 bg-gray-100 rounded-xl border border-gray-200">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'boleta'}))}
-                                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${newInvoice.tipo === 'boleta' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                                >
-                                                    🏷️ BOLETA
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'factura'}))}
-                                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${newInvoice.tipo === 'factura' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                                >
-                                                    🏢 FACTURA
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-gray-500 uppercase">{docLabel}</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                        <div className="md:col-span-4 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{docLabel}</label>
                                             <div className="flex gap-2">
                                                 <input 
                                                     type="text" 
                                                     inputMode="numeric"
                                                     maxLength={maxDocLength}
-                                                    className="flex-1 px-4 py-2 border rounded-lg text-sm font-mono"
+                                                    className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                                     placeholder={docPlaceholder}
                                                     value={newInvoice.clienteDocumento}
                                                     onChange={(e) => handleDocumentoChange(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchClient(); }}
                                                 />
                                                 <button 
                                                     type="button"
                                                     onClick={handleSearchClient}
                                                     disabled={loading}
-                                                    className="px-4 bg-gray-800 text-white rounded-lg hover:bg-black transition flex items-center gap-2 disabled:bg-gray-400"
-                                                    title="Buscar en SUNAT"
+                                                    className="px-4 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition flex items-center justify-center disabled:bg-slate-300 min-w-[48px]"
+                                                    title="Buscar"
                                                 >
                                                     {loading ? <Loader size={16} className="animate-spin" /> : <Search size={16} />}
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="md:col-span-2 space-y-1">
-                                            <label className="text-xs font-bold text-gray-500 uppercase">{nameLabel}</label>
+                                        <div className="md:col-span-8 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{nameLabel}</label>
                                             <input 
                                                 type="text" 
-                                                className="w-full px-4 py-2 border rounded-lg text-sm"
+                                                className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                                 placeholder="Se autocompleta al buscar"
                                                 value={newInvoice.clienteNombre}
                                                 onChange={(e) => setNewInvoice(prev => ({...prev, clienteNombre: e.target.value}))}
                                             />
                                         </div>
+                                        
+                                        <div className="md:col-span-4 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo Comprobante</label>
+                                            <div className="flex p-1 bg-slate-50 rounded-lg border border-slate-100">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'boleta'}))}
+                                                    className={`flex-1 py-1.5 text-[10px] font-black tracking-wider rounded-md transition-all ${newInvoice.tipo === 'boleta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    BOLETA
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'factura'}))}
+                                                    className={`flex-1 py-1.5 text-[10px] font-black tracking-wider rounded-md transition-all ${newInvoice.tipo === 'factura' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    FACTURA
+                                                </button>
+                                            </div>
+                                        </div>
                                         <div className="md:col-span-2 space-y-1">
-                                            <label className="text-xs font-bold text-gray-500 uppercase">Dirección</label>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Serie</label>
                                             <input 
                                                 type="text" 
-                                                className="w-full px-4 py-2 border rounded-lg text-sm"
+                                                readOnly
+                                                className="w-full px-4 py-2 bg-slate-100 border-transparent rounded-lg text-sm font-bold text-slate-500 outline-none cursor-not-allowed"
+                                                value={newInvoice.tipo === 'factura' ? config.serieFactura : config.serieBoleta}
+                                            />
+                                        </div>
+                                        <div className="md:col-span-6 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dirección (Opcional)</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                                 value={newInvoice.clienteDireccion}
                                                 onChange={(e) => setNewInvoice({...newInvoice, clienteDireccion: e.target.value})}
                                             />
@@ -1038,97 +1054,117 @@ const BillingConfigModal = ({ onClose }) => {
                                     </div>
                                 </section>
 
-                                <section className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                                            <FileText size={16} /> Conceptos / Productos
+                                <section className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
+                                    <div className="flex justify-between items-center border-b pb-3">
+                                        <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                                            <FileText size={16} className="text-blue-600" /> Detalle del Comprobante
                                         </h3>
                                         <button 
                                             onClick={addItem}
-                                            className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1"
+                                            className="text-[10px] text-blue-600 font-black uppercase tracking-widest hover:underline flex items-center gap-1"
                                         >
-                                            <Plus size={14} /> Añadir Fila
+                                            <Plus size={14} /> Agregar Item
                                         </button>
                                     </div>
                                     <div className="space-y-3">
-                                        {newInvoice.items.map((item, idx) => (
-                                            <div key={idx} className="flex gap-3 items-start animate-in fade-in duration-200">
-                                                <div className="flex-1 space-y-1">
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Descripción del servicio o producto"
-                                                        className="w-full px-4 py-2 border rounded-lg text-sm"
-                                                        value={item.description}
-                                                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="w-20 space-y-1">
+                                        <div className="hidden md:flex gap-3 px-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <div className="w-20">Cant</div>
+                                            <div className="flex-1">Descripción</div>
+                                            <div className="w-32">Precio Unit</div>
+                                            <div className="w-32 text-right">Subtotal</div>
+                                            <div className="w-10"></div>
+                                        </div>
+                                        
+                                        {newInvoice.items.map((item, idx) => {
+                                            const qty = parseFloat(item.quantity) || 0;
+                                            const total = parseFloat(item.amount) || 0;
+                                            const unitPrice = qty > 0 ? (total / qty).toFixed(2) : '0.00';
+                                            
+                                            return (
+                                            <div key={idx} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-slate-50/50 p-3 rounded-lg border border-slate-100 animate-in fade-in duration-200">
+                                                <div className="w-full md:w-20 space-y-1">
                                                     <input 
                                                         type="number" 
                                                         placeholder="Cant"
-                                                        className="w-full px-4 py-2 border rounded-lg text-sm text-center"
+                                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-center font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
                                                         value={item.quantity}
                                                         onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
                                                     />
                                                 </div>
-                                                <div className="w-32 space-y-1">
+                                                <div className="w-full md:flex-1 space-y-1">
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Concepto..."
+                                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                                        value={item.description}
+                                                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="w-full md:w-32 space-y-1">
                                                     <div className="relative">
-                                                        <span className="absolute left-3 top-2 text-gray-400 text-sm">S/</span>
+                                                        <span className="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">S/</span>
                                                         <input 
                                                             type="number" 
-                                                            placeholder="Precio"
-                                                            className="w-full pl-8 pr-4 py-2 border rounded-lg text-sm text-right"
-                                                            value={item.amount}
-                                                            onChange={(e) => updateItem(idx, 'amount', e.target.value)}
+                                                            placeholder="0.00"
+                                                            className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-right font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                                            value={unitPrice}
+                                                            onChange={(e) => {
+                                                                const newUnit = parseFloat(e.target.value) || 0;
+                                                                updateItem(idx, 'amount', (newUnit * qty).toFixed(2));
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
+                                                <div className="w-full md:w-32 py-2 text-right">
+                                                    <span className="text-slate-400 text-xs font-bold mr-1">S/</span>
+                                                    <span className="text-sm font-black text-slate-800">{parseFloat(item.amount || 0).toFixed(2)}</span>
+                                                </div>
                                                 <button 
                                                     onClick={() => removeItem(idx)}
-                                                    className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
-                                        ))}
+                                        )})}
                                     </div>
                                 </section>
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 space-y-4">
-                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Resumen de Venta</h3>
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between text-gray-600">
+                            <div className="md:col-span-1 space-y-6">
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 sticky top-6">
+                                    <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Resumen de Venta</h3>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between text-slate-500 font-bold">
                                             <span>Subtotal</span>
                                             <span>S/ {config.operacionesExoneradas ? calculateTotal() : (parseFloat(calculateTotal()) / (1 + config.igvTasa/100)).toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between text-gray-600">
+                                        <div className="flex justify-between text-slate-500 font-bold">
                                             <span>IGV ({config.operacionesExoneradas ? '0' : config.igvTasa}%)</span>
                                             <span>S/ {config.operacionesExoneradas ? '0.00' : (parseFloat(calculateTotal()) - (parseFloat(calculateTotal()) / (1 + config.igvTasa/100))).toFixed(2)}</span>
                                         </div>
-                                        <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg text-gray-900">
-                                            <span>Total</span>
-                                            <span>S/ {calculateTotal()}</span>
+                                        <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-end">
+                                            <span className="font-black text-slate-800">Total</span>
+                                            <span className="text-2xl font-black text-slate-900 tracking-tighter">S/ {calculateTotal()}</span>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={handleEmit}
                                         disabled={loading}
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:shadow-none"
+                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none disabled:transform-none mt-6"
                                     >
-                                        <Zap size={20} fill="currentColor" /> {loading ? 'Emitiendo...' : 'Emitir Comprobante'}
+                                        {loading ? <Loader size={16} className="animate-spin" /> : <Zap size={16} fill="currentColor" />} 
+                                        Emitir Comprobante
                                     </button>
-                                    <div className="text-[10px] text-gray-400 text-center uppercase flex items-center justify-center gap-1">
-                                        <ShieldCheck size={10} /> Conexión segura con Sunat Hub
+                                    <div className="text-[9px] font-black text-slate-400 text-center uppercase tracking-widest flex items-center justify-center gap-1.5 mt-4">
+                                        <ShieldCheck size={12} className="text-blue-500" /> Conexión segura con Sunat Hub
                                     </div>
                                 </div>
-
-                                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl space-y-2">
-                                    <div className="flex items-center gap-2 text-blue-700 font-bold text-xs uppercase">
+                                <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-xl space-y-2">
+                                    <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
                                         <AlertCircle size={14} /> Información
                                     </div>
-                                    <p className="text-xs text-blue-600 leading-relaxed">
+                                    <p className="text-[11px] text-blue-600/80 font-medium leading-relaxed">
                                         El comprobante se enviará automáticamente a SUNAT si la facturación electrónica está activada en la pestaña de configuración.
                                     </p>
                                 </div>

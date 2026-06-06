@@ -20,8 +20,11 @@ export default function AccountManagementView() {
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('cuentas'); // 'cuentas' | 'turnos'
 
-    // Local timezone aware date string (YYYY-MM-DD)
+    // Local timezone aware date string (YYYY-MM-DD) with 7 AM business day logic
     const todayLocal = new Date();
+    if (todayLocal.getHours() < 7) {
+        todayLocal.setDate(todayLocal.getDate() - 1);
+    }
     const offset = todayLocal.getTimezoneOffset();
     const localDateStr = new Date(todayLocal.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
 

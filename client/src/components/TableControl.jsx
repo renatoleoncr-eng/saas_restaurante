@@ -494,17 +494,17 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         }
     };
 
-    // Autocomplete client billing data when issuing electronic invoice
+    // Autocomplete client data
     useEffect(() => {
-        if (!issueInvoice) return;
         const doc = (clientForm.dni || '').trim();
-        const isRucPrefix = ['10', '15', '17', '20'].some(p => doc.startsWith(p));
-        if (invoiceType === 'boleta' && doc.length === 8 && !isRucPrefix) {
-            searchClientData();
-        } else if (invoiceType === 'factura' && doc.length === 11) {
-            searchClientData();
+        if (doc.length === 8 || doc.length === 11) {
+            const timer = setTimeout(() => {
+                searchClientData();
+            }, 500);
+            return () => clearTimeout(timer);
         }
-    }, [clientForm.dni, invoiceType, issueInvoice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clientForm.dni]);
 
     // Menu Daily State
     const [viewMode, setViewMode] = useState('products'); // 'products' | 'menu_builder'
