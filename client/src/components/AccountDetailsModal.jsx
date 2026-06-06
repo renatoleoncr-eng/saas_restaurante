@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { X, Loader2, FileText, Receipt } from 'lucide-react';
+import { X, Loader2, FileText, Receipt, Printer } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import InvoiceManagementModal from './InvoiceManagementModal';
@@ -60,6 +60,22 @@ const AccountDetailsModal = ({
             setError("No se pudo cargar el detalle de la cuenta.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePrintPreCuenta = async () => {
+        const id = accountId || (account && account.id);
+        if (!id) return;
+        try {
+            const res = await axios.post(`/api/accounts/${id}/print-pre-cuenta`);
+            if (res.data.success) {
+                alert("Detalle de consumos enviado a la impresora.");
+            } else {
+                alert("Error al enviar el ticket a la impresora.");
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || "Error al imprimir consumos");
+            console.error(err);
         }
     };
 
@@ -122,6 +138,13 @@ const AccountDetailsModal = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <button
+                            onClick={handlePrintPreCuenta}
+                            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                        >
+                            <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
+                            <span>Imprimir Consumos</span>
+                        </button>
                         {account.status === 'closed' && (
                             <button
                                 onClick={() => setShowInvoiceModal(true)}
