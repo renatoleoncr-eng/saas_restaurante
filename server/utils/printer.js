@@ -286,24 +286,46 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
     return await printTicket('caja', builder);
 }
 
+// Helper to get restaurant header info (name, RUC, address) from BillingConfig or RestaurantConfig
+async function getRestaurantHeader() {
+    const { RestaurantConfig, BillingConfig } = getModels();
+    let rName = 'MI RESTAURANTE';
+    let rRuc = '';
+    let rAddress = '';
+    try {
+        const billConfig = await BillingConfig.findOne();
+        if (billConfig && billConfig.razonSocial) {
+            rName = billConfig.razonSocial;
+            rRuc = billConfig.ruc || '';
+            rAddress = billConfig.direccion || '';
+        } else {
+            const config = await RestaurantConfig.findOne();
+            if (config) {
+                rName = config.name || rName;
+                rAddress = config.address || rAddress;
+            }
+        }
+    } catch (_) {
+        try {
+            const config = await RestaurantConfig.findOne();
+            if (config) {
+                rName = config.name || rName;
+                rAddress = config.address || rAddress;
+            }
+        } catch (__) {}
+    }
+    return { name: rName, ruc: rRuc, address: rAddress };
+}
+
 // 3. Pre-cuenta (Table consumption detail)
 async function triggerPreCuentaPrint(account, table, orders, payments, user) {
     const builder = new EscPosBuilder().init();
     
-    // Load config for header name/address
-    const { RestaurantConfig } = getModels();
-    let rName = 'MI RESTAURANTE';
-    let rAddress = '';
-    try {
-        const config = await RestaurantConfig.findOne();
-        if (config) {
-            rName = config.name || rName;
-            rAddress = config.address || rAddress;
-        }
-    } catch (_) {}
+    const header = await getRestaurantHeader();
 
-    builder.alignCenter().doubleSize().bold().line(rName).doubleSize(false).bold(false);
-    if (rAddress) builder.line(rAddress);
+    builder.alignCenter().doubleSize().bold().line(header.name).doubleSize(false).bold(false);
+    if (header.ruc) builder.line(`R.U.C. ${header.ruc}`);
+    if (header.address) builder.line(header.address);
     builder.feed(1);
     
     builder.doubleSize().bold().line("PRE-CUENTA").doubleSize(false).bold(false).feed(1);
@@ -419,19 +441,11 @@ async function triggerInvoicePrint(invoice, account) {
     const builder = new EscPosBuilder().init();
     builder.kickDrawer(); // Kick cash drawer for sale receipts
     
-    const { RestaurantConfig } = getModels();
-    let rName = 'MI RESTAURANTE';
-    let rAddress = '';
-    try {
-        const config = await RestaurantConfig.findOne();
-        if (config) {
-            rName = config.name || rName;
-            rAddress = config.address || rAddress;
-        }
-    } catch (_) {}
+    const header = await getRestaurantHeader();
 
-    builder.alignCenter().doubleSize().bold().line(rName).doubleSize(false).bold(false);
-    if (rAddress) builder.line(rAddress);
+    builder.alignCenter().doubleSize().bold().line(header.name).doubleSize(false).bold(false);
+    if (header.ruc) builder.line(`R.U.C. ${header.ruc}`);
+    if (header.address) builder.line(header.address);
     builder.feed(1);
     
     builder.bold().line(`${invoice.tipo.toUpperCase()} ELECTRONICA`).bold(false);

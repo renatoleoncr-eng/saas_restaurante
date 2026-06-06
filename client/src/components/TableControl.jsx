@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download, Camera, Image } from 'lucide-react';
+import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Info, Loader2, Printer, Download, Camera, Image } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
@@ -1328,7 +1328,17 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             let resInvoiceData = null;
             if (issueInvoice) {
                 let itemsToBill = [];
-                if (isPartial) {
+                const previousInvoices = account?.Invoices ? account.Invoices.filter(inv => inv.status !== 'anulado') : [];
+                const totalInvoiced = previousInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+
+                if (totalInvoiced > 0) {
+                    const availableToInvoice = Math.max(0, parseFloat(account.total) - totalInvoiced);
+                    itemsToBill = [{
+                        description: `Saldo restante - Mesa ${tableData ? (tableData.number || tableData.id) : account.TableId} - Cuenta #${account.id}`,
+                        qty: 1,
+                        amount: availableToInvoice
+                    }];
+                } else if (isPartial) {
                     itemsToBill = [{
                         description: `Abono parcial - Mesa ${tableData ? (tableData.number || tableData.id) : account.TableId} - Cuenta #${account.id}`,
                         qty: 1,
@@ -3666,102 +3676,126 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     const remaining = account ? Math.max(0, accountTotal - totalPaid) : 0;
                                     const enteredVal = parseFloat(payAmount) || 0;
                                     const isPartial = enteredVal < (remaining - 0.01);
-                                    const showInvoiceWarning = issueInvoice && !isPartial && enteredVal < accountTotal;
+
+                                    const previousInvoices = account?.Invoices ? account.Invoices.filter(inv => inv.status !== 'anulado') : [];
+                                    const totalInvoiced = previousInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+                                    const availableToInvoice = Math.max(0, accountTotal - totalInvoiced);
+
+                                    const showInvoiceWarning = issueInvoice && totalInvoiced === 0 && !isPartial && enteredVal < accountTotal;
+                                    const showPreviousInvoicesInfo = issueInvoice && totalInvoiced > 0;
 
                                     return (
                                         <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <input 
-                                                    type="checkbox" 
-                                                    id="issue_invoice"
-                                                    checked={issueInvoice}
-                                                    onChange={(e) => setIssueInvoice(e.target.checked)}
-                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                                    disabled={isConfirmingPayment}
-                                                />
-                                                <label htmlFor="issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
-                                                    Emitir Comprobante Electrónico
-                                                </label>
-                                            </div>
-                                            
-                                            {issueInvoice && (
-                                                <div className="animate-in fade-in slide-in-from-top-2">
-                                                    <div className="flex gap-2 mb-3">
-                                                        <button
-                                                            onClick={() => setInvoiceType('boleta')}
+                                            {totalInvoiced >= accountTotal ? (
+                                                <div className="text-xs text-gray-500 font-bold text-center flex items-center justify-center gap-1.5 py-1">
+                                                    <Info size={14} className="text-blue-500 shrink-0" />
+                                                    <span>La cuenta ya ha sido facturada por completo (S/ {totalInvoiced.toFixed(2)}).</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            id="issue_invoice"
+                                                            checked={issueInvoice}
+                                                            onChange={(e) => setIssueInvoice(e.target.checked)}
+                                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                                             disabled={isConfirmingPayment}
-                                                            className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        >
-                                                            Boleta
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setInvoiceType('factura')}
-                                                            disabled={isConfirmingPayment}
-                                                            className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        >
-                                                            Factura
-                                                        </button>
+                                                        />
+                                                        <label htmlFor="issue_invoice" className="text-sm font-bold text-gray-700 cursor-pointer">
+                                                            Emitir Comprobante Electrónico
+                                                        </label>
                                                     </div>
-                                                    <div className="space-y-2 text-left">
-                                                        <div>
-                                                            <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
-                                                            <div className="relative">
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
-                                                                    value={clientForm.dni}
-                                                                    onChange={e => {
-                                                                        const val = e.target.value;
-                                                                        setClientForm({...clientForm, dni: val});
-                                                                        if (val.length === 11) setInvoiceType('factura');
-                                                                        else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
-                                                                    }}
+                                                    
+                                                    {issueInvoice && (
+                                                        <div className="animate-in fade-in slide-in-from-top-2">
+                                                            <div className="flex gap-2 mb-3">
+                                                                <button
+                                                                    onClick={() => setInvoiceType('boleta')}
                                                                     disabled={isConfirmingPayment}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white pr-10"
-                                                                    onKeyDown={e => e.key === 'Enter' && searchClientData()}
-                                                                />
-                                                                {isSearchingClient && (
-                                                                    <div className="absolute right-3 top-2.5 text-blue-500">
-                                                                        <Loader2 size={16} className="animate-spin" />
+                                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'boleta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    Boleta
+                                                                 </button>
+                                                                <button
+                                                                    onClick={() => setInvoiceType('factura')}
+                                                                    disabled={isConfirmingPayment}
+                                                                    className={`flex-1 py-2 rounded border text-sm font-bold transition-colors ${invoiceType === 'factura' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'} ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    Factura
+                                                                 </button>
+                                                            </div>
+                                                            <div className="space-y-2 text-left">
+                                                                <div>
+                                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                                    <div className="relative">
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
+                                                                            value={clientForm.dni}
+                                                                            onChange={e => {
+                                                                                const val = e.target.value;
+                                                                                setClientForm({...clientForm, dni: val});
+                                                                                if (val.length === 11) setInvoiceType('factura');
+                                                                                else if (val.length === 8 && !['10', '15', '17', '20'].some(p => val.startsWith(p))) setInvoiceType('boleta');
+                                                                            }}
+                                                                            disabled={isConfirmingPayment}
+                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white pr-10"
+                                                                            onKeyDown={e => e.key === 'Enter' && searchClientData()}
+                                                                        />
+                                                                        {isSearchingClient && (
+                                                                            <div className="absolute right-3 top-2.5 text-blue-500">
+                                                                                <Loader2 size={16} className="animate-spin" />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
+                                                                        value={clientForm.name}
+                                                                        onChange={e => setClientForm({...clientForm, name: e.target.value})}
+                                                                        disabled={isConfirmingPayment}
+                                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                    />
+                                                                </div>
+                                                                {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
+                                                                    <div>
+                                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="Dirección Fiscal de la Empresa"
+                                                                            value={clientForm.direccion || ''}
+                                                                            onChange={e => setClientForm({...clientForm, direccion: e.target.value})}
+                                                                            disabled={isConfirmingPayment}
+                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
-                                                            <input 
-                                                                type="text" 
-                                                                placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
-                                                                value={clientForm.name}
-                                                                onChange={e => setClientForm({...clientForm, name: e.target.value})}
-                                                                disabled={isConfirmingPayment}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                                                            />
-                                                        </div>
-                                                        {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
-                                                            <div>
-                                                                <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Dirección Fiscal de la Empresa"
-                                                                    value={clientForm.direccion || ''}
-                                                                    onChange={e => setClientForm({...clientForm, direccion: e.target.value})}
-                                                                    disabled={isConfirmingPayment}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {showInvoiceWarning && (
-                                                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-[11px] flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                                                            <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                                                            <div>
-                                                                <span className="font-bold text-amber-950 block mb-0.5">Nota de Facturación</span> 
-                                                                Este cobro final es por <span className="font-bold">S/ {enteredVal.toFixed(2)}</span>, pero el comprobante se emitirá por el <span className="font-bold">total de la cuenta (S/ {accountTotal.toFixed(2)})</span> debido a los abonos parciales registrados anteriormente.
-                                                            </div>
+                                                            {showInvoiceWarning && (
+                                                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-[11px] flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                                                                    <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                                                                    <div>
+                                                                        <span className="font-bold text-amber-950 block mb-0.5">Nota de Facturación</span> 
+                                                                        Este cobro final es por <span className="font-bold">S/ {enteredVal.toFixed(2)}</span>, pero el comprobante se emitirá por el <span className="font-bold">total de la cuenta (S/ {accountTotal.toFixed(2)})</span> debido a los abonos parciales registrados anteriormente.
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {showPreviousInvoicesInfo && (
+                                                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-[11px] flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                                                                    <Info size={14} className="text-blue-600 shrink-0 mt-0.5" />
+                                                                    <div>
+                                                                        <span className="font-bold text-blue-950 block mb-0.5">Nota de Facturación</span> 
+                                                                        Se han emitido comprobantes previos por <span className="font-bold">S/ {totalInvoiced.toFixed(2)}</span>. Este comprobante se emitirá por la diferencia disponible para facturar (<span className="font-bold">S/ {availableToInvoice.toFixed(2)}</span>).
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
-                                                </div>
+                                                </>
                                             )}
                                         </div>
                                     );
