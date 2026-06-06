@@ -214,13 +214,17 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Create an account-specific folder based on the ID if available, otherwise root
+        // Create an account-specific folder based on year, month, and ID
         const accountId = req.params.id || 'general';
-        const accountDir = path.join(uploadDir, `account_${accountId}`);
-        if (!fs.existsSync(accountDir)) {
-            fs.mkdirSync(accountDir, { recursive: true });
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        
+        const targetDir = path.join(uploadDir, year, month, `cuenta_${accountId}`);
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
         }
-        cb(null, accountDir);
+        cb(null, targetDir);
     },
     filename: function (req, file, cb) {
         cb(null, 'evidence-' + Date.now() + path.extname(file.originalname));
@@ -280,12 +284,16 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
             account.paymentMethod = paymentMethod;
         }
 
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
         if (req.files && req.files.length > 0) {
-            const filePaths = req.files.map(file => `/uploads/account_${id}/${file.filename}`);
+            const filePaths = req.files.map(file => `/uploads/${year}/${month}/cuenta_${id}/${file.filename}`);
             account.paymentEvidence = JSON.stringify(filePaths);
         } else if (req.file) {
             // Keep backwards compatibility for old single upload just in case
-            account.paymentEvidence = JSON.stringify([`/uploads/account_${id}/${req.file.filename}`]);
+            account.paymentEvidence = JSON.stringify([`/uploads/${year}/${month}/cuenta_${id}/${req.file.filename}`]);
         }
 
         // Calculate missing amount and generate payment
@@ -342,12 +350,16 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
         if (account.status !== 'open') return res.status(400).json({ error: 'La cuenta no está abierta' });
 
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
         let evidencePath = null;
         if (req.files && req.files.length > 0) {
-            const filePaths = req.files.map(file => `/uploads/account_${id}/${file.filename}`);
+            const filePaths = req.files.map(file => `/uploads/${year}/${month}/cuenta_${id}/${file.filename}`);
             evidencePath = JSON.stringify(filePaths);
         } else if (req.file) {
-            evidencePath = JSON.stringify([`/uploads/account_${id}/${req.file.filename}`]);
+            evidencePath = JSON.stringify([`/uploads/${year}/${month}/cuenta_${id}/${req.file.filename}`]);
         }
 
         // Create the Partial Payment record
@@ -1594,7 +1606,7 @@ router.delete('/payments/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { userId } = req.query; // Expecting admin userId
-        const { Payment, User } = require('../models');
+        const { Payment, User, Account, Table } = getModels();
 
         const user = await User.findByPk(userId);
         if (!user || user.role !== 'admin') {
@@ -1604,9 +1616,77 @@ router.delete('/payments/:id', async (req, res) => {
         const payment = await Payment.findByPk(id);
         if (!payment) return res.status(404).json({ error: 'Pago no encontrado' });
 
+        const accountId = payment.AccountId;
+
+        // Delete associated evidence files from disk
+        if (payment.evidence) {
+            try {
+                let filePaths = [];
+                try {
+                    filePaths = JSON.parse(payment.evidence);
+                } catch (e) {
+                    filePaths = [payment.evidence];
+                }
+                
+                if (Array.isArray(filePaths)) {
+                    filePaths.forEach(filePath => {
+                        if (typeof filePath === 'string' && filePath.startsWith('/uploads/')) {
+                            const relativePath = filePath.replace(/^\/uploads\//, '');
+                            const absPath = path.join(__dirname, '../uploads', relativePath);
+                            if (fs.existsSync(absPath)) {
+                                fs.unlinkSync(absPath);
+                                console.log(`[Payment] Deleted file from disk: ${absPath}`);
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("[Payment] Error deleting evidence files from disk:", err);
+            }
+        }
+
         await payment.destroy();
-        res.json({ success: true, message: 'Pago eliminado correctamente.' });
+
+        // Sync Account status and paymentEvidence fallback
+        if (accountId) {
+            const account = await Account.findByPk(accountId);
+            if (account) {
+                // If account's paymentEvidence equals the deleted payment's evidence, clear it
+                if (account.paymentEvidence === payment.evidence) {
+                    account.paymentEvidence = null;
+                }
+                
+                // Recalculate total paid
+                const remainingPayments = await Payment.findAll({ where: { AccountId: accountId } });
+                const totalPaid = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                
+                // If total paid is less than the account total, revert the account to open
+                if (totalPaid < Number(account.total)) {
+                    account.status = 'open';
+                    account.closedAt = null;
+                    
+                    // Revert Table status to occupied
+                    if (account.TableId) {
+                        const table = await Table.findByPk(account.TableId);
+                        if (table && table.status === 'free') {
+                            table.status = 'occupied';
+                            await table.save();
+                        }
+                    }
+                }
+                await account.save();
+                
+                // Notify clients via socket
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('table_updated', { tableId: account.TableId, status: 'occupied' });
+                }
+            }
+        }
+
+        res.json({ success: true, message: 'Pago eliminado y estado de cuenta/mesa actualizado correctamente.' });
     } catch (error) {
+        console.error("[Payment] ERROR deleting payment:", error);
         res.status(500).json({ error: error.message });
     }
 });
