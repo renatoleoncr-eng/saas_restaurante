@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
     Calendar, ChevronDown, ChevronUp, DollarSign, FileText, User, 
     X, Calculator, AlertCircle, CheckCircle, List, Package, 
-    Coffee, Utensils, Sparkles, Clock, Receipt 
+    Coffee, Utensils, Sparkles, Clock, Receipt, Printer 
 } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -185,6 +185,25 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
 
     useModalBackHandler(isOpen, onClose);
+
+    const handlePrintSessionReport = async (type) => {
+        try {
+            const userString = localStorage.getItem('user');
+            const currentUser = userString ? JSON.parse(userString) : null;
+            const res = await axios.post(`/api/sessions/${sessionId}/print`, {
+                type,
+                userId: currentUser?.id
+            });
+            if (res.data.success) {
+                alert(`Ticket de ${type} enviado a la impresora.`);
+            } else {
+                alert(`Error al enviar el ticket de ${type} a la impresora.`);
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || `Error al imprimir el ticket de ${type}`);
+            console.error(err);
+        }
+    };
 
     // Reset expanded category on modal open, lock scroll, and listen for Escape key
     useEffect(() => {
@@ -667,7 +686,21 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0 session-modal-footer">
+                <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0 session-modal-footer gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handlePrintSessionReport('apertura')}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50 mr-auto"
+                    >
+                        <Printer size={14} /> Imprimir Apertura
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handlePrintSessionReport('cierre')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50"
+                    >
+                        <Printer size={14} /> Imprimir Cierre
+                    </button>
                     <button 
                         type="button"
                         onClick={(e) => {
