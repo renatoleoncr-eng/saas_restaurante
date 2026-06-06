@@ -1095,6 +1095,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         let targetAccountId = account?.id;
 
         try {
+            const printComanda = window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?");
+
             if (!targetAccountId) {
                 // Open account NOW because we are sending an order
                 const newAccount = await handleAutoOpen();
@@ -1106,7 +1108,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 accountId: targetAccountId,
                 products: cart,
                 userId: user?.id || null,
-                authorPin: authorPin
+                authorPin: authorPin,
+                printComanda: printComanda
             });
             setCart([]);
 
@@ -1128,6 +1131,21 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             }
             console.error(err);
             return false;
+        }
+    };
+
+    const handlePrintPreCuenta = async (accountId) => {
+        if (!accountId) return;
+        try {
+            const res = await axios.post(`/api/accounts/${accountId}/print-pre-cuenta`);
+            if (res.data.success) {
+                alert("Pre-cuenta enviada a la impresora.");
+            } else {
+                alert("Error al enviar pre-cuenta a la impresora.");
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || "Error al imprimir la pre-cuenta");
+            console.error(err);
         }
     };
 
@@ -2003,16 +2021,28 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 >
                                     Enviar Pedido <Check size={20} />
                                 </button>
-                            ) : (
+                            ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                                 <button
                                     onClick={handleCloseClick}
-                                    className={`w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg ${(!account || (account.Orders && account.Orders.length === 0))
-                                        ? "bg-gray-500 hover:bg-gray-600"
-                                        : "bg-red-500 hover:bg-red-600"
-                                        }`}
+                                    className="w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg bg-gray-500 hover:bg-gray-600"
                                 >
-                                    {(!account || (account.Orders && account.Orders.length === 0)) ? "Liberar Mesa" : "Pagar"}
+                                    Liberar Mesa
                                 </button>
+                            ) : (
+                                <div className="flex gap-3 w-full">
+                                    <button
+                                        onClick={() => handlePrintPreCuenta(account.id)}
+                                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    >
+                                        <Printer size={20} /> Pre-cuenta
+                                    </button>
+                                    <button
+                                        onClick={handleCloseClick}
+                                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all"
+                                    >
+                                        Pagar
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -3164,12 +3194,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         )}
                         {cart.length > 0 ? (
                             <button onClick={sendOrder} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700">Enviar Pedido</button>
+                        ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
+                            <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
                         ) : (
-                            (!account || (account.Orders && account.Orders.length === 0)) ? (
-                                <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
-                            ) : (
-                                <button onClick={handleCloseClick} className="w-full border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50">Pagar</button>
-                            )
+                            <div className="flex gap-2 w-full">
+                                <button 
+                                    onClick={() => handlePrintPreCuenta(account.id)} 
+                                    className="flex-1 border-2 border-amber-600 text-amber-600 py-3 rounded-xl font-bold hover:bg-amber-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                >
+                                    <Printer size={16} /> Pre-cuenta
+                                </button>
+                                <button 
+                                    onClick={handleCloseClick} 
+                                    className="flex-1 border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all"
+                                >
+                                    Pagar
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
