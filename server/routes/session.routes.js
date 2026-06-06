@@ -346,6 +346,17 @@ router.post('/sessions/open', async (req, res) => {
         // Audit log
         await logAction(req, 'OPEN_SHIFT', 'CashSession', newSession.id, { userId, openingCash: openingCash || 0 });
 
+        // Print opening ticket in background
+        (async () => {
+            try {
+                const { triggerAperturaPrint } = require('../utils/printer');
+                const openerUser = userId ? await User.findByPk(userId) : null;
+                await triggerAperturaPrint(newSession, openerUser);
+            } catch (pErr) {
+                console.error("Error printing opening session ticket:", pErr);
+            }
+        })();
+
         res.json(newSession);
     } catch (error) {
         console.error("Error opening session:", error);
@@ -404,10 +415,201 @@ router.post('/sessions/close', async (req, res) => {
         // Audit log
         await logAction(req, 'CLOSE_SHIFT', 'CashSession', session.id, { userId, closingNotes, sessionId });
 
+        // Print closing report in background
+        (async () => {
+            try {
+                const parsedDetails = typeof session.closingDetails === 'string' ? JSON.parse(session.closingDetails) : session.closingDetails;
+                
+                const payments = await Payment.findAll({
+                    where: { CashSessionId: session.id },
+                    include: [{ model: Account, include: [{ model: Table }] }]
+                });
+
+                const expenses = await Expense.findAll({
+                    where: { CashSessionId: session.id }
+                });
+
+                const paymentTotals = { efectivo: 0, tarjeta: 0, yape: 0, transferencia: 0 };
+                payments.forEach(p => {
+                    const method = p.method ? p.method.toLowerCase() : 'efectivo';
+                    if (paymentTotals[method] !== undefined) paymentTotals[method] += parseFloat(p.amount);
+                    else paymentTotals[method] = parseFloat(p.amount);
+                });
+
+                const expenseTotals = { efectivo: 0, yape: 0, transferencia: 0 };
+                expenses.forEach(e => {
+                    const method = e.paymentMethod ? e.paymentMethod.toLowerCase() : 'efectivo';
+                    if (expenseTotals[method] !== undefined) expenseTotals[method] += parseFloat(e.amount);
+                });
+
+                const expected = {
+                    efectivo: parseFloat(session.openingCash) + paymentTotals.efectivo - expenseTotals.efectivo,
+                    efectivoIn: paymentTotals.efectivo,
+                    efectivoOut: expenseTotals.efectivo,
+                    tarjeta: paymentTotals.tarjeta,
+                    yape: paymentTotals.yape,
+                    transferencia: paymentTotals.transferencia
+                };
+
+                const accountIds = [...new Set(payments.map(p => p.AccountId).filter(id => id != null))];
+                let salesSummary = {
+                    menus: { count: 0, total: 0 },
+                    platos: { count: 0, total: 0 },
+                    bebidas: { count: 0, total: 0 },
+                    "2x1 / Promos": { count: 0, total: 0 },
+                    otros: { count: 0, total: 0 }
+                };
+
+                if (accountIds.length > 0) {
+                    const orders = await Order.findAll({
+                        where: { AccountId: { [Op.in]: accountIds }, status: { [Op.notIn]: ['cancelled'] } },
+                        include: [{ model: Product }]
+                    });
+
+                    orders.forEach(order => {
+                        let category = 'otros';
+                        if (order.Product) {
+                            const type = order.Product.type;
+                            if (['menu', 'daily_entry', 'daily_main'].includes(type)) category = 'menus';
+                            else if (type === 'dish') category = 'platos';
+                            else if (type === 'drink') category = 'bebidas';
+                        } else {
+                            category = '2x1 / Promos';
+                        }
+                        let itemPrice = parseFloat(order.priceAtOrder || (order.Product ? order.Product.price : 0));
+                        let itemTotal = itemPrice * order.quantity;
+                        salesSummary[category].count += order.quantity;
+                        salesSummary[category].total += itemTotal;
+                    });
+                }
+                expected.salesSummary = salesSummary;
+
+                const { triggerCierrePrint } = require('../utils/printer');
+                const closerUser = userId ? await User.findByPk(userId) : null;
+                await triggerCierrePrint(session, expected, parsedDetails, closerUser);
+            } catch (pErr) {
+                console.error("Error printing closing session report:", pErr);
+            }
+        })();
+
         res.json({ success: true, session });
     } catch (error) {
         console.error("Error closing session:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/sessions/:id/print - Reprint closing report of any session
+router.post('/sessions/:id/print', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, type } = req.body;
+
+        const session = await CashSession.findByPk(id, {
+            include: [
+                { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] },
+                { model: User, as: 'Closer', attributes: ['id', 'username', 'displayName'] }
+            ]
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: 'Sesión no encontrada' });
+        }
+
+        // Handle Apertura reprint
+        if (type === 'apertura') {
+            const { triggerAperturaPrint } = require('../utils/printer');
+            const printResult = await triggerAperturaPrint(session, session.Opener);
+
+            if (printResult.success) {
+                return res.json({ success: true, message: 'Ticket de apertura enviado a la impresora.' });
+            } else if (printResult.error === 'disabled') {
+                return res.status(400).json({ error: 'La impresora de Caja esta deshabilitada.' });
+            } else {
+                return res.status(500).json({ error: 'Fallo el envio a la impresora.', details: printResult.error });
+            }
+        }
+
+        const payments = await Payment.findAll({
+            where: { CashSessionId: session.id },
+            include: [{ model: Account, include: [{ model: Table }] }]
+        });
+
+        const expenses = await Expense.findAll({
+            where: { CashSessionId: session.id }
+        });
+
+        const paymentTotals = { efectivo: 0, tarjeta: 0, yape: 0, transferencia: 0 };
+        payments.forEach(p => {
+            const method = p.method ? p.method.toLowerCase() : 'efectivo';
+            if (paymentTotals[method] !== undefined) paymentTotals[method] += parseFloat(p.amount);
+            else paymentTotals[method] = parseFloat(p.amount);
+        });
+
+        const expenseTotals = { efectivo: 0, yape: 0, transferencia: 0 };
+        expenses.forEach(e => {
+            const method = e.paymentMethod ? e.paymentMethod.toLowerCase() : 'efectivo';
+            if (expenseTotals[method] !== undefined) expenseTotals[method] += parseFloat(e.amount);
+        });
+
+        const expected = {
+            efectivo: parseFloat(session.openingCash) + paymentTotals.efectivo - expenseTotals.efectivo,
+            efectivoIn: paymentTotals.efectivo,
+            efectivoOut: expenseTotals.efectivo,
+            tarjeta: paymentTotals.tarjeta,
+            yape: paymentTotals.yape,
+            transferencia: paymentTotals.transferencia
+        };
+
+        const accountIds = [...new Set(payments.map(p => p.AccountId).filter(id => id != null))];
+        let salesSummary = {
+            menus: { count: 0, total: 0 },
+            platos: { count: 0, total: 0 },
+            bebidas: { count: 0, total: 0 },
+            "2x1 / Promos": { count: 0, total: 0 },
+            otros: { count: 0, total: 0 }
+        };
+
+        if (accountIds.length > 0) {
+            const orders = await Order.findAll({
+                where: { AccountId: { [Op.in]: accountIds }, status: { [Op.notIn]: ['cancelled'] } },
+                include: [{ model: Product }]
+            });
+
+            orders.forEach(order => {
+                let category = 'otros';
+                if (order.Product) {
+                    const type = order.Product.type;
+                    if (['menu', 'daily_entry', 'daily_main'].includes(type)) category = 'menus';
+                    else if (type === 'dish') category = 'platos';
+                    else if (type === 'drink') category = 'bebidas';
+                } else {
+                    category = '2x1 / Promos';
+                }
+                let itemPrice = parseFloat(order.priceAtOrder || (order.Product ? order.Product.price : 0));
+                let itemTotal = itemPrice * order.quantity;
+                salesSummary[category].count += order.quantity;
+                salesSummary[category].total += itemTotal;
+            });
+        }
+        expected.salesSummary = salesSummary;
+
+        const parsedDetails = session.closingDetails ? JSON.parse(session.closingDetails) : null;
+        const userObj = userId ? await User.findByPk(userId) : null;
+
+        const { triggerCierrePrint } = require('../utils/printer');
+        const printResult = await triggerCierrePrint(session, expected, parsedDetails, userObj);
+
+        if (printResult.success) {
+            res.json({ success: true, message: 'Reporte de cierre enviado a la impresora.' });
+        } else if (printResult.error === 'disabled') {
+            res.status(400).json({ error: 'La impresora de Caja esta deshabilitada.' });
+        } else {
+            res.status(500).json({ error: 'Fallo el envio a la impresora.', details: printResult.error });
+        }
+    } catch (err) {
+        console.error("Error reprinting cierre:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 

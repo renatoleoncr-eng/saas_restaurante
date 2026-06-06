@@ -53,6 +53,14 @@ const BillingConfigModal = ({ onClose }) => {
     });
     const [selectedAccountId, setSelectedAccountId] = useState(null);
 
+    // Printer States
+    const [printers, setPrinters] = useState({
+        caja: { type: 'disabled', path: '', printerName: '' },
+        cocina: { type: 'disabled', path: '', printerName: '' },
+        barra: { type: 'disabled', path: '', printerName: '' }
+    });
+    const [testLoading, setTestLoading] = useState({});
+
     // Derived helpers
     const isFactura = newInvoice.tipo === 'factura';
     const docLabel = isFactura ? 'RUC (11 dígitos)' : 'DNI / Documento';
@@ -84,9 +92,47 @@ const BillingConfigModal = ({ onClose }) => {
         return { pdf, xml };
     };
 
+    const fetchPrintersConfig = async () => {
+        try {
+            const res = await axios.get('/api/config/printers');
+            if (res.data) setPrinters(res.data);
+        } catch (err) {
+            console.error("Error fetching printers config:", err);
+        }
+    };
+
+    const handleSavePrinters = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await axios.post('/api/config/printers', printers);
+            alert('✅ Configuración de impresoras guardada correctamente.');
+        } catch (err) {
+            alert('❌ Error al guardar impresoras: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTestPrinter = async (key) => {
+        setTestLoading(prev => ({ ...prev, [key]: true }));
+        try {
+            const res = await axios.post('/api/config/printers/test', {
+                printerKey: key,
+                ...printers[key]
+            });
+            alert('✅ ' + res.data.message);
+        } catch (err) {
+            alert('❌ Error de prueba: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setTestLoading(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
     useEffect(() => {
         fetchConfig();
         fetchInvoices();
+        fetchPrintersConfig();
     }, []);
 
     useEffect(() => {
@@ -753,12 +799,20 @@ const BillingConfigModal = ({ onClose }) => {
                         <Plus size={18} /> Nueva Emisión
                     </button>
                     {user?.role === 'admin' && (
-                        <button 
-                            onClick={() => setActiveTab('config')}
-                            className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
-                        >
-                            <Settings size={18} /> Configuración
-                        </button>
+                        <>
+                            <button 
+                                onClick={() => setActiveTab('config')}
+                                className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                <Settings size={18} /> Configuración
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('printers')}
+                                className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'printers' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                <Printer size={18} /> Impresoras
+                            </button>
+                        </>
                     )}
                 </div>
 
@@ -910,7 +964,27 @@ const BillingConfigModal = ({ onClose }) => {
                                                                     title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
                                                                 >
                                                                     <ExternalLink size={18} />
-                                                                </button>
+                                                                 </button>
+
+                                                                 {inv.status !== 'anulado' && (
+                                                                     <button
+                                                                         onClick={async () => {
+                                                                             try {
+                                                                                 setLoading(true);
+                                                                                 await axios.post(`/api/billing/invoices/${inv.id}/print`);
+                                                                                 alert('✅ Comprobante enviado a la impresora térmica.');
+                                                                             } catch (e) {
+                                                                                 alert('❌ Error al imprimir ticket: ' + (e.response?.data?.error || e.message));
+                                                                             } finally {
+                                                                                 setLoading(false);
+                                                                             }
+                                                                         }}
+                                                                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition border border-orange-100"
+                                                                         title="Imprimir Ticket Térmico"
+                                                                     >
+                                                                         <Printer size={18} />
+                                                                     </button>
+                                                                 )}
 
                                                                 {inv.status === 'anulado' && inv.notaCreditoUrl && (
                                                                     <button
@@ -1306,6 +1380,119 @@ const BillingConfigModal = ({ onClose }) => {
                                     className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 disabled:bg-gray-400"
                                 >
                                     {loading ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {activeTab === 'printers' && user?.role === 'admin' && (
+                        <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
+                            <div className="flex justify-between items-center border-b pb-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800">Configuración de Impresoras Térmicas</h3>
+                                    <p className="text-xs text-gray-500">Configura la impresión directa USB o mediante la cola de Windows</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {['caja', 'cocina', 'barra'].map(key => {
+                                    const prt = printers[key] || { type: 'disabled', path: '', printerName: '' };
+                                    return (
+                                        <div key={key} className="bg-white border rounded-xl p-5 shadow-sm space-y-4 border-gray-200">
+                                            <div className="flex items-center gap-2 font-bold text-gray-800 capitalize border-b pb-2">
+                                                <Printer size={18} className="text-blue-600" />
+                                                Impresora {key === 'caja' ? 'Caja / General' : key}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-bold text-gray-500 uppercase">Puerto / Tipo</label>
+                                                <select
+                                                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white font-medium"
+                                                    value={prt.type}
+                                                    onChange={(e) => {
+                                                        const type = e.target.value;
+                                                        setPrinters(prev => ({
+                                                            ...prev,
+                                                            [key]: { ...prev[key], type }
+                                                        }));
+                                                    }}
+                                                >
+                                                    <option value="disabled">Deshabilitada</option>
+                                                    <option value="usb">USB Directo (RAW)</option>
+                                                    <option value="windows_print">Cola de Windows (Spooler)</option>
+                                                </select>
+                                            </div>
+
+                                            {prt.type === 'usb' && (
+                                                <div className="space-y-1 animate-in fade-in duration-200">
+                                                    <label className="text-xs font-bold text-gray-500 uppercase">USB Device Path</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
+                                                        placeholder="\\?\USB#VID_0456&PID_0808#..."
+                                                        value={prt.path || ''}
+                                                        onChange={(e) => {
+                                                            const path = e.target.value;
+                                                            setPrinters(prev => ({
+                                                                ...prev,
+                                                                [key]: { ...prev[key], path }
+                                                            }));
+                                                        }}
+                                                    />
+                                                    <span className="text-[10px] text-gray-400 block">Ruta del puerto USB.</span>
+                                                </div>
+                                            )}
+
+                                            {prt.type === 'windows_print' && (
+                                                <div className="space-y-1 animate-in fade-in duration-200">
+                                                    <label className="text-xs font-bold text-gray-500 uppercase">Nombre en Windows</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                        placeholder="Ej. Advance, Cocina, Barra"
+                                                        value={prt.printerName || ''}
+                                                        onChange={(e) => {
+                                                            const printerName = e.target.value;
+                                                            setPrinters(prev => ({
+                                                                ...prev,
+                                                                [key]: { ...prev[key], printerName }
+                                                            }));
+                                                        }}
+                                                    />
+                                                    <span className="text-[10px] text-gray-400 block">Nombre exacto de la impresora.</span>
+                                                </div>
+                                            )}
+
+                                            {prt.type !== 'disabled' && (
+                                                <button
+                                                    type="button"
+                                                    disabled={testLoading[key] || loading}
+                                                    onClick={() => handleTestPrinter(key)}
+                                                    className="w-full mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border"
+                                                >
+                                                    {testLoading[key] ? (
+                                                        <>
+                                                            <Loader2 size={14} className="animate-spin text-gray-500" />
+                                                            <span>Imprimiendo Prueba...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Printer size={14} />
+                                                            <span>Probar Impresora</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex justify-end pt-6 border-t">
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg disabled:bg-gray-400"
+                                >
+                                    {loading ? 'Guardando...' : 'Guardar Impresoras'}
                                 </button>
                             </div>
                         </form>

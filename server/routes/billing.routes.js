@@ -445,4 +445,34 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
     }
 });
 
+// POST /api/billing/invoices/:id/print - Print receipt on the thermal printer
+router.post('/billing/invoices/:id/print', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { Invoice, Account } = require('../models');
+
+        const invoice = await Invoice.findByPk(id, {
+            include: [{ model: Account }]
+        });
+
+        if (!invoice) {
+            return res.status(404).json({ error: 'Comprobante no encontrado' });
+        }
+
+        const { triggerInvoicePrint } = require('../utils/printer');
+        const printResult = await triggerInvoicePrint(invoice, invoice.Account);
+
+        if (printResult.success) {
+            res.json({ success: true, message: 'Comprobante enviado a la impresora.' });
+        } else if (printResult.error === 'disabled') {
+            res.status(400).json({ error: 'La impresora de Caja esta deshabilitada.' });
+        } else {
+            res.status(500).json({ error: 'Fallo el envio a la impresora.', details: printResult.error });
+        }
+    } catch (err) {
+        console.error("Error printing invoice:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

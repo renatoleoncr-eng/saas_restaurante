@@ -1218,6 +1218,62 @@ router.post('/orders', async (req, res) => {
 
         await t.commit();
 
+        // Comanda print trigger in background (asynchronous)
+        if (req.body.printComanda) {
+            (async () => {
+                try {
+                    const { Table, Product, User } = getModels();
+                    const tableObj = await Table.findByPk(account.TableId);
+                    
+                    const cocinaItems = [];
+                    const barraItems = [];
+                    
+                    for (const item of products) {
+                        let type = 'dish'; // default
+                        let name = item.productName || '';
+                        
+                        if (item.productId) {
+                            const p = await Product.findByPk(item.productId);
+                            if (p) {
+                                type = p.type;
+                                name = p.name;
+                            }
+                        } else {
+                            // Combo/Promo (usually drink)
+                            type = 'drink';
+                            name = item.name || item.notes || 'Promo/Combo';
+                        }
+                        
+                        const printItem = {
+                            quantity: item.quantity,
+                            name: name,
+                            presentation: item.presentation || null,
+                            notes: item.notes || null,
+                            subItems: item.subItems || null
+                        };
+                        
+                        if (['dish', 'menu', 'daily_entry', 'daily_main'].includes(type)) {
+                            cocinaItems.push(printItem);
+                        } else {
+                            barraItems.push(printItem);
+                        }
+                    }
+                    
+                    const { triggerComandaPrint } = require('../utils/printer');
+                    const placingUser = userId ? await User.findByPk(userId) : null;
+                    
+                    if (cocinaItems.length > 0) {
+                        await triggerComandaPrint(tableObj, cocinaItems, 'Cocina', placingUser);
+                    }
+                    if (barraItems.length > 0) {
+                        await triggerComandaPrint(tableObj, barraItems, 'Barra', placingUser);
+                    }
+                } catch (printErr) {
+                    console.error("Error printing comanda in background:", printErr);
+                }
+            })();
+        }
+
         // Audit log – log after commit so entityId is valid
         try {
             const productSummary = products.map(p => `${p.productName || p.productId} x${p.quantity}`).join(', ');
@@ -1694,6 +1750,48 @@ router.delete('/payments/:id', async (req, res) => {
     } catch (error) {
         console.error("[Payment] ERROR deleting payment:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/accounts/:id/print-pre-cuenta
+router.post('/accounts/:id/print-pre-cuenta', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.body;
+        const { Account, Table, Order, Product, Payment, User } = getModels();
+
+        const account = await Account.findByPk(id, {
+            include: [
+                { model: Table },
+                {
+                    model: Order,
+                    where: { status: { [require('sequelize').Op.notIn]: ['cancelled'] } },
+                    required: false,
+                    include: [Product]
+                },
+                { model: Payment }
+            ]
+        });
+
+        if (!account) {
+            return res.status(404).json({ error: 'Cuenta no encontrada' });
+        }
+
+        const userObj = userId ? await User.findByPk(userId) : null;
+        
+        const { triggerPreCuentaPrint } = require('../utils/printer');
+        const printResult = await triggerPreCuentaPrint(account, account.Table, account.Orders || [], account.Payments || [], userObj);
+
+        if (printResult.success) {
+            res.json({ success: true, message: 'Pre-cuenta enviada a la impresora.' });
+        } else if (printResult.error === 'disabled') {
+            res.status(400).json({ error: 'La impresora de Caja esta deshabilitada.' });
+        } else {
+            res.status(500).json({ error: 'Fallo el envio a la impresora.', details: printResult.error });
+        }
+    } catch (err) {
+        console.error("Error printing pre-cuenta:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
