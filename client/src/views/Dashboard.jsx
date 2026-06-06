@@ -15,7 +15,7 @@ import QrManagement from './QrManagement';
 import AuditLogView from '../components/AuditLogView';
 import { 
     LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
-    Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard,
+    Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard, Settings,
     Tv, Menu, ClipboardList
 } from 'lucide-react';
 
@@ -412,7 +412,7 @@ export default function Dashboard() {
                                         onClick={() => { setShowBillingConfig(true); setShowUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <CreditCard size={16} /> Facturación Electrónica
+                                        <Settings size={16} /> Configuración del Sistema
                                     </button>
                                 )}
                                 {['admin', 'cashier', 'waiter'].includes(user.role) && (
@@ -485,7 +485,7 @@ export default function Dashboard() {
                                         onClick={() => { setShowBillingConfig(true); setShowMobileUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <CreditCard size={16} /> Facturación Electrónica
+                                        <Settings size={16} /> Configuración del Sistema
                                     </button>
                                 )}
                                 {['admin', 'cashier', 'waiter'].includes(user?.role) && (

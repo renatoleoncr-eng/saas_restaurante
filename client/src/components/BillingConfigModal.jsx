@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     X, Settings, FileText, Plus, Search, Trash2, 
     CheckCircle, AlertCircle, Printer, Download,
-    CreditCard, Building2, ShieldCheck, Zap, Loader,
+    CreditCard, Building2, ShieldCheck, Zap, Loader, Loader2,
     ArrowRight, ExternalLink, MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
@@ -775,8 +775,8 @@ const BillingConfigModal = ({ onClose }) => {
                             <CreditCard size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-gray-800">Facturación Electrónica</h2>
-                            <p className="text-sm text-gray-500">Gestión de comprobantes y configuración SUNAT</p>
+                            <h2 className="text-xl font-bold text-gray-800">Configuración del Sistema</h2>
+                            <p className="text-sm text-gray-500">Gestión de comprobantes, impresoras y SUNAT</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
