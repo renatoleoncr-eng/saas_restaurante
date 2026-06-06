@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, Trash2, Clock, CheckCircle, ArrowRightLeft, Wine, Tag, ChevronRight, AlertCircle, Loader2, Printer, Download, Camera, Image } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
+import { printLocalPreCuenta, printLocalComanda } from '../utils/printUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
@@ -1110,8 +1111,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 products: cart,
                 userId: user?.id || null,
                 authorPin: authorPin,
-                printComanda: printComanda
+                printComanda: false
             });
+
+            if (printComanda) {
+                printLocalComanda(tableData, cart, user?.displayName || 'Staff');
+            }
+
             setCart([]);
 
             const accRes = await axios.get(`/api/accounts/table/${tableId}`);
@@ -1138,14 +1144,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const handlePrintPreCuenta = async (accountId) => {
         if (!accountId) return;
         try {
-            const res = await axios.post(`/api/accounts/${accountId}/print-pre-cuenta`);
-            if (res.data.success) {
-                alert("Pre-cuenta enviada a la impresora.");
-            } else {
-                alert("Error al enviar pre-cuenta a la impresora.");
-            }
+            const res = await axios.get(`/api/accounts/specific/${accountId}`);
+            const fullAccount = res.data;
+            printLocalPreCuenta(fullAccount, billingConfig, user);
         } catch (err) {
-            alert(err.response?.data?.error || "Error al imprimir la pre-cuenta");
+            alert("Error al obtener los datos de la cuenta para imprimir.");
             console.error(err);
         }
     };

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Loader2, FileText, Receipt, Printer } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
+import { printLocalPreCuenta } from '../utils/printUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import InvoiceManagementModal from './InvoiceManagementModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
@@ -25,6 +26,19 @@ const AccountDetailsModal = ({
     const [error, setError] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [billingConfig, setBillingConfig] = useState(null);
+
+    useEffect(() => {
+        const fetchBillingConfig = async () => {
+            try {
+                const res = await axios.get('/api/billing/config');
+                setBillingConfig(res.data);
+            } catch (err) {
+                console.error("Error fetching billing config:", err);
+            }
+        };
+        fetchBillingConfig();
+    }, []);
 
     // Handle nested back buttons
     useModalBackHandler(showInvoiceModal, () => setShowInvoiceModal(false));
@@ -63,20 +77,9 @@ const AccountDetailsModal = ({
         }
     };
 
-    const handlePrintPreCuenta = async () => {
-        const id = accountId || (account && account.id);
-        if (!id) return;
-        try {
-            const res = await axios.post(`/api/accounts/${id}/print-pre-cuenta`);
-            if (res.data.success) {
-                alert("Detalle de consumos enviado a la impresora.");
-            } else {
-                alert("Error al enviar el ticket a la impresora.");
-            }
-        } catch (err) {
-            alert(err.response?.data?.error || "Error al imprimir consumos");
-            console.error(err);
-        }
+    const handlePrintPreCuenta = () => {
+        if (!account) return;
+        printLocalPreCuenta(account, billingConfig, user);
     };
 
     if (loading) {
