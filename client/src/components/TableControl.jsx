@@ -1988,6 +1988,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             >
                                 Seguir Comprando
                             </button>
+                            {cart.length > 0 && (
+                                <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1 text-left">
+                                    <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <span className="font-bold">⚠️ Atención:</span> Una vez enviado el pedido, <span className="font-bold text-red-950">no se podrá modificar ni eliminar</span> (salvo por un administrador). Por favor, revise bien los productos y las cantidades antes de enviar.
+                                    </div>
+                                </div>
+                            )}
                             {cart.length > 0 ? (
                                 <button
                                     onClick={sendOrder}
@@ -3146,6 +3154,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
                             </div>
                         </div>
+                        {cart.length > 0 && (
+                            <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1 text-left">
+                                <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-bold">⚠️ Atención:</span> Una vez enviado el pedido, <span className="font-bold text-red-950">no se podrá modificar ni eliminar</span> (salvo por un administrador). Por favor, revise bien los productos y las cantidades antes de enviar.
+                                </div>
+                            </div>
+                        )}
                         {cart.length > 0 ? (
                             <button onClick={sendOrder} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700">Enviar Pedido</button>
                         ) : (
