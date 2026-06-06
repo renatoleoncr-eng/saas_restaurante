@@ -112,7 +112,7 @@ function formatLine(left, right, width = 42) {
 
 // Helper to get active models dynamically to avoid circular dependencies
 function getModels() {
-    return require('./models');
+    return require('../models');
 }
 
 // Fetch Printer Config from settings
