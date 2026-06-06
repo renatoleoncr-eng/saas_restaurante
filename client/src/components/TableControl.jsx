@@ -24,6 +24,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
+    const [payAmount, setPayAmount] = useState('');
+    const [isLastPaymentPartial, setIsLastPaymentPartial] = useState(false);
     const handleFileChange = (e) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
@@ -1215,6 +1217,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return;
         }
 
+        const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+        const remaining = Math.max(0, parseFloat(account.total) - totalPaid);
+        setPayAmount(remaining.toString());
+
         setShowPaymentModal(true);
         setIsConfirmingPayment(false); // Reset confirmation state
         setIssueInvoice(false); // ALWAYS start disabled
@@ -1230,6 +1236,20 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
         if (isProcessingPayment) return;
         setIsProcessingPayment(true);
+
+        const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+        const remaining = Math.max(0, parseFloat(account.total) - totalPaid);
+        const enteredAmount = parseFloat(payAmount);
+
+        if (isNaN(enteredAmount) || enteredAmount <= 0) {
+            alert('Por favor ingrese un monto a pagar válido.');
+            setIsConfirmingPayment(false);
+            setIsProcessingPayment(false);
+            return;
+        }
+
+        const isPartial = enteredAmount < (remaining - 0.01);
+        setIsLastPaymentPartial(isPartial);
 
         if (issueInvoice) {
             if (invoiceType === 'factura') {
@@ -1265,23 +1285,32 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             // Pre-create invoice if requested
             let resInvoiceData = null;
             if (issueInvoice) {
-                const itemsToBill = groupedOrders.map(o => {
-                    let pName = "Producto";
-                    let displayNotes = o.notes;
-                    if (!o.ProductId && o.notes) {
-                        pName = `2x1: ${o.notes}`;
-                        displayNotes = null;
-                    } else if (o.Product && o.Product.name) {
-                        pName = o.Product.name;
-                    }
-                    const fullDesc = `${pName} ${o.presentation ? `(${o.presentation})` : ''} ${displayNotes ? `- ${displayNotes}` : ''}`.trim();
-                    
-                    return {
-                        description: fullDesc,
-                        qty: o.quantity,
-                        amount: o.quantity * parseFloat(o.priceAtOrder)
-                    };
-                });
+                let itemsToBill = [];
+                if (isPartial) {
+                    itemsToBill = [{
+                        description: `Abono parcial - Mesa ${tableData ? (tableData.number || tableData.id) : account.TableId} - Cuenta #${account.id}`,
+                        qty: 1,
+                        amount: enteredAmount
+                    }];
+                } else {
+                    itemsToBill = groupedOrders.map(o => {
+                        let pName = "Producto";
+                        let displayNotes = o.notes;
+                        if (!o.ProductId && o.notes) {
+                            pName = `2x1: ${o.notes}`;
+                            displayNotes = null;
+                        } else if (o.Product && o.Product.name) {
+                            pName = o.Product.name;
+                        }
+                        const fullDesc = `${pName} ${o.presentation ? `(${o.presentation})` : ''} ${displayNotes ? `- ${displayNotes}` : ''}`.trim();
+                        
+                        return {
+                            description: fullDesc,
+                            qty: o.quantity,
+                            amount: o.quantity * parseFloat(o.priceAtOrder)
+                        };
+                    });
+                }
                 
                 const resInvoice = await axios.post('/api/billing/invoices', {
                     tipo: invoiceType,
@@ -1296,6 +1325,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             }
 
             const formData = new FormData();
+            if (isPartial) {
+                formData.append('amount', enteredAmount);
+            }
             formData.append('paymentMethod', paymentMethod);
             if (user?.id) {
                 formData.append('userId', user.id);
@@ -1306,7 +1338,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             }
 
-            await axios.post(`/api/accounts/${account.id}/close`, formData, {
+            const endpoint = isPartial 
+                ? `/api/accounts/${account.id}/pay`
+                : `/api/accounts/${account.id}/close`;
+
+            await axios.post(endpoint, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -1321,10 +1357,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 setIsConfirmingPayment(false);
                 setShowPaymentModal(false);
                 setEvidenceFiles([]); // Reset file
-                onClose();
+                if (isPartial) {
+                    fetchAccount();
+                } else {
+                    onClose();
+                }
             }
         } catch (err) {
-            alert('Error cerrando cuenta: ' + (err.response?.data?.error || err.message));
+            alert('Error al procesar el pago: ' + (err.response?.data?.error || err.message));
             setIsConfirmingPayment(false); // Reset on error
         } finally {
             setIsProcessingPayment(false);
@@ -3320,12 +3360,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             setwhatsappPhone('');
                                             setShowWhatsappInput(false);
                                             setShowPaymentModal(false);
-                                            onClose();
+                                            if (isLastPaymentPartial) {
+                                                fetchAccount();
+                                            } else {
+                                                onClose();
+                                            }
                                         }}
                                         className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm mt-2"
                                     >
                                         <Check size={18} className="stroke-[3]" />
-                                        Finalizar y Liberar Mesa
+                                        {isLastPaymentPartial ? 'Finalizar Abono' : 'Finalizar y Liberar Mesa'}
                                     </button>
                                 </div>
                             </div>
@@ -3333,10 +3377,52 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95 my-auto">
                                 <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Confirmar Pago</h2>
 
-                                <div className="bg-blue-50 p-4 rounded-lg mb-6 text-center border border-blue-100">
-                                    <div className="text-sm text-gray-500">Total a Pagar</div>
-                                    <div className="text-3xl font-bold text-blue-600">S/ {Number((cartTotal + (accountTotal || 0)).toFixed(1))}</div>
-                                </div>
+                                {(() => {
+                                    const totalPaid = account?.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+                                    const remaining = account ? Math.max(0, parseFloat(account.total) - totalPaid) : 0;
+                                    const enteredAmount = parseFloat(payAmount) || 0;
+                                    const isPartial = enteredAmount < (remaining - 0.01);
+
+                                    return (
+                                        <>
+                                            <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100 space-y-1">
+                                                <div className="flex justify-between items-center text-xs text-gray-500">
+                                                    <span>Total de la Cuenta:</span>
+                                                    <span className="font-semibold text-gray-700">S/ {parseFloat(account?.total || 0).toFixed(2)}</span>
+                                                </div>
+                                                {totalPaid > 0 && (
+                                                    <div className="flex justify-between items-center text-xs text-gray-500">
+                                                        <span>Abonado anteriormente:</span>
+                                                        <span className="font-semibold text-green-600">- S/ {totalPaid.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-center pt-1 border-t border-blue-200/50">
+                                                    <span className="text-sm font-bold text-blue-800 font-mono">Saldo Pendiente:</span>
+                                                    <span className="text-2xl font-black text-blue-600 font-mono">S/ {remaining.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-6 text-left">
+                                                <label className="block text-sm font-bold text-gray-700 mb-1.5">Monto a Pagar (S/):</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    max={remaining}
+                                                    disabled={isConfirmingPayment}
+                                                    value={payAmount}
+                                                    onChange={(e) => setPayAmount(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    placeholder="0.00"
+                                                />
+                                                {isPartial && enteredAmount > 0 && (
+                                                    <p className="text-xs text-orange-600 font-bold mt-1.5 animate-pulse">
+                                                        ⚠️ Se registrará como un abono parcial. La mesa seguirá ocupada.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
 
                                 <div className="space-y-3 mb-6">
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago:</label>
@@ -3532,14 +3618,24 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 )}
 
                                 {(() => {
+                                    const totalPaid = account?.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+                                    const remaining = account ? Math.max(0, parseFloat(account.total) - totalPaid) : 0;
+                                    const enteredVal = parseFloat(payAmount) || 0;
+                                    const isAmountInvalid = isNaN(enteredVal) || enteredVal <= 0 || (account && enteredVal > (remaining + 0.01));
                                     const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(paymentMethod);
-                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0);
+                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid;
+                                    const isPartial = enteredVal < (remaining - 0.01);
 
                                     return (
                                         <>
                                             {isEvidenceMandatory && evidenceFiles.length === 0 && (
                                                 <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
                                                     * Se requiere subir comprobante o foto para continuar.
+                                                </p>
+                                            )}
+                                            {isAmountInvalid && enteredVal > 0 && (
+                                                <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
+                                                    * El monto a pagar no puede superar el saldo pendiente de S/ {remaining.toFixed(2)}.
                                                 </p>
                                             )}
                                             <div className="flex gap-3 mt-4">
@@ -3567,15 +3663,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     {isProcessingPayment ? (
                                                         <div className="flex items-center gap-2">
                                                             <Loader2 className="animate-spin text-white" size={18} />
-                                                            <span>{issueInvoice ? 'Generando...' : 'Cobrando...'}</span>
+                                                            <span>{issueInvoice ? 'Generando...' : isPartial ? 'Abonando...' : 'Cobrando...'}</span>
                                                         </div>
                                                     ) : isConfirmingPayment ? (
                                                         <>
                                                             <span className="text-xs opacity-90 uppercase">Confirmar</span>
-                                                            <span>SI, COBRAR</span>
+                                                            <span>{isPartial ? 'SI, ABONAR' : 'SI, COBRAR'}</span>
                                                         </>
                                                     ) : (
-                                                        'Cobrar'
+                                                        isPartial ? 'Registrar Abono' : 'Cobrar'
                                                     )}
                                                 </button>
                                             </div>

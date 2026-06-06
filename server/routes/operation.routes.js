@@ -189,11 +189,14 @@ router.post('/accounts/transfer', async (req, res) => {
 // Get Active Account for a Table
 router.get('/accounts/table/:tableId', async (req, res) => {
     try {
-        const { Account, Order, Product } = getModels();
+        const { Account, Order, Product, Payment } = getModels();
         const { tableId } = req.params;
         const account = await Account.findOne({
             where: { TableId: tableId, status: 'open' },
-            include: [{ model: Order, include: [Product] }]
+            include: [
+                { model: Order, include: [Product] },
+                { model: Payment }
+            ]
         });
         res.json(account);
     } catch (err) {
