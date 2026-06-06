@@ -19,7 +19,7 @@ const AccountDetailsModal = ({
 }) => {
     useModalBackHandler(true, onClose);
 
-    const { socket } = useRestaurant();
+    const { socket, user } = useRestaurant();
     const [account, setAccount] = useState(initialAccount);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -138,13 +138,15 @@ const AccountDetailsModal = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        <button
-                            onClick={handlePrintPreCuenta}
-                            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
-                        >
-                            <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
-                            <span>Imprimir Consumos</span>
-                        </button>
+                        {['admin', 'cashier'].includes(user?.role) && (
+                            <button
+                                onClick={handlePrintPreCuenta}
+                                className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                            >
+                                <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
+                                <span>Imprimir Consumos</span>
+                            </button>
+                        )}
                         {account.status === 'closed' && (
                             <button
                                 onClick={() => setShowInvoiceModal(true)}
