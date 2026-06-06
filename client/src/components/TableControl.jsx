@@ -1980,7 +1980,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         : "bg-red-500 hover:bg-red-600"
                                         }`}
                                 >
-                                    {(!account || (account.Orders && account.Orders.length === 0)) ? "Liberar Mesa" : "Cerrar Cuenta"}
+                                    {(!account || (account.Orders && account.Orders.length === 0)) ? "Liberar Mesa" : "Pagar"}
                                 </button>
                             )}
                         </div>
@@ -3129,7 +3129,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             (!account || (account.Orders && account.Orders.length === 0)) ? (
                                 <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
                             ) : (
-                                <button onClick={handleCloseClick} className="w-full border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50">Cerrar Cuenta</button>
+                                <button onClick={handleCloseClick} className="w-full border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50">Pagar</button>
                             )
                         )}
                     </div>
