@@ -116,8 +116,11 @@ router.delete('/accounts/:id', async (req, res) => {
             }
         }
 
-        // Delete associated orders and payments (or let cascading handle if configured, but explicit is safer)
-        await Payment.destroy({ where: { AccountId: id }, transaction: t });
+        // Update payments to unlink them from the account instead of deleting them (preserve in Caja!)
+        await Payment.update(
+            { AccountId: null },
+            { where: { AccountId: id }, transaction: t }
+        );
         await Order.destroy({ where: { AccountId: id }, transaction: t });
         await account.destroy({ transaction: t });
 
