@@ -325,7 +325,12 @@ export default function AccountManagementView() {
                     _t: new Date().getTime()
                 }
             });
-            const filteredAccounts = res.data.filter(acc => acc.status !== 'cancelled');
+            const filteredAccounts = res.data.filter(acc => {
+                if (statusFilter === 'all') {
+                    return acc.status !== 'cancelled' || parseFloat(acc.totalPaid) > 0;
+                }
+                return true; // The server already filters by acc.status = statusFilter
+            });
             setAccounts(filteredAccounts);
         } catch (error) {
             console.error("Error loading accounts:", error);
@@ -413,6 +418,7 @@ export default function AccountManagementView() {
                         <option value="all">Todas las Cuentas</option>
                         <option value="open">Abiertas</option>
                         <option value="closed">Completadas</option>
+                        <option value="cancelled">Canceladas</option>
                     </select>
                 </div>
             </div>

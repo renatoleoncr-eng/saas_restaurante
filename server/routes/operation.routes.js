@@ -1249,7 +1249,14 @@ router.post('/orders', async (req, res) => {
 router.delete('/orders/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { Order, Product, Account } = getModels();
+        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+        const { Order, Product, Account, User } = getModels();
+
+        const user = await User.findByPk(cancelOrderUserId);
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ error: 'Solo los administradores pueden eliminar pedidos enviados.' });
+        }
+
         const order = await Order.findByPk(id, {
             include: [Product]
         });
@@ -1301,7 +1308,14 @@ router.delete('/orders/:id', async (req, res) => {
 router.put('/orders/:id/decrement', async (req, res) => {
     try {
         const { id } = req.params;
-        const { Order, Product, Account } = getModels();
+        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+        const { Order, Product, Account, User } = getModels();
+
+        const user = await User.findByPk(cancelOrderUserId);
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ error: 'Solo los administradores pueden reducir pedidos enviados.' });
+        }
+
         const order = await Order.findByPk(id, {
             include: [Product]
         });

@@ -1142,6 +1142,18 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const handleDeleteOrder = async (orderId) => {
         setDeleteConfirmId(null); // Clear inline confirmation
+        const order = account?.Orders?.find(o => o.id === orderId);
+        if (order) {
+            const orderPrice = parseFloat(order.priceAtOrder || 0);
+            const orderQty = parseFloat(order.quantity || 1);
+            const newTotal = Math.max(0, parseFloat(account.total) - (orderPrice * orderQty));
+            const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+            if (newTotal < totalPaid) {
+                if (!window.confirm(`⚠️ Advertencia: Esta cuenta tiene abonos registrados (S/ ${totalPaid.toFixed(2)}) que superan el nuevo total de la cuenta (S/ ${newTotal.toFixed(2)}).\n\n¿Estás seguro de que deseas eliminar este pedido de todas formas?`)) {
+                    return;
+                }
+            }
+        }
         try {
             await axios.delete(`/api/orders/${orderId}?userId=${user?.id}`);
             // Force reload manually to see price update immediately
@@ -1159,6 +1171,17 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const handleDecrementOrder = async (orderId) => {
+        const order = account?.Orders?.find(o => o.id === orderId);
+        if (order) {
+            const orderPrice = parseFloat(order.priceAtOrder || 0);
+            const newTotal = Math.max(0, parseFloat(account.total) - orderPrice);
+            const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+            if (newTotal < totalPaid) {
+                if (!window.confirm(`⚠️ Advertencia: Esta cuenta tiene abonos registrados (S/ ${totalPaid.toFixed(2)}) que superan el nuevo total de la cuenta (S/ ${newTotal.toFixed(2)}).\n\n¿Estás seguro de que deseas reducir este pedido de todas formas?`)) {
+                    return;
+                }
+            }
+        }
         try {
             await axios.put(`/api/orders/${orderId}/decrement`, { userId: user?.id });
             // Force reload manually to see price update immediately
@@ -1869,7 +1892,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                                     {/* Actions */}
                                                     <div className="flex items-center gap-2">
-                                                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                                                        {user.role === 'admin' && (
                                                             deleteConfirmId === o.id ? (
                                                                 <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                                     <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
@@ -3032,7 +3055,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                             {/* Actions */}
                                             <div className="flex items-center gap-2">
-                                                {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                                                {user.role === 'admin' && (
                                                     deleteConfirmId === o.id ? (
                                                         <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                             <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
@@ -3676,7 +3699,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     const enteredVal = parseFloat(payAmount) || 0;
                                     const isAmountInvalid = isNaN(enteredVal) || enteredVal <= 0 || (account && enteredVal > (remaining + 0.01));
                                     const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(paymentMethod);
-                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid;
+                                    const isInvoiceDataMissing = issueInvoice && (
+                                        !clientForm.dni?.trim() || 
+                                        !clientForm.name?.trim() || 
+                                        ((invoiceType === 'factura' || clientForm.dni?.trim().length === 11) && !clientForm.direccion?.trim())
+                                    );
+                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid || isInvoiceDataMissing;
                                     const isPartial = enteredVal < (remaining - 0.01);
 
                                     return (
@@ -3689,6 +3717,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             {isAmountInvalid && enteredVal > 0 && (
                                                 <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
                                                     * El monto a pagar no puede superar el saldo pendiente de S/ {remaining.toFixed(2)}.
+                                                </p>
+                                            )}
+                                            {issueInvoice && isInvoiceDataMissing && (
+                                                <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
+                                                    * Busque/complete los datos del cliente {(invoiceType === 'factura' || clientForm.dni?.trim().length === 11) ? '(DNI/RUC, nombre y dirección)' : '(DNI y nombre)'} para cobrar.
                                                 </p>
                                             )}
                                             <div className="flex gap-3 mt-4">
