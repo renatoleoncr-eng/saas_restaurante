@@ -348,7 +348,18 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
 
         const account = await Account.findByPk(id, { include: [Payment] });
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
-        if (account.status !== 'open') return res.status(400).json({ error: 'La cuenta no está abierta' });
+
+        const totalPaidBefore = (account.Payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+        const remaining = Math.max(0, Number(account.total) - totalPaidBefore);
+
+        if (account.status !== 'open') {
+            if (account.status === 'cancelled') {
+                return res.status(400).json({ error: 'La cuenta está anulada y no admite pagos.' });
+            }
+            if (account.status === 'closed' && remaining <= 0.01) {
+                return res.status(400).json({ error: 'La cuenta ya está pagada por completo.' });
+            }
+        }
 
         const now = new Date();
         const year = now.getFullYear().toString();
@@ -378,24 +389,29 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
 
         // Auto-close if fully paid
         if (totalPaid >= Number(account.total)) {
-            account.status = 'closed';
-            account.closedAt = new Date();
-            // Store the last payment method on the account as primary reference. 
-            // Or leave it since the details are in the Payments table now.
-            if (paymentMethod) account.paymentMethod = paymentMethod;
-            if (evidencePath && !account.paymentEvidence) account.paymentEvidence = evidencePath; // fallback
+            if (account.status === 'open') {
+                account.status = 'closed';
+                account.closedAt = new Date();
+                if (paymentMethod) account.paymentMethod = paymentMethod;
+                if (evidencePath && !account.paymentEvidence) account.paymentEvidence = evidencePath; // fallback
 
-            await account.save();
+                await account.save();
 
-            const table = await Table.findByPk(account.TableId);
-            if (table) {
-                table.status = 'free';
-                await table.save();
-            }
+                const table = await Table.findByPk(account.TableId);
+                if (table) {
+                    table.status = 'free';
+                    await table.save();
+                }
 
-            const io = req.app.get('io');
-            if (io) {
-                io.emit('table_updated', { tableId: table.id, status: 'free' });
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('table_updated', { tableId: table.id, status: 'free' });
+                }
+            } else {
+                // If it was already closed, just update fallbacks
+                if (paymentMethod) account.paymentMethod = paymentMethod;
+                if (evidencePath && !account.paymentEvidence) account.paymentEvidence = evidencePath; // fallback
+                await account.save();
             }
         }
 
@@ -1655,32 +1671,7 @@ router.delete('/payments/:id', async (req, res) => {
                 if (account.paymentEvidence === payment.evidence) {
                     account.paymentEvidence = null;
                 }
-                
-                // Recalculate total paid
-                const remainingPayments = await Payment.findAll({ where: { AccountId: accountId } });
-                const totalPaid = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                
-                // If total paid is less than the account total, revert the account to open
-                if (totalPaid < Number(account.total)) {
-                    account.status = 'open';
-                    account.closedAt = null;
-                    
-                    // Revert Table status to occupied
-                    if (account.TableId) {
-                        const table = await Table.findByPk(account.TableId);
-                        if (table && table.status === 'free') {
-                            table.status = 'occupied';
-                            await table.save();
-                        }
-                    }
-                }
                 await account.save();
-                
-                // Notify clients via socket
-                const io = req.app.get('io');
-                if (io) {
-                    io.emit('table_updated', { tableId: account.TableId, status: 'occupied' });
-                }
             }
         }
 

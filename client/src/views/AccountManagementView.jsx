@@ -365,7 +365,7 @@ export default function AccountManagementView() {
         setEditDni(acc.clientDni || '');
     };
 
-    if (user.role !== 'admin' && user.role !== 'waiter') {
+    if (user.role !== 'admin' && user.role !== 'waiter' && user.role !== 'cashier') {
         return <div className="p-8 text-center text-gray-500">Acceso Denegado. Solo personal autorizado pueden ver esta sección.</div>;
     }
 
@@ -538,7 +538,7 @@ export default function AccountManagementView() {
 
 
                                                     {/* Pay Partial Button */}
-                                                    {!isComplete && acc.status !== 'cancelled' && acc.accountType !== 'staff' && (isAdmin || user.role === 'waiter') && (
+                                                    {(!isComplete || acc.deuda > 0.01) && acc.status !== 'cancelled' && acc.accountType !== 'staff' && (isAdmin || user.role === 'waiter' || user.role === 'cashier') && (
                                                         <button
                                                             onClick={() => openPayModal(acc)}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-bold bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
