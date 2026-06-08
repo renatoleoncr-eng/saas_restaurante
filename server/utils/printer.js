@@ -92,6 +92,39 @@ class EscPosBuilder {
         return this;
     }
 
+    // Print QR code using ESC/POS GS ( k commands
+    // qrData: string to encode
+    qr(qrData, size = 4) {
+        const data = cleanSpanishChars(qrData);
+        const bytes = Buffer.from(data, 'ascii');
+        const storeLen = bytes.length + 3; // cn(0x31) + fn(0x50) + m(0x30) = 3 overhead bytes
+        const pL = storeLen & 0xff;
+        const pH = (storeLen >> 8) & 0xff;
+
+        // 1. Select QR model 2:  GS ( k 04 00 31 41 32 00
+        //    cn=0x31  fn=0x41(set model)  n1=0x32(model2)  n2=0x00
+        this.writeHex('1d286b040031413200');
+
+        // 2. Set module size:  GS ( k 03 00 31 43 <size>
+        //    cn=0x31  fn=0x43(set size)  n=size
+        this.writeHex('1d286b03003143' + size.toString(16).padStart(2, '0'));
+
+        // 3. Set error correction level M:  GS ( k 03 00 31 45 31
+        //    cn=0x31  fn=0x45(set EC)  n=0x31(level M)
+        this.writeHex('1d286b0300314531');
+
+        // 4. Store QR data:  GS ( k pL pH 31 50 30 <data>
+        //    cn=0x31  fn=0x50(store)  m=0x30
+        this.writeHex('1d286b' + pL.toString(16).padStart(2, '0') + pH.toString(16).padStart(2, '0') + '315030');
+        this.writeHex(bytes.toString('hex'));
+
+        // 5. Print QR:  GS ( k 03 00 31 51 30
+        //    cn=0x31  fn=0x51(print)  m=0x30
+        this.writeHex('1d286b0300315130');
+
+        return this;
+    }
+
     writeHex(hexStr) {
         this.buffer.push(hexStr);
         return this;
@@ -436,51 +469,177 @@ async function triggerComandaPrint(table, items, type, user) {
     return await printTicket(printerKey, builder);
 }
 
+// Helper: Format date/time manually in 24h to avoid locale AM/PM artifacts (e.g. "p.am.")
+function formatDateTime24h(date) {
+    const d = new Date(date);
+    const day   = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year  = d.getFullYear();
+    const hh    = String(d.getHours()).padStart(2, '0');
+    const mm    = String(d.getMinutes()).padStart(2, '0');
+    const ss    = String(d.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hh}:${mm}:${ss}`;
+}
+
 // 5. Boleta / Factura Fiscal (Electronic Receipt)
 async function triggerInvoicePrint(invoice, account) {
     const builder = new EscPosBuilder().init();
     builder.kickDrawer(); // Kick cash drawer for sale receipts
-    
+
+    // Read billing config for IGV rate and exoneration flag
+    const { BillingConfig } = getModels();
+    let igvTasa = 18;       // safe fallback
+    let isExonerado = false;
+    try {
+        const billCfg = await BillingConfig.findOne();
+        if (billCfg) {
+            igvTasa     = parseFloat(billCfg.igvTasa) || 18;
+            isExonerado = !!billCfg.operacionesExoneradas;
+        }
+    } catch (_) {}
+
+    // Determine payment method from account payments
+    let formaPago = 'CONTADO';
+    if (account && account.Payments && account.Payments.length > 0) {
+        const methods = [...new Set(account.Payments.map(p => (p.method || '').toUpperCase()))].filter(Boolean);
+        if (methods.length > 0) formaPago = methods.join('+');
+    }
+
     const header = await getRestaurantHeader();
 
+    // ─── HEADER ───────────────────────────────────────────────────────────────
     builder.alignCenter().doubleSize().bold().line(header.name).doubleSize(false).bold(false);
     if (header.ruc) builder.line(`R.U.C. ${header.ruc}`);
     if (header.address) builder.line(header.address);
     builder.feed(1);
-    
+
     builder.bold().line(`${invoice.tipo.toUpperCase()} ELECTRONICA`).bold(false);
-    builder.bold().line(`SERIE: ${invoice.serie}  NRO: ${String(invoice.correlativo).padStart(6, '0')}`).bold(false);
-    builder.feed(1);
-    
+    builder.bold().line(`${invoice.serie}-${String(invoice.correlativo).padStart(8, '0')}`).bold(false);
+    builder.line("-".repeat(42));
+
+    // ─── FECHA, FORMA DE PAGO Y CLIENTE ───────────────────────────────────────
     builder.alignLeft();
-    builder.line(`Fecha de Emision: ${new Date(invoice.emitidoAt).toLocaleString('es-PE')}`);
-    builder.line(`Cliente: ${invoice.clienteNombre || 'CLIENTES VARIOS'}`);
-    if (invoice.clienteDocumento) builder.line(`Doc. Identidad: ${invoice.clienteDocumento}`);
+    builder.line(`Fecha de emision: ${formatDateTime24h(invoice.emitidoAt)}`);
+    builder.line(`Forma de Pago: ${formaPago}`);
+    builder.feed(1);
+
+    const tipoDocLabel = invoice.clienteDocumento && invoice.clienteDocumento.length === 11 ? 'RUC' : 'DNI';
+    builder.line(`SENOR(ES): ${invoice.clienteNombre || 'CLIENTES VARIOS'}`);
+    if (invoice.clienteDocumento) builder.line(`${tipoDocLabel}: ${invoice.clienteDocumento}`);
     if (invoice.clienteDireccion) builder.line(`Direccion: ${invoice.clienteDireccion}`);
     builder.line("-".repeat(42));
-    
-    // Items
-    builder.bold().line(formatLine("Cant - Descripcion", "Total")).bold(false);
+
+    // ─── ITEMS (con columnas: Cant | Descripcion | P.Unit | Total) ─────────────
+    function padR(s, n) { s = String(s); return s.length >= n ? s.substring(0, n) : s + ' '.repeat(n - s.length); }
+    function padL(s, n) { s = String(s); return s.length >= n ? s.substring(0, n) : ' '.repeat(n - s.length) + s; }
+
+    // Column widths for 42-char ticket: Cant(4) Desc(23) P.Unit(7) Total(7) + 1 space each = 42
+    const cantW  = 4;
+    const unitW  = 7;
+    const totW   = 7;
+    const descW  = 42 - cantW - unitW - totW - 3; // 3 separator spaces = 21
+
+    const hdr = padR('Cant', cantW) + ' ' + padR('Descripcion', descW) + ' ' + padL('P.Unit', unitW) + ' ' + padL('Total', totW);
+    builder.bold().line(hdr).bold(false);
     builder.line("-".repeat(42));
-    
-    let items = [];
+
+    let itemsList = [];
     try {
-        items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+        itemsList = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
     } catch (_) {}
-    
-    items.forEach(it => {
-        builder.line(formatLine(`${it.qty} x ${it.description || it.name}`, `S/ ${Number(it.amount || 0).toFixed(2)}`));
+
+    itemsList.forEach(it => {
+        const qty       = parseInt(it.qty || it.quantity || 1);
+        const lineTotal = Number(it.amount || 0);
+        const unitPrice = qty > 0 ? (lineTotal / qty) : lineTotal;
+        const desc      = String(it.description || it.name || '');
+
+        // Print first line
+        const row = padR(String(qty), cantW) + ' ' + padR(desc, descW) + ' ' + padL(unitPrice.toFixed(2), unitW) + ' ' + padL(lineTotal.toFixed(2), totW);
+        builder.line(row);
+
+        // Print overflow lines for long descriptions
+        if (desc.length > descW) {
+            let rest = desc.substring(descW);
+            while (rest.length > 0) {
+                builder.line(' '.repeat(cantW + 1) + rest.substring(0, descW));
+                rest = rest.substring(descW);
+            }
+        }
     });
-    
+
     builder.line("-".repeat(42));
-    builder.line(formatLine("Subtotal (Gravada):", `S/ ${Number(invoice.subtotal).toFixed(2)}`));
-    builder.line(formatLine("IGV (18%):", `S/ ${Number(invoice.igv).toFixed(2)}`));
-    builder.bold().line(formatLine("TOTAL COMPROBANTE:", `S/ ${Number(invoice.total).toFixed(2)}`)).bold(false);
-    
+
+    // ─── TOTALES E IMPUESTOS ──────────────────────────────────────────────────
+    const subtotal = Number(invoice.subtotal); // base imponible
+    const igv      = Number(invoice.igv);
+    const total    = Number(invoice.total);
+
+    // Always show all three operation lines (matching PDF)
+    const opGravada   = isExonerado ? 0       : subtotal;
+    const opExonerada = isExonerado ? subtotal : 0;
+    const opInafecta  = 0; // not used currently
+
+    builder.line(formatLine("Op. Gravada:",   `S/ ${opGravada.toFixed(2)}`));
+    builder.line(formatLine("Op. Exonerada:", `S/ ${opExonerada.toFixed(2)}`));
+    builder.line(formatLine("Op. Inafecta:",  `S/ ${opInafecta.toFixed(2)}`));
+    builder.line(formatLine(`I.G.V. (${igvTasa.toFixed(1)}%):`, `S/ ${igv.toFixed(2)}`));
+    builder.bold().line(formatLine("IMPORTE TOTAL:", `S/ ${total.toFixed(2)}`)).bold(false);
+
+    // ─── QR CODE ──────────────────────────────────────────────────────────────
+    let qrContent = null;
+    try {
+        const sunat = invoice.sunatResponse
+            ? (typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse)
+            : null;
+        // Hub may return: qr_url, qr, hash, url_ticket, url, pdf_url
+        qrContent = sunat?.qr_url || sunat?.qr || sunat?.hash || sunat?.url_ticket || sunat?.url || sunat?.pdf_url || null;
+    } catch (_) {}
+
+    // Fallback: standard SUNAT QR pipe-separated string
+    if (!qrContent && header.ruc) {
+        const tipoDoc         = invoice.tipo === 'factura' ? '01' : '03';
+        const fechaEmision    = formatDateTime24h(invoice.emitidoAt).substring(0, 10);
+        const tipoDocReceptor = invoice.clienteDocumento && invoice.clienteDocumento.length === 11 ? '6' : '1';
+        qrContent = [
+            header.ruc,
+            tipoDoc,
+            invoice.serie,
+            String(invoice.correlativo).padStart(8, '0'),
+            igv.toFixed(2),
+            total.toFixed(2),
+            fechaEmision,
+            tipoDocReceptor,
+            invoice.clienteDocumento || ''
+        ].join('|');
+    }
+
     builder.feed(1).alignCenter();
-    builder.line("Representacion Impresa de Comprobante Electronico");
-    builder.line("Consulte su comprobante en SUNAT");
-    builder.line("GRACIAS POR SU COMPRA");
+    if (qrContent) {
+        builder.qr(qrContent, 4);
+        builder.feed(1);
+    }
+
+    // ─── ACEPTADA POR SUNAT ───────────────────────────────────────────────────
+    let isAceptada = false;
+    try {
+        const sunat = invoice.sunatResponse
+            ? (typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse)
+            : null;
+        isAceptada = sunat?.success === true || !!sunat?.fileName || !!sunat?.url || !!sunat?.url_ticket;
+    } catch (_) {}
+
+    if (isAceptada) {
+        builder.bold().line("** ACEPTADA POR SUNAT **").bold(false);
+    }
+
+    // ─── FOOTER ───────────────────────────────────────────────────────────────
+    builder.line("Representacion impresa de un comprobante");
+    builder.line("electronico.");
+    builder.line("El documento puede ser consultado en el");
+    builder.line("portal interno de su proveedor.");
+    builder.feed(1);
+    builder.line("Gracias por su preferencia.");
     builder.feed(4).cut();
 
     return await printTicket('caja', builder);

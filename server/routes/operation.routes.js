@@ -15,6 +15,20 @@ router.post('/accounts/open', async (req, res) => {
 
         // Check if table is occupied
         const table = await Table.findByPk(tableId);
+        
+        // Ensure there isn't already an open account for this table
+        const existingAccount = await Account.findOne({ where: { TableId: tableId, status: 'open' } });
+        if (existingAccount) {
+            // Self-heal table status if it was erroneously set to free
+            if (table.status !== 'occupied') {
+                table.status = 'occupied';
+                await table.save();
+                const io = req.app.get('io');
+                if (io) io.emit('table_updated', { tableId: table.id, status: 'occupied' });
+            }
+            return res.status(400).json({ error: 'Ya existe una cuenta abierta para esta mesa' });
+        }
+
         if (table.status === 'occupied') {
             return res.status(400).json({ error: 'Mesa ya ocupada' });
         }
@@ -142,6 +156,21 @@ router.post('/accounts/transfer', async (req, res) => {
             await t.rollback();
             return res.status(404).json({ error: 'Mesa de destino no encontrada' });
         }
+        
+        // Safety check: ensure target table does not have an active account
+        const existingAccountTarget = await Account.findOne({ where: { TableId: newTableId, status: 'open' }, transaction: t });
+        if (existingAccountTarget) {
+            await t.rollback();
+            // Optional: Auto-heal the destination table status if it was free
+            if (newTable.status === 'free') {
+                newTable.status = 'occupied';
+                await newTable.save();
+                const io = req.app.get('io');
+                if (io) io.emit('table_updated', { tableId: newTable.id, status: 'occupied' });
+            }
+            return res.status(400).json({ error: 'La mesa de destino ya tiene una cuenta abierta.' });
+        }
+
         if (newTable.status !== 'free') {
             await t.rollback();
             return res.status(400).json({ error: 'La mesa de destino ya está ocupada' });
@@ -303,7 +332,7 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
         // Calculate missing amount and generate payment
         const allPayments = await Payment.findAll({ where: { AccountId: account.id } });
         const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-        const remaining = Math.max(0, Number(account.total) - totalPaid);
+        const remaining = Math.max(0, Math.round((Number(account.total) - totalPaid) * 100) / 100);
 
         if (remaining > 0 && paymentMethod !== 'consumo_interno') {
             await Payment.create({
@@ -354,7 +383,7 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         const totalPaidBefore = (account.Payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-        const remaining = Math.max(0, Number(account.total) - totalPaidBefore);
+        const remaining = Math.max(0, Math.round((Number(account.total) - totalPaidBefore) * 100) / 100);
 
         if (account.status !== 'open') {
             if (account.status === 'cancelled') {
@@ -432,11 +461,21 @@ router.post('/accounts/:id/cancel', async (req, res) => {
     try {
         const { Account, Order, Table } = getModels();
         const { id } = req.params;
+        const { checkEmpty } = req.body;
+        
         const account = await Account.findByPk(id, {
             include: [Order]
         });
 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
+
+        // If requested to check for empty, ensure there are no active orders
+        if (checkEmpty) {
+            const activeOrders = account.Orders ? account.Orders.filter(o => o.status !== 'cancelled') : [];
+            if (activeOrders.length > 0) {
+                return res.status(400).json({ error: 'Auto-cancelación rechazada: La cuenta tiene pedidos activos en el servidor.' });
+            }
+        }
 
         // Restore stock for ALL orders in this account before cancelling
         if (account.Orders && account.Orders.length > 0) {
@@ -800,7 +839,10 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                         await recipe.Ingredient.reload({ transaction, lock: true });
                         const currentStock = parseFloat(recipe.Ingredient.stock || 0);
                         previousStock = currentStock;
-                        const newStockVal = Math.max(0, currentStock - amount);
+                        if (currentStock < amount) {
+                            throw new Error(`Stock insuficiente de ingrediente: ${recipe.Ingredient.name} (Req: ${amount}, Disp: ${currentStock})`);
+                        }
+                        const newStockVal = currentStock - amount;
                         recipe.Ingredient.stock = newStockVal;
                         await recipe.Ingredient.save({ transaction });
                     } else {
@@ -911,7 +953,10 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 await targetStockModel.reload({ transaction, lock: true });
                 const currentStock = Number(targetStockModel.stock || 0);
                 previousStockCalc = currentStock;
-                const newStockValueVal = Math.max(0, currentStock - quantity);
+                if (currentStock < quantity) {
+                    throw new Error(`Stock insuficiente para ${targetStockModel.name || product.name} (Req: ${quantity}, Disp: ${currentStock})`);
+                }
+                const newStockValueVal = currentStock - quantity;
                 targetStockModel.stock = newStockValueVal;
                 await targetStockModel.save({ transaction });
             } else {

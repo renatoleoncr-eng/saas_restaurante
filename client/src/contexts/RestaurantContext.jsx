@@ -37,6 +37,7 @@ export const RestaurantProvider = ({ children }) => {
 
         newSocket.on('connect', () => {
             console.log("Socket connected:", newSocket.id);
+            refreshData(); // Force refresh on connect/reconnect to prevent stale state
         });
 
         newSocket.on('connect_error', (err) => {

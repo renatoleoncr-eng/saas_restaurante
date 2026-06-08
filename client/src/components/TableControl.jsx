@@ -21,6 +21,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [showMobileCart, setShowMobileCart] = useState(initialShowCart);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false); // New State for Transfer
+    const [isSendingOrder, setIsSendingOrder] = useState(false); // Prevent double-clicks
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
@@ -800,17 +801,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         // Even if there are items in the local cart, they will be lost anyway.
         if (account && (!account.Orders || account.Orders.length === 0)) {
             try {
-                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id });
+                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id, checkEmpty: true });
             } catch (err) {
                 console.error("Error auto-cancelling empty account on close:", err);
-            }
-        } else if (isAccountLoaded && !account && tableData && tableData.status !== 'free') {
-            // Self-healing: Table is marked occupied or reserved in UI but has no active account
-            try {
-                await axios.put(`/api/tables/${tableId}`, { status: 'free' });
-                refreshData(); // Trigger UI rebuild
-            } catch (err) {
-                console.error("Error freeing orphan table:", err);
             }
         }
         onClose();
@@ -1092,6 +1085,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const executeSendOrder = async (authorPin = null) => {
+        if (isSendingOrder) return false;
+        setIsSendingOrder(true);
         let targetAccountId = account?.id;
 
         try {
@@ -1121,7 +1116,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             await fetchDailyMenu();
             // Also trigger global refresh to update other components
             refreshData();
-
+            
+            setIsSendingOrder(false);
             return true;
         } catch (err) {
             const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || 'Error enviando pedido';
@@ -1131,6 +1127,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 alert(errorMsg);
             }
             console.error(err);
+            setIsSendingOrder(false);
             return false;
         }
     };
@@ -1233,11 +1230,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         if (!account.Orders || account.Orders.length === 0) {
             if (!confirm("¿Liberar mesa y cancelar cuenta vacía?")) return;
             try {
-                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id });
+                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id, checkEmpty: true });
                 // Refresh table status in background or just close
                 onClose();
             } catch (e) {
-                alert("Error liberando mesa");
+                alert(e.response?.data?.error || "Error liberando mesa");
             }
             return;
         }
@@ -1260,7 +1257,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         }
 
         const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
-        const remaining = Math.max(0, parseFloat(account.total) - totalPaid);
+        const remaining = Math.max(0, Math.round((parseFloat(account.total) - totalPaid) * 100) / 100);
         setPayAmount(remaining.toString());
 
         setShowPaymentModal(true);
@@ -1280,7 +1277,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         setIsProcessingPayment(true);
 
         const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
-        const remaining = Math.max(0, parseFloat(account.total) - totalPaid);
+        const remaining = Math.max(0, Math.round((parseFloat(account.total) - totalPaid) * 100) / 100);
         const enteredAmount = parseFloat(payAmount);
 
         if (isNaN(enteredAmount) || enteredAmount <= 0) {
@@ -1292,6 +1289,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
         const isPartial = enteredAmount < (remaining - 0.01);
         setIsLastPaymentPartial(isPartial);
+
+        if (isPartial && issueInvoice) {
+            setIssueInvoice(false);
+            alert('No se pueden emitir comprobantes para abonos parciales.');
+            setIsConfirmingPayment(false);
+            setIsProcessingPayment(false);
+            return;
+        }
 
         if (issueInvoice) {
             if (invoiceType === 'factura') {
@@ -3211,7 +3216,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             </div>
                         )}
                         {cart.length > 0 ? (
-                            <button onClick={sendOrder} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700">Enviar Pedido</button>
+                            <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
                         ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                             <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
                         ) : ['admin', 'cashier'].includes(user?.role) ? (
@@ -3552,7 +3557,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     max={remaining}
                                                     disabled={isConfirmingPayment}
                                                     value={payAmount}
-                                                    onChange={(e) => setPayAmount(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setPayAmount(val);
+                                                        const enteredVal = parseFloat(val) || 0;
+                                                        if (enteredVal < (remaining - 0.01)) {
+                                                            setIssueInvoice(false);
+                                                        }
+                                                    }}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
                                                     placeholder="0.00"
                                                 />
@@ -3686,7 +3698,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                     return (
                                         <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                            {totalInvoiced >= accountTotal ? (
+                                            {isPartial ? (
+                                                <div className="text-xs text-amber-600 font-bold text-center flex items-center justify-center gap-1.5 py-1">
+                                                    <Info size={14} className="text-amber-500 shrink-0" />
+                                                    <span>No se pueden emitir comprobantes para abonos parciales. Pague el saldo restante para facturar la cuenta.</span>
+                                                </div>
+                                            ) : totalInvoiced >= accountTotal ? (
                                                 <div className="text-xs text-gray-500 font-bold text-center flex items-center justify-center gap-1.5 py-1">
                                                     <Info size={14} className="text-blue-500 shrink-0" />
                                                     <span>La cuenta ya ha sido facturada por completo (S/ {totalInvoiced.toFixed(2)}).</span>

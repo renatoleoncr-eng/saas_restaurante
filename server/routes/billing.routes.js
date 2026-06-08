@@ -449,10 +449,10 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
 router.post('/billing/invoices/:id/print', async (req, res) => {
     try {
         const { id } = req.params;
-        const { Invoice, Account } = require('../models');
+        const { Invoice, Account, Payment } = require('../models');
 
         const invoice = await Invoice.findByPk(id, {
-            include: [{ model: Account }]
+            include: [{ model: Account, include: [{ model: Payment }] }]
         });
 
         if (!invoice) {
