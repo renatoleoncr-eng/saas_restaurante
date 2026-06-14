@@ -179,5 +179,69 @@ function processJobs(jobs) {
     });
 }
 
+// ─── MINI SERVIDOR HTTP LOCAL ─────────────────────────────────────────────────
+// Escucha en localhost:6789 para que el frontend web pueda detectar
+// que el agente está corriendo en esta PC y obtener la lista de impresoras Windows.
+// El navegador acepta fetch a localhost aunque la página sea HTTPS.
+const LOCAL_PORT = 6789;
+
+const localServer = http.createServer((req, res) => {
+    // CORS: permite que cualquier origen (el frontend web) pueda consultar
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
+    if (req.url === '/status') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, agent: 'RestauranteAgentePrint', server: serverUrl }));
+        return;
+    }
+
+    if (req.url === '/windows-printers') {
+        execFile('powershell.exe',
+            ['-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'],
+            { timeout: 8000 },
+            (err, stdout) => {
+                if (err || !stdout.trim()) {
+                    res.writeHead(200);
+                    res.end('[]');
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(stdout.trim());
+                    const names = Array.isArray(parsed) ? parsed : [parsed];
+                    res.writeHead(200);
+                    res.end(JSON.stringify(names));
+                } catch (_) {
+                    res.writeHead(200);
+                    res.end('[]');
+                }
+            }
+        );
+        return;
+    }
+
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: 'Not found' }));
+});
+
+localServer.listen(LOCAL_PORT, '127.0.0.1', () => {
+    log(`[LOCAL] Servidor HTTP local escuchando en http://localhost:${LOCAL_PORT}`);
+    log(`[LOCAL]   /status           -> Estado del agente`);
+    log(`[LOCAL]   /windows-printers -> Lista de impresoras Windows`);
+});
+
+localServer.on('error', (err) => {
+    log(`[LOCAL] No se pudo iniciar el servidor HTTP local: ${err.message} (otra instancia corriendo?)`);
+});
+
 // Start polling
 poll();
+

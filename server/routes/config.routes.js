@@ -82,10 +82,8 @@ router.post('/config/printers/test', async (req, res) => {
             return res.status(400).json({ error: 'La impresora esta deshabilitada. Activala primero.' });
         }
 
-        // Build a nice test ticket
+        // Build a nice test ticket (no kickDrawer — impresoras sin gaveta lo ignoran o bloquean)
         const builder = new EscPosBuilder().init();
-        builder.kickDrawer(); // Test drawer kick
-        
         builder.alignCenter().doubleSize().bold().line("PRUEBA DE IMPRESION").doubleSize(false).bold(false).feed(1);
         builder.alignLeft();
         builder.line(`Impresora: ${printerKey.toUpperCase()}`);
@@ -132,4 +130,38 @@ router.get('/config/printers/pending', (req, res) => {
     }
 });
 
+// GET list of Windows printers installed on the server machine
+// On Linux (VPS/Docker), returns [] — the local print agent should call this directly
+router.get('/config/printers/windows-list', (req, res) => {
+    const { execFile } = require('child_process');
+    const isWindows = process.platform === 'win32';
+    if (!isWindows) {
+        return res.json([]);
+    }
+    execFile('powershell.exe', ['-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'], { timeout: 8000 }, (err, stdout) => {
+        if (err || !stdout.trim()) return res.json([]);
+        try {
+            const parsed = JSON.parse(stdout.trim());
+            const names = Array.isArray(parsed) ? parsed : [parsed];
+            res.json(names);
+        } catch (_) {
+            res.json([]);
+        }
+    });
+});
+
+// GET download the print agent installer script (instalar_servicio_impresion.ps1)
+router.get('/config/printers/agent-download', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const scriptPath = path.resolve(__dirname, '../../instalar_servicio_impresion.ps1');
+    if (!fs.existsSync(scriptPath)) {
+        return res.status(404).json({ error: 'Script de instalacion no encontrado en el servidor.' });
+    }
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="instalar_servicio_impresion.ps1"');
+    fs.createReadStream(scriptPath).pipe(res);
+});
+
 module.exports = router;
+

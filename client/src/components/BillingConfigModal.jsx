@@ -60,6 +60,8 @@ const BillingConfigModal = ({ onClose }) => {
         barra: { type: 'disabled', path: '', printerName: '' }
     });
     const [testLoading, setTestLoading] = useState({});
+    const [windowsPrinters, setWindowsPrinters] = useState([]);
+    const [agentStatus, setAgentStatus] = useState('unknown'); // 'active' | 'inactive' | 'unknown'
 
     // Derived helpers
     const isFactura = newInvoice.tipo === 'factura';
@@ -101,6 +103,34 @@ const BillingConfigModal = ({ onClose }) => {
         }
     };
 
+    const fetchWindowsPrinters = async () => {
+        try {
+            // Consulta al agente local en esta PC (no al servidor en la nube)
+            const res = await fetch('http://localhost:6789/windows-printers', { signal: AbortSignal.timeout(3000) });
+            const data = await res.json();
+            if (Array.isArray(data)) setWindowsPrinters(data);
+        } catch (err) {
+            // El agente no está corriendo o no está instalado — campo manual
+            setWindowsPrinters([]);
+        }
+    };
+
+    const checkAgentStatus = async () => {
+        try {
+            const res = await fetch('http://localhost:6789/status', { signal: AbortSignal.timeout(2000) });
+            const data = await res.json();
+            if (data?.ok) {
+                setAgentStatus('active');
+                // Si el agente está corriendo, también trae la lista de impresoras
+                fetchWindowsPrinters();
+            } else {
+                setAgentStatus('inactive');
+            }
+        } catch {
+            setAgentStatus('inactive');
+        }
+    };
+
     const handleSavePrinters = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -133,6 +163,8 @@ const BillingConfigModal = ({ onClose }) => {
         fetchConfig();
         fetchInvoices();
         fetchPrintersConfig();
+        fetchWindowsPrinters();
+        checkAgentStatus();
     }, []);
 
     useEffect(() => {
@@ -1387,10 +1419,65 @@ const BillingConfigModal = ({ onClose }) => {
 
                     {activeTab === 'printers' && user?.role === 'admin' && (
                         <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
+
+                            {/* === PANEL: INSTALAR AGENTE EN ESTA PC === */}
+                            <div className={`border rounded-xl p-5 space-y-3 ${agentStatus === 'active' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${agentStatus === 'active' ? 'bg-green-600' : 'bg-blue-600'}`}>1</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className={`font-bold text-sm ${agentStatus === 'active' ? 'text-green-900' : 'text-blue-900'}`}>Agente de Impresión en esta PC</h4>
+                                            {agentStatus === 'active' && (
+                                                <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block"></span>
+                                                    Activo
+                                                </span>
+                                            )}
+                                            {agentStatus === 'inactive' && (
+                                                <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                                                    No instalado en esta PC
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className={`text-xs ${agentStatus === 'active' ? 'text-green-700' : 'text-blue-700'}`}>
+                                            {agentStatus === 'active'
+                                                ? 'El agente está corriendo y arrancará automáticamente con Windows. No necesitas hacer nada más en esta PC.'
+                                                : 'Cada PC del restaurante que tenga una impresora conectada debe instalar el agente una sola vez. Funciona en segundo plano.'}
+                                        </p>
+                                    </div>
+                                </div>
+                                {agentStatus !== 'active' && (
+                                    <div className="ml-10 space-y-2">
+                                        <div className="text-xs text-blue-800 space-y-1">
+                                            <p className="font-semibold">Pasos para esta PC:</p>
+                                            <ol className="list-decimal list-inside space-y-1 text-blue-700">
+                                                <li>Instala <strong>Node.js</strong> si no está instalado (<a href="https://nodejs.org" target="_blank" rel="noreferrer" className="underline">nodejs.org</a>)</li>
+                                                <li>Descarga el instalador haciendo clic en el botón de abajo</li>
+                                                <li>Clic derecho sobre el archivo → <strong>"Ejecutar como Administrador"</strong></li>
+                                                <li>¡Listo! El agente arranca automáticamente con cada inicio de sesión</li>
+                                            </ol>
+                                        </div>
+                                        <a
+                                            href="/api/config/printers/agent-download"
+                                            download="instalar_servicio_impresion.ps1"
+                                            className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                        >
+                                            <Download size={14} />
+                                            Descargar Instalador del Agente (.ps1)
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* === PANEL: CONFIGURAR IMPRESORAS === */}
                             <div className="flex justify-between items-center border-b pb-3">
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-800">Configuración de Impresoras Térmicas</h3>
-                                    <p className="text-xs text-gray-500">Configura la impresión directa USB o mediante la cola de Windows</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold text-sm shrink-0">2</div>
+                                        <h3 className="text-lg font-bold text-gray-800">Configuración de Impresoras</h3>
+                                    </div>
+                                    <p className="text-xs text-gray-500 ml-10">Esta configuración es global — aplica a todas las PCs del restaurante.</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1413,6 +1500,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                             ...prev,
                                                             [key]: { ...prev[key], type }
                                                         }));
+                                                        if (type === 'windows_print') fetchWindowsPrinters();
                                                     }}
                                                 >
                                                     <option value="disabled">Deshabilitada</option>
@@ -1465,20 +1553,39 @@ const BillingConfigModal = ({ onClose }) => {
                                             {prt.type === 'windows_print' && (
                                                 <div className="space-y-1 animate-in fade-in duration-200">
                                                     <label className="text-xs font-bold text-gray-500 uppercase">Nombre en Windows</label>
-                                                    <input
-                                                        type="text"
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                        placeholder="Ej. Advance, Cocina, Barra"
-                                                        value={prt.printerName || ''}
-                                                        onChange={(e) => {
-                                                            const printerName = e.target.value;
-                                                            setPrinters(prev => ({
-                                                                ...prev,
-                                                                [key]: { ...prev[key], printerName }
-                                                            }));
-                                                        }}
-                                                    />
-                                                    <span className="text-[10px] text-gray-400 block">Nombre exacto de la impresora.</span>
+                                                    {windowsPrinters.length > 0 ? (
+                                                        <select
+                                                            className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                                                            value={prt.printerName || ''}
+                                                            onChange={(e) => {
+                                                                const printerName = e.target.value;
+                                                                setPrinters(prev => ({
+                                                                    ...prev,
+                                                                    [key]: { ...prev[key], printerName }
+                                                                }));
+                                                            }}
+                                                        >
+                                                            <option value="">-- Seleccionar impresora --</option>
+                                                            {windowsPrinters.map(name => (
+                                                                <option key={name} value={name}>{name}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                            placeholder="Ej. POS 80 Series, Advance, Cocina"
+                                                            value={prt.printerName || ''}
+                                                            onChange={(e) => {
+                                                                const printerName = e.target.value;
+                                                                setPrinters(prev => ({
+                                                                    ...prev,
+                                                                    [key]: { ...prev[key], printerName }
+                                                                }));
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <span className="text-[10px] text-gray-400 block">Nombre exacto de la impresora instalada en Windows.</span>
                                                 </div>
                                             )}
 
