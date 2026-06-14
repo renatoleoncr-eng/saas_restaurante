@@ -13,9 +13,15 @@ module.exports = {
         {
             name: 'restaurante-frontend',
             cwd: './client',
-            script: 'npm.cmd',
-            args: 'run dev',
-            interpreter: 'none',
+            script: 'node_modules/vite/bin/vite.js',
+            watch: false,
+            env: {
+                NODE_ENV: 'development'
+            }
+        },
+        {
+            name: 'restaurante-print-agent',
+            script: 'print-agent.js',
             watch: false,
             env: {
                 NODE_ENV: 'development'
