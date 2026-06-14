@@ -92,6 +92,8 @@ router.post('/config/printers/test', async (req, res) => {
         builder.line(`Tipo de Puerto: ${type}`);
         if (type === 'usb') {
             builder.line(`USB Path: ${path}`);
+        } else if (type === 'ethernet') {
+            builder.line(`IP Impresora: ${path}`);
         } else {
             builder.line(`Nombre Windows: ${printerName}`);
         }

@@ -170,7 +170,38 @@ elseif ($PrinterType -eq "windows_print") {
     }
 }
 
+elseif ($PrinterType -eq "ethernet" -or $PrinterType -eq "network") {
+    if ([string]::IsNullOrEmpty($PrinterPath)) {
+        Write-Error "Error: PrinterPath (IP Address) is empty for Ethernet printing."
+        exit 1
+    }
+
+    $ip = $PrinterPath.Trim()
+    $port = 9100
+    if ($ip -like "*:*") {
+        $parts = $ip.Split(":")
+        $ip = $parts[0]
+        $port = [int]$parts[1]
+    }
+
+    Write-Host "Sending print job directly to TCP socket $($ip):$($port)"
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $client.Connect($ip, $port)
+        $stream = $client.GetStream()
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Close()
+        Write-Host "Success: Sent raw bytes directly to Ethernet printer at $($ip):$($port)."
+        exit 0
+    } catch {
+        Write-Error "Error: Failed to connect or write to $($ip):$($port). Detail: $_"
+        exit 1
+    } finally {
+        $client.Close()
+    }
+}
+
 else {
-    Write-Error "Error: Invalid PrinterType '$PrinterType'. Must be 'usb' or 'windows_print'."
+    Write-Error "Error: Invalid PrinterType '$PrinterType'. Must be 'usb', 'windows_print' or 'ethernet'."
     exit 1
 }

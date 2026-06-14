@@ -1418,6 +1418,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                     <option value="disabled">Deshabilitada</option>
                                                     <option value="usb">USB Directo (RAW)</option>
                                                     <option value="windows_print">Cola de Windows (Spooler)</option>
+                                                    <option value="ethernet">Red Ethernet (IP Directo)</option>
                                                 </select>
                                             </div>
 
@@ -1438,6 +1439,26 @@ const BillingConfigModal = ({ onClose }) => {
                                                         }}
                                                     />
                                                     <span className="text-[10px] text-gray-400 block">Ruta del puerto USB.</span>
+                                                </div>
+                                            )}
+
+                                            {prt.type === 'ethernet' && (
+                                                <div className="space-y-1 animate-in fade-in duration-200">
+                                                    <label className="text-xs font-bold text-gray-500 uppercase">Dirección IP de la Impresora</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
+                                                        placeholder="Ej. 192.168.1.23"
+                                                        value={prt.path || ''}
+                                                        onChange={(e) => {
+                                                            const path = e.target.value;
+                                                            setPrinters(prev => ({
+                                                                ...prev,
+                                                                [key]: { ...prev[key], path }
+                                                            }));
+                                                        }}
+                                                    />
+                                                    <span className="text-[10px] text-gray-400 block">Dirección IP de la impresora en la red local.</span>
                                                 </div>
                                             )}
 
