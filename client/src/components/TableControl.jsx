@@ -696,7 +696,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                     name: accRes.data.customerName,
                     dni: accRes.data.clientDni || '',
                     direccion: accRes.data.clientAddress || '',
-                    accountType: accRes.data.accountType || 'standard'
+                    accountType: accRes.data.accountType || 'standard',
+                    staffTotal: accRes.data.accountType === 'staff' ? parseFloat(accRes.data.total) : 0
                 });
 
                 // If viewing a history account and we didn't pass tableId, try to load its historical table
@@ -818,14 +819,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 clientDni: '',
                 clientAddress: clientForm.direccion || '',
                 userId: user?.id || null,
-                accountType: clientForm.accountType
+                accountType: clientForm.accountType,
+                staffTotal: clientForm.accountType === 'staff' ? parseFloat(clientForm.staffTotal || 0) : undefined
             });
             setAccount(res.data);
             setClientForm({
                 name: res.data.customerName,
                 dni: res.data.clientDni || '',
                 direccion: res.data.clientAddress || '',
-                accountType: res.data.accountType || 'standard'
+                accountType: res.data.accountType || 'standard',
+                staffTotal: res.data.accountType === 'staff' ? parseFloat(res.data.total) : 0
             });
             return res.data;
         } catch (err) {
@@ -834,7 +837,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
             if (errorMsg === 'Mesa ya ocupada') {
                 console.log("Mesa ya ocupada, recargando datos...");
-                await loadData();
+                refreshData();
                 return null;
             }
 
@@ -1095,7 +1098,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             if (!targetAccountId) {
                 // Open account NOW because we are sending an order
                 const newAccount = await handleAutoOpen();
-                if (!newAccount) return false;
+                if (!newAccount) {
+                    setIsSendingOrder(false);
+                    return false;
+                }
                 targetAccountId = newAccount.id;
             }
 
@@ -1974,7 +1980,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                                     {/* Actions */}
                                                     <div className="flex items-center gap-2">
-                                                        {user.role === 'admin' && (
+                                                        {user?.role === 'admin' && (
                                                             deleteConfirmId === o.id ? (
                                                                 <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                                     <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
@@ -3206,7 +3212,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                             {/* Actions */}
                                             <div className="flex items-center gap-2">
-                                                {user.role === 'admin' && (
+                                                {user?.role === 'admin' && (
                                                     deleteConfirmId === o.id ? (
                                                         <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                                                             <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>

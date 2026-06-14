@@ -163,5 +163,31 @@ router.get('/config/printers/agent-download', (req, res) => {
     fs.createReadStream(scriptPath).pipe(res);
 });
 
+// GET download print-agent.js (el agente en sí, para instalación automática en nuevas PCs)
+router.get('/config/printers/agent-js', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.resolve(__dirname, '../../print-agent.js');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'print-agent.js no encontrado en el servidor.' });
+    }
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Content-Disposition', 'attachment; filename="print-agent.js"');
+    fs.createReadStream(filePath).pipe(res);
+});
+
+// GET download print_raw.ps1 (script auxiliar de impresion directa)
+router.get('/config/printers/print-raw-ps1', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.resolve(__dirname, '../utils/print_raw.ps1');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'print_raw.ps1 no encontrado en el servidor.' });
+    }
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="print_raw.ps1"');
+    fs.createReadStream(filePath).pipe(res);
+});
+
 module.exports = router;
 

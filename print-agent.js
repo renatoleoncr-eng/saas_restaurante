@@ -44,41 +44,14 @@ log('  AGENTE DE IMPRESION LOCAL - GESTION RESTAURANTE');
 log(`  Servidor: ${serverUrl}`);
 log('=============================================================');
 
-function getEnabledLocalPrinters() {
-    const localConfigPath = path.join(__dirname, 'local-printer-config.json');
-    if (!fs.existsSync(localConfigPath)) {
-        return null;
-    }
-    try {
-        const data = fs.readFileSync(localConfigPath, 'utf8');
-        const config = JSON.parse(data);
-        const enabled = [];
-        for (const [key, val] of Object.entries(config)) {
-            if (val && val.type && val.type !== 'disabled') {
-                enabled.push(key);
-            }
-        }
-        return enabled;
-    } catch (err) {
-        log(`[ERROR] Error al parsear local-printer-config.json: ${err.message}`);
-        return null;
-    }
-}
+// La configuración de impresoras es GLOBAL y viene desde el servidor con cada job.
+// No existe configuración local por PC — cualquier PC puede imprimr usando cualquier impresora registrada.
+// El filtro por impresora se hace en el servidor via ?printers=caja,cocina
 
-function getLocalPrinterConfig(printerKey) {
-    const localConfigPath = path.join(__dirname, 'local-printer-config.json');
-    if (fs.existsSync(localConfigPath)) {
-        try {
-            const data = fs.readFileSync(localConfigPath, 'utf8');
-            const config = JSON.parse(data);
-            if (config && config[printerKey]) {
-                return config[printerKey];
-            }
-        } catch (err) {
-            log(`[ERROR] No se pudo leer local-printer-config.json: ${err.message}`);
-        }
-    }
-    return null;
+// Lista de qué keys de impresora gestiona este agente.
+// Por defecto gestiona TODAS (no hay filtro local).
+function getEnabledLocalPrinters() {
+    return null; // null = pedir todos los trabajos al servidor sin filtro
 }
 
 function poll() {
@@ -146,8 +119,7 @@ function processJobs(jobs) {
     }
 
     const job = jobs.shift();
-    const localConfig = job.printerKey ? getLocalPrinterConfig(job.printerKey) : null;
-    const printerConfig = localConfig || job.printerConfig || {};
+    const printerConfig = job.printerConfig || {};
     const ptype = (printerConfig.type || 'disabled').toUpperCase();
     
     log(`[PRINT] Procesando trabajo #${job.id} (Key: ${job.printerKey || 'caja'}) -> ${ptype}`);
