@@ -59,3 +59,8 @@ docker-compose.override.yml
 tmp/
 temp/
 *.tmp
+
+# Local printer config
+local-printer-config.json
+local-printer-config.json.bak
+

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter, getPendingJobs } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters } = require('../utils/printer');
 
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
@@ -103,7 +103,7 @@ router.post('/config/printers/test', async (req, res) => {
         builder.line("-".repeat(42)).feed(4).cut();
 
         const config = { type, path, printerName };
-        const result = await sendToPrinter(config, builder.toHex());
+        const result = await sendToPrinter(printerKey, config, builder.toHex());
 
         if (result.success) {
             res.json({ success: true, message: 'Prueba enviada con exito!' });
@@ -118,7 +118,14 @@ router.post('/config/printers/test', async (req, res) => {
 // GET pending print jobs for local print agent
 router.get('/config/printers/pending', (req, res) => {
     try {
-        const jobs = getPendingJobs();
+        const { printers } = req.query;
+        let jobs;
+        if (printers) {
+            const keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+            jobs = getPendingJobsForPrinters(keys);
+        } else {
+            jobs = getPendingJobs();
+        }
         res.json(jobs);
     } catch (err) {
         res.status(500).json({ error: err.message });

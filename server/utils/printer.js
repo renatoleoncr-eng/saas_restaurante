@@ -172,7 +172,7 @@ async function getPrintersConfig() {
     };
 }
 
-async function sendToPrinter(printerConfig, hexData) {
+async function sendToPrinter(printerKey, printerConfig, hexData) {
     if (!printerConfig || printerConfig.type === 'disabled') {
         console.log("Printer is disabled or not configured.");
         return { success: false, error: 'disabled' };
@@ -183,12 +183,13 @@ async function sendToPrinter(printerConfig, hexData) {
         jobCounter++;
         const job = {
             id: jobCounter,
+            printerKey: printerKey || 'caja',
             printerConfig,
             hexData,
             createdAt: new Date()
         };
         pendingJobs.push(job);
-        console.log(`[Printer Queue] Queued print job #${job.id} for local print agent.`);
+        console.log(`[Printer Queue] Queued print job #${job.id} for local print agent (${printerKey || 'caja'}).`);
         return { success: true, queued: true, jobId: job.id };
     }
 
@@ -219,11 +220,13 @@ async function sendToPrinter(printerConfig, hexData) {
 async function printTicket(printerKey, builder) {
     const configs = await getPrintersConfig();
     let printerConfig = configs[printerKey];
+    let targetPrinterKey = printerKey;
 
     // Fallback: if Cocina/Barra is disabled, try to route to Caja
     if ((printerKey === 'cocina' || printerKey === 'barra') && (!printerConfig || printerConfig.type === 'disabled')) {
         console.log(`[Printer Fallback] ${printerKey} printer disabled. Routing comanda to Caja printer.`);
         printerConfig = configs['caja'];
+        targetPrinterKey = 'caja';
     }
 
     if (!printerConfig || printerConfig.type === 'disabled') {
@@ -232,7 +235,7 @@ async function printTicket(printerKey, builder) {
     }
 
     const hex = builder.toHex();
-    return await sendToPrinter(printerConfig, hex);
+    return await sendToPrinter(targetPrinterKey, printerConfig, hex);
 }
 
 // === TICKET TEMPLATE GENERATORS ===
@@ -651,6 +654,23 @@ function getPendingJobs() {
     return jobs;
 }
 
+function getPendingJobsForPrinters(printerKeys) {
+    const jobsToReturn = [];
+    const jobsToKeep = [];
+
+    for (const job of pendingJobs) {
+        if (!job.printerKey || printerKeys.includes(job.printerKey.toLowerCase())) {
+            jobsToReturn.push(job);
+        } else {
+            jobsToKeep.push(job);
+        }
+    }
+
+    pendingJobs.length = 0;
+    pendingJobs.push(...jobsToKeep);
+    return jobsToReturn;
+}
+
 module.exports = {
     cleanSpanishChars,
     EscPosBuilder,
@@ -663,5 +683,6 @@ module.exports = {
     triggerPreCuentaPrint,
     triggerComandaPrint,
     triggerInvoicePrint,
-    getPendingJobs
+    getPendingJobs,
+    getPendingJobsForPrinters
 };

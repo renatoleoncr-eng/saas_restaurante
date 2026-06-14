@@ -789,6 +789,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     // --- NEW: Custom Staff Confirmation ---
     const [showStaffConfirm, setShowStaffConfirm] = useState(false);
+    const [staffTotalInput, setStaffTotalInput] = useState('');
     // --------------------------------------
 
     useModalBackHandler(true, onClose);

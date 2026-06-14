@@ -44,9 +44,59 @@ log('  AGENTE DE IMPRESION LOCAL - GESTION RESTAURANTE');
 log(`  Servidor: ${serverUrl}`);
 log('=============================================================');
 
+function getEnabledLocalPrinters() {
+    const localConfigPath = path.join(__dirname, 'local-printer-config.json');
+    if (!fs.existsSync(localConfigPath)) {
+        return null;
+    }
+    try {
+        const data = fs.readFileSync(localConfigPath, 'utf8');
+        const config = JSON.parse(data);
+        const enabled = [];
+        for (const [key, val] of Object.entries(config)) {
+            if (val && val.type && val.type !== 'disabled') {
+                enabled.push(key);
+            }
+        }
+        return enabled;
+    } catch (err) {
+        log(`[ERROR] Error al parsear local-printer-config.json: ${err.message}`);
+        return null;
+    }
+}
+
+function getLocalPrinterConfig(printerKey) {
+    const localConfigPath = path.join(__dirname, 'local-printer-config.json');
+    if (fs.existsSync(localConfigPath)) {
+        try {
+            const data = fs.readFileSync(localConfigPath, 'utf8');
+            const config = JSON.parse(data);
+            if (config && config[printerKey]) {
+                return config[printerKey];
+            }
+        } catch (err) {
+            log(`[ERROR] No se pudo leer local-printer-config.json: ${err.message}`);
+        }
+    }
+    return null;
+}
+
 function poll() {
     const client = serverUrl.startsWith('https') ? https : http;
-    const urlObj = new URL(`${serverUrl}/api/config/printers/pending`);
+    
+    const enabledPrinters = getEnabledLocalPrinters();
+    let pendingUrl = `${serverUrl}/api/config/printers/pending`;
+    
+    if (enabledPrinters !== null) {
+        if (enabledPrinters.length === 0) {
+            // No printers configured or all disabled -> wait and retry later
+            setTimeout(poll, POLL_INTERVAL_ERR);
+            return;
+        }
+        pendingUrl += `?printers=${enabledPrinters.join(',')}`;
+    }
+
+    const urlObj = new URL(pendingUrl);
 
     const req = client.get(urlObj, { headers: { 'Cache-Control': 'no-cache' } }, (res) => {
         let data = '';
@@ -78,10 +128,8 @@ function poll() {
     });
 
     req.setTimeout(10000, () => {
+        log('[WARN] Timeout de conexion con el servidor. Destruyendo socket...');
         req.destroy();
-        log('[WARN] Timeout de conexion con el servidor. Reintentando...');
-        currentPollInterval = Math.min(currentPollInterval + POLL_INTERVAL_ERR, POLL_INTERVAL_MAX);
-        setTimeout(poll, currentPollInterval);
     });
 
     req.on('error', (err) => {
@@ -98,9 +146,17 @@ function processJobs(jobs) {
     }
 
     const job = jobs.shift();
-    const printerConfig = job.printerConfig || {};
+    const localConfig = job.printerKey ? getLocalPrinterConfig(job.printerKey) : null;
+    const printerConfig = localConfig || job.printerConfig || {};
     const ptype = (printerConfig.type || 'disabled').toUpperCase();
-    log(`[PRINT] Procesando trabajo #${job.id} -> ${ptype}`);
+    
+    log(`[PRINT] Procesando trabajo #${job.id} (Key: ${job.printerKey || 'caja'}) -> ${ptype}`);
+
+    if (ptype === 'DISABLED') {
+        log(`[WARN] Trabajo #${job.id} omitido porque la impresora local está deshabilitada.`);
+        setTimeout(() => processJobs(jobs), 300);
+        return;
+    }
 
     const args = [
         '-NoProfile', '-ExecutionPolicy', 'Bypass',
