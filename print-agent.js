@@ -1,56 +1,93 @@
+/**
+ * Agente de Impresión Local - Gestión Restaurante El Makala
+ * 
+ * Este proceso corre en segundo plano en la PC del restaurante.
+ * Consulta periódicamente el servidor en la nube por trabajos de
+ * impresión pendientes y los ejecuta usando la impresora local.
+ * 
+ * Se inicia automáticamente con Windows vía la carpeta de Inicio.
+ * No requiere abrir nada manualmente.
+ */
+
 const https = require('https');
-const http = require('http');
+const http  = require('http');
 const { execFile } = require('child_process');
-const path = require('path');
+const path  = require('path');
+const fs    = require('fs');
 
-const serverUrl = process.argv[2] || 'https://makala.maksuites.com.pe';
-console.log(`\n=============================================================`);
-console.log(`  AGENTE DE IMPRESIÓN LOCAL - GESTIÓN RESTAURANTE`);
-console.log(`  Servidor: ${serverUrl}`);
-console.log(`  Impresoras configuradas en la nube se redirigirán aquí`);
-console.log(`=============================================================\n`);
-console.log(`[Print Agent] Iniciando escucha de cola de impresión...`);
-console.log(`[Print Agent] Presione Ctrl+C para detener el agente.\n`);
-
+const serverUrl  = process.argv[2] || 'https://makala.maksuites.com.pe';
 const scriptPath = path.join(__dirname, 'server', 'utils', 'print_raw.ps1');
+const logFile    = path.join(__dirname, 'print-agent.log');
+
+// Backoff settings for when server is unreachable
+const POLL_INTERVAL_OK    = 1000;   // 1s when server OK
+const POLL_INTERVAL_ERR   = 5000;   // 5s on first error
+const POLL_INTERVAL_MAX   = 30000;  // max 30s backoff
+let   currentPollInterval = POLL_INTERVAL_OK;
+
+// Log to both console and file (max 500KB, then truncate)
+function log(msg) {
+    const line = `[${new Date().toISOString()}] ${msg}`;
+    console.log(line);
+    try {
+        const stat = fs.existsSync(logFile) ? fs.statSync(logFile) : null;
+        if (stat && stat.size > 500 * 1024) {
+            fs.writeFileSync(logFile, line + '\n');
+        } else {
+            fs.appendFileSync(logFile, line + '\n');
+        }
+    } catch (_) { /* ignore log write errors */ }
+}
+
+log('=============================================================');
+log('  AGENTE DE IMPRESION LOCAL - GESTION RESTAURANTE');
+log(`  Servidor: ${serverUrl}`);
+log('=============================================================');
 
 function poll() {
     const client = serverUrl.startsWith('https') ? https : http;
     const urlObj = new URL(`${serverUrl}/api/config/printers/pending`);
-    
-    const req = client.get(urlObj, {
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    }, (res) => {
+
+    const req = client.get(urlObj, { headers: { 'Cache-Control': 'no-cache' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
             if (res.statusCode !== 200) {
-                console.error(`[Print Agent] Servidor retornó estado ${res.statusCode}: ${data}`);
-                setTimeout(poll, 3000);
+                log(`[WARN] Servidor retorno estado ${res.statusCode}. Reintentando en ${currentPollInterval / 1000}s...`);
+                currentPollInterval = Math.min(currentPollInterval * 2, POLL_INTERVAL_MAX);
+                setTimeout(poll, currentPollInterval);
                 return;
             }
-            
+
+            // Server OK - reset backoff
+            currentPollInterval = POLL_INTERVAL_OK;
+
             try {
                 const jobs = JSON.parse(data);
                 if (jobs && jobs.length > 0) {
-                    console.log(`[Print Agent] Recibidos ${jobs.length} trabajos de impresión.`);
+                    log(`[INFO] Recibidos ${jobs.length} trabajo(s) de impresion.`);
                     processJobs(jobs);
                 } else {
-                    // Poll again in 1 second
-                    setTimeout(poll, 1000);
+                    setTimeout(poll, currentPollInterval);
                 }
             } catch (err) {
-                console.error(`[Print Agent] Error al decodificar JSON:`, err.message);
-                setTimeout(poll, 3000);
+                log(`[ERROR] Error al decodificar JSON: ${err.message}`);
+                setTimeout(poll, POLL_INTERVAL_ERR);
             }
         });
     });
-    
+
+    req.setTimeout(10000, () => {
+        req.destroy();
+        log('[WARN] Timeout de conexion con el servidor. Reintentando...');
+        currentPollInterval = Math.min(currentPollInterval + POLL_INTERVAL_ERR, POLL_INTERVAL_MAX);
+        setTimeout(poll, currentPollInterval);
+    });
+
     req.on('error', (err) => {
-        console.error(`[Print Agent] Error de conexión con el servidor (${err.message}). Reintentando en 3s...`);
-        setTimeout(poll, 3000);
+        currentPollInterval = Math.min(currentPollInterval * 2 || POLL_INTERVAL_ERR, POLL_INTERVAL_MAX);
+        log(`[WARN] Sin conexion (${err.message}). Reintentando en ${currentPollInterval / 1000}s...`);
+        setTimeout(poll, currentPollInterval);
     });
 }
 
@@ -59,11 +96,12 @@ function processJobs(jobs) {
         poll();
         return;
     }
-    
+
     const job = jobs.shift();
     const printerConfig = job.printerConfig || {};
-    console.log(`[Print Agent] [%s] Procesando impresión para ${printerConfig.type.toUpperCase()}...`, new Date().toLocaleTimeString());
-    
+    const ptype = (printerConfig.type || 'disabled').toUpperCase();
+    log(`[PRINT] Procesando trabajo #${job.id} -> ${ptype}`);
+
     const args = [
         '-NoProfile', '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
@@ -73,22 +111,17 @@ function processJobs(jobs) {
         '-HexData', job.hexData
     ];
 
-    execFile('powershell.exe', args, (error, stdout, stderr) => {
+    execFile('powershell.exe', args, { timeout: 15000 }, (error, stdout, stderr) => {
         if (error) {
-            console.error(`[Print Agent] Error al imprimir Trabajo #${job.id}:`, error.message);
-            if (stderr) console.error(`[Print Agent] Detalle:`, stderr);
+            log(`[ERROR] Trabajo #${job.id} fallo: ${error.message}`);
+            if (stderr) log(`[ERROR] Detalle: ${stderr.trim()}`);
         } else {
-            console.log(`[Print Agent] Trabajo #${job.id} impreso con éxito.`);
-            if (stdout) {
-                const cleanOut = stdout.replace(/[\r\n]+/g, ' ').trim();
-                console.log(`[Print Agent] Info: ${cleanOut}`);
-            }
+            const info = stdout ? stdout.replace(/[\r\n]+/g, ' ').trim() : '';
+            log(`[OK] Trabajo #${job.id} impreso. ${info}`);
         }
-        
-        // Process next job after small delay to let spooler relax
-        setTimeout(() => processJobs(jobs), 200);
+        setTimeout(() => processJobs(jobs), 300);
     });
 }
 
-// Start polling loop
+// Start polling
 poll();
