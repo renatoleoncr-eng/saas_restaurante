@@ -22,6 +22,10 @@ RUN npm install --production
 # Copy server code
 COPY server/ ./
 
+# Copy print agent files (served via /api/config/printers/agent-download, agent-js, print-raw-ps1)
+COPY print-agent.js ../print-agent.js
+COPY instalar_servicio_impresion.ps1 ../instalar_servicio_impresion.ps1
+
 # Copy built frontend from Stage 1
 COPY --from=client-build /app/client/dist ../client/dist
 
