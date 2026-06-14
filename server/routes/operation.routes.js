@@ -39,7 +39,8 @@ router.post('/accounts/open', async (req, res) => {
             clientDni: clientDni || null,
             clientAddress: clientAddress || null,
             status: 'open',
-            accountType: accountType || 'standard'
+            accountType: accountType || 'standard',
+            total: accountType === 'staff' && req.body.staffTotal !== undefined ? parseFloat(req.body.staffTotal) : 0
         });
 
         // Update Table Status
@@ -66,7 +67,7 @@ router.post('/accounts/open', async (req, res) => {
 router.put('/accounts/:id', async (req, res) => {
     try {
         const { Account } = getModels();
-        const { customerName, clientDni, clientAddress, accountType } = req.body;
+        const { customerName, clientDni, clientAddress, accountType, staffTotal } = req.body;
         const account = await Account.findByPk(req.params.id);
 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
@@ -77,10 +78,9 @@ router.put('/accounts/:id', async (req, res) => {
         if (accountType !== undefined && accountType !== account.accountType) {
             account.accountType = accountType;
             const { Order } = getModels();
-            // If converting to staff, force all orders to 0 and reset total
+            // If converting to staff, reset total (keep original prices on orders)
             if (accountType === 'staff') {
-                await Order.update({ priceAtOrder: 0 }, { where: { AccountId: account.id } });
-                account.total = 0;
+                account.total = staffTotal !== undefined ? parseFloat(staffTotal) : 0;
             } else if (accountType === 'standard') {
                 // Restore priceAtOrder from priceAtOrderAtCreation
                 const orders = await Order.findAll({ where: { AccountId: account.id } });
@@ -128,6 +128,9 @@ router.put('/accounts/:id', async (req, res) => {
                 }
                 account.total = newTotal;
             }
+        } else if (staffTotal !== undefined && account.accountType === 'staff') {
+            // Allow updating the total of an existing staff account
+            account.total = parseFloat(staffTotal);
         }
 
         await account.save();
@@ -1113,7 +1116,7 @@ router.post('/orders', async (req, res) => {
             // COMBO ITEMS (2x1 drink promotions have no productId)
             if (item.isCombo || !item.productId) {
                 const originalComboPrice = parseFloat(item.price) || 0;
-                const finalComboPrice = isStaff ? 0 : originalComboPrice;
+                const finalComboPrice = originalComboPrice;
 
                 const comboOrder = await Order.create({
                     AccountId: accountId,
@@ -1161,7 +1164,7 @@ router.post('/orders', async (req, res) => {
             let originalResolvedPrice = parseFloat(product.price);
             let appliedHappyHour = false;
 
-            if (item.price !== undefined && item.price !== null && !isNaN(parseFloat(item.price)) && !isStaff) {
+            if (item.price !== undefined && item.price !== null && !isNaN(parseFloat(item.price))) {
                 originalResolvedPrice = parseFloat(item.price); // Trust the custom price generated for split items or combos
             } else if (item.presentation && product.ProductVariants && product.ProductVariants.length > 0) {
                 const variant = product.ProductVariants.find(v => v.name === item.presentation);
@@ -1203,10 +1206,6 @@ router.post('/orders', async (req, res) => {
             }
 
             let finalPrice = originalResolvedPrice;
-            if (isStaff) {
-                finalPrice = 0;
-                console.log(`[Orders] Staff Account: Forcing price to 0 for ${product.name} (Original: ${originalResolvedPrice})`);
-            }
 
             const order = await Order.create({
                 AccountId: accountId,
@@ -1259,7 +1258,9 @@ router.post('/orders', async (req, res) => {
         }
 
         // Update Account Total
-        account.total = parseFloat(account.total) + totalAdd;
+        if (account.accountType !== 'staff') {
+            account.total = parseFloat(account.total) + totalAdd;
+        }
         await account.save({ transaction: t });
 
         await t.commit();
@@ -1376,7 +1377,9 @@ router.delete('/orders/:id', async (req, res) => {
         await order.destroy();
 
         // 2. Recalculate Account Total safely
-        account.total = Math.max(0, parseFloat(account.total) - totalDeduction);
+        if (account.accountType !== 'staff') {
+            account.total = Math.max(0, parseFloat(account.total) - totalDeduction);
+        }
         await account.save();
 
         // 3. Audit log
@@ -1440,7 +1443,9 @@ router.put('/orders/:id/decrement', async (req, res) => {
         }
 
         // 2. Recalculate Account Total safely
-        account.total = Math.max(0, parseFloat(account.total) - orderPrice);
+        if (account.accountType !== 'staff') {
+            account.total = Math.max(0, parseFloat(account.total) - orderPrice);
+        }
         await account.save();
 
         // 3. Audit log

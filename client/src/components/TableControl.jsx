@@ -916,8 +916,6 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return;
         }
 
-        const isStaffConsumption = (account?.accountType === 'staff') || (!account && clientForm?.accountType === 'staff');
-
         let basePrice = 0;
         let activePrice = 0;
 
@@ -943,8 +941,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             activePrice = isHH ? parseFloat(product.happyHourPrice) : basePrice;
         }
 
-        const finalPriceCalc = isStaffConsumption ? 0 : activePrice;
-        const originalPriceCalc = isStaffConsumption ? activePrice : basePrice;
+        const finalPriceCalc = activePrice;
+        const originalPriceCalc = basePrice;
 
         setCart(prev => {
             // Use custom ticket name over original name if provided (helpful for decoupled combos)
@@ -1239,8 +1237,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return;
         }
 
-        if (account.accountType === 'staff') {
-            if (!confirm("¿Cerrar consumo de personal? (Total S/ 0)")) return;
+        if (account.accountType === 'staff' && parseFloat(account.total) === 0) {
+            if (!confirm("¿Cerrar consumo de personal? (Total S/ 0.00)")) return;
             try {
                 const formData = new FormData();
                 formData.append('paymentMethod', 'consumo_interno');
@@ -1680,6 +1678,20 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const totalPaid = account?.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
     const remaining = account ? Math.max(0, accountTotal - totalPaid) : 0;
 
+    const isStaff = (account?.accountType === 'staff') || (!account && clientForm.accountType === 'staff');
+    
+    // Original total (sum of all items at standard prices + cart)
+    const originalOrdersTotal = account?.Orders 
+        ? account.Orders.reduce((sum, o) => o.status !== 'cancelled' ? sum + (parseFloat(o.priceAtOrder) * o.quantity) : sum, 0) 
+        : 0;
+    const originalGrandTotal = originalOrdersTotal + cartTotal;
+
+    // Custom/Payable total
+    const staffPayableTotal = account ? accountTotal : (parseFloat(clientForm.staffTotal) || 0);
+    const grandTotal = isStaff 
+        ? Math.max(0, staffPayableTotal - totalPaid) 
+        : (cartTotal + (totalPaid > 0 ? remaining : accountTotal));
+
     if (loading) {
         return createPortal(
             <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">Cargando...</div>,
@@ -1712,9 +1724,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     checked={clientForm.accountType === 'staff'}
                                                     onChange={async (e) => {
                                                         if (e.target.checked) {
+                                                            setStaffTotalInput(clientForm.staffTotal || 0);
                                                             setShowStaffConfirm(true); // Open custom modal
                                                         } else {
-                                                            const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '' };
+                                                            const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
                                                             setClientForm(newClientForm);
                                                             if (account) {
                                                                 try {
@@ -1738,14 +1751,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                 <label htmlFor="staff_toggle_edit_mobile" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
                                             </div>
                                             {clientForm.accountType === 'staff' ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                                    <input 
-                                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                        value={clientForm.direccion || ''} 
-                                                        onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                        placeholder="Escriba un comentario (ej: Juan Pérez)" 
-                                                    />
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-1">
+                                                        <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
+                                                        <input 
+                                                            type="number"
+                                                            min="0"
+                                                            step="1"
+                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                            value={clientForm.staffTotal} 
+                                                            onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                                        <input 
+                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                            value={clientForm.direccion || ''} 
+                                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                            placeholder="Escriba un comentario (ej: Juan Pérez)" 
+                                                        />
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <>
@@ -1792,7 +1818,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-600 text-sm">Cuenta #{account.id}</span>
                                                 <div className="flex flex-col items-end">
-                                                    {totalPaid > 0 ? (
+                                                    {isStaff ? (
+                                                        <div className="flex flex-col items-end">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-xs text-gray-400 line-through">
+                                                                    S/ {Number(originalOrdersTotal).toFixed(1)}
+                                                                </span>
+                                                                <span className="font-bold text-lg text-blue-800">
+                                                                    S/ {Number(accountTotal).toFixed(1)}
+                                                                </span>
+                                                            </div>
+                                                            {totalPaid > 0 && (
+                                                                <span className="text-xs text-gray-500">
+                                                                    Abonado: S/ {totalPaid.toFixed(1)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : totalPaid > 0 ? (
                                                         <>
                                                             <span className="text-xs text-gray-500 line-through">Total: S/ {accountTotal.toFixed(2)}</span>
                                                             <span className="font-bold text-lg text-blue-800">Saldo: S/ {remaining.toFixed(2)}</span>
@@ -1836,6 +1878,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             checked={clientForm.accountType === 'staff'}
                                             onChange={(e) => {
                                                 if (e.target.checked) {
+                                                    setStaffTotalInput(clientForm.staffTotal || 0);
                                                     setShowStaffConfirm(true); // Open custom modal
                                                 } else {
                                                     setClientForm({ ...clientForm, accountType: 'standard' });
@@ -1846,14 +1889,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         <label htmlFor="staff_toggle_new_mobile" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
                                     </div>
                                     {clientForm.accountType === 'staff' && (
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                            <input 
-                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                value={clientForm.direccion || ''} 
-                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                placeholder="Escriba un comentario..." 
-                                            />
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
+                                                <input 
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                    value={clientForm.staffTotal} 
+                                                    onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                                <input 
+                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                    value={clientForm.direccion || ''} 
+                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                    placeholder="Escriba un comentario..." 
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -1898,25 +1954,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                 }
                                             }
 
-                                            const isStaff = account?.accountType === 'staff';
                                             return (
                                                 <div key={o.key} className="flex justify-between items-center text-sm border-b border-dashed pb-2 last:border-b-0 last:pb-0">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-gray-700">
                                                             {o.quantity}x {pName}
                                                             <span className="text-blue-600 ml-1">
-                                                                {isStaff ? (
-                                                                    o.quantity > 1 ? (
-                                                                        <span className="text-orange-600">({o.quantity}x <span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> = <span className="line-through text-gray-400">S/ {Number((o.quantity * parseFloat(originalP || 0)).toFixed(1))}</span> a costo S/ 0)</span>
-                                                                    ) : (
-                                                                        <span className="text-orange-600">(<span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> a costo S/ 0)</span>
-                                                                    )
+                                                                {o.quantity > 1 ? (
+                                                                    `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
                                                                 ) : (
-                                                                    o.quantity > 1 ? (
-                                                                        `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
-                                                                    ) : (
-                                                                        `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
-                                                                    )
+                                                                    `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
                                                                 )}
                                                             </span>
                                                         </span>
@@ -2000,11 +2047,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         </div>
 
                         <div className="p-4 border-t bg-gray-50">
-                            {account?.accountType !== 'staff' && totalPaid > 0 && (
+                            {totalPaid > 0 && (
                                 <div className="space-y-1 text-xs border-b pb-2 mb-2 text-gray-500">
                                     <div className="flex justify-between">
-                                        <span>Total consumido:</span>
-                                        <span className="font-semibold">S/ {accountTotal.toFixed(2)}</span>
+                                        <span>{isStaff ? 'Total a cobrar:' : 'Total consumido:'}</span>
+                                        <span className="font-semibold">S/ {(isStaff ? staffPayableTotal : accountTotal).toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-green-600">
                                         <span>Abonado:</span>
@@ -2014,7 +2061,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             )}
                             <div className="flex justify-between items-center mb-4">
                                 <span className="font-bold text-gray-600">{totalPaid > 0 ? 'Saldo Pendiente' : 'Total a Pagar'}</span>
-                                <span className="text-2xl font-bold text-blue-800">S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
+                                <div className="flex items-center gap-2">
+                                    {isStaff && (
+                                        <span className="text-sm text-gray-400 line-through">
+                                            S/ {Number(originalGrandTotal).toFixed(1)}
+                                        </span>
+                                    )}
+                                    <span className="text-2xl font-bold text-blue-800">S/ {Number(grandTotal).toFixed(1)}</span>
+                                </div>
                             </div>
                             <button
                                 onClick={() => setShowMobileCart(false)}
@@ -2866,7 +2920,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     <ShoppingCart size={20} />
                                     <span>{cart.length > 0 ? 'Ver Carrito' : 'Ver Cuenta'}</span>
                                 </div>
-                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
+                                <div className="flex items-center gap-2 text-right">
+                                    {isStaff && (
+                                        <span className="text-xs text-white/60 line-through">
+                                            S/ {Number(originalGrandTotal).toFixed(1)}
+                                        </span>
+                                    )}
+                                    <span>S/ {Number(grandTotal).toFixed(1)}</span>
+                                </div>
                             </button>
                         </div>
                     )}
@@ -2907,9 +2968,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             checked={clientForm.accountType === 'staff'}
                                             onChange={async (e) => {
                                                 if (e.target.checked) {
+                                                    setStaffTotalInput(clientForm.staffTotal || 0);
                                                     setShowStaffConfirm(true); // Open custom modal
                                                 } else {
-                                                    const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '' };
+                                                    const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
                                                     setClientForm(newClientForm);
                                                     if (account) {
                                                         try {
@@ -2933,14 +2995,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         <label htmlFor="staff_toggle_edit" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
                                     </div>
                                     {clientForm.accountType === 'staff' ? (
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                            <input 
-                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                                value={clientForm.direccion || ''} 
-                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                placeholder="Escriba un comentario (ej: Juan Pérez)" 
-                                            />
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
+                                                <input 
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                    value={clientForm.staffTotal} 
+                                                    onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                                <input 
+                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                                    value={clientForm.direccion || ''} 
+                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                    placeholder="Escriba un comentario (ej: Juan Pérez)" 
+                                                />
+                                            </div>
                                         </div>
                                     ) : (
                                         <>
@@ -3014,9 +3089,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         checked={clientForm.accountType === 'staff'}
                                         onChange={(e) => {
                                             if (e.target.checked) {
+                                                setStaffTotalInput(clientForm.staffTotal || 0);
                                                 setShowStaffConfirm(true); // Open custom modal
                                             } else {
-                                                setClientForm({ ...clientForm, accountType: 'standard' });
+                                                setClientForm({ ...clientForm, accountType: 'standard', staffTotal: 0 });
                                             }
                                         }}
                                         className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
@@ -3024,14 +3100,27 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     <label htmlFor="staff_toggle_new" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
                                 </div>
                                 {clientForm.accountType === 'staff' && (
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                        <input 
-                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                            value={clientForm.direccion || ''} 
-                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                            placeholder="Escriba un comentario..." 
-                                        />
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
+                                            <input 
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                value={clientForm.staffTotal} 
+                                                onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                            <input 
+                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                                                value={clientForm.direccion || ''} 
+                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
+                                                placeholder="Escriba un comentario..." 
+                                            />
+                                        </div>
                                     </div>
                                 )}
                                 <div className="text-sm text-gray-500 italic">
@@ -3186,11 +3275,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                     </div>
 
                     <div className="p-4 border-t bg-gray-50">
-                        {account?.accountType !== 'staff' && totalPaid > 0 && (
+                        {totalPaid > 0 && (
                             <div className="space-y-1 text-sm border-b pb-2 mb-2 text-gray-500">
                                 <div className="flex justify-between">
-                                    <span>Total consumido:</span>
-                                    <span className="font-semibold">S/ {accountTotal.toFixed(2)}</span>
+                                    <span>{isStaff ? 'Total a cobrar:' : 'Total consumido:'}</span>
+                                    <span className="font-semibold">S/ {(isStaff ? staffPayableTotal : accountTotal).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-green-600">
                                     <span>Abonado:</span>
@@ -3204,7 +3293,14 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 {account?.accountType === 'staff' && (
                                     <span className="text-[10px] text-orange-600 uppercase font-bold bg-orange-50 px-2 py-0.5 rounded -mb-1">Consumo Personal</span>
                                 )}
-                                <span>S/ {Number((account?.accountType === 'staff' ? 0 : (cartTotal + (totalPaid > 0 ? remaining : accountTotal))).toFixed(1))}</span>
+                                <div className="flex items-center gap-2">
+                                    {isStaff && (
+                                        <span className="text-sm text-gray-400 line-through font-normal">
+                                            S/ {Number(originalGrandTotal).toFixed(1)}
+                                        </span>
+                                    )}
+                                    <span className="text-blue-800 font-bold">S/ {Number(grandTotal).toFixed(1)}</span>
+                                </div>
                             </div>
                         </div>
                         {cart.length > 0 && (
@@ -3252,11 +3348,24 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <h3 className="text-xl font-black text-gray-800 text-center">Consumo de Personal</h3>
                         </div>
                         <div className="p-6 text-center">
-                            <p className="text-gray-600 mb-6 font-medium">
-                                ¿Estás seguro que deseas marcar esta mesa como Consumo Interno?
+                            <p className="text-gray-600 mb-4 font-medium text-sm">
+                                ¿Estás seguro que deseas marcar esta mesa como Consumo de Trabajador?
                                 <br /><br />
-                                <span className="bg-orange-100 px-2 py-1 rounded text-orange-800 text-sm font-bold">Todos los precios cambiarán a S/ 0.</span>
+                                <span className="bg-orange-100 px-2 py-1.5 rounded text-orange-800 text-xs font-bold block text-left">
+                                    Los productos mantendrán su precio original, pero el total de la cuenta se ajustará al valor ingresado.
+                                </span>
                             </p>
+                            <div className="flex flex-col gap-1 mb-6 text-left">
+                                <label className="text-xs font-bold text-gray-700">Total a cobrar (S/)</label>
+                                <input 
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    className="w-full border p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-white" 
+                                    value={staffTotalInput} 
+                                    onChange={e => setStaffTotalInput(e.target.value)} 
+                                />
+                            </div>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowStaffConfirm(false)}
@@ -3266,7 +3375,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 </button>
                                 <button
                                     onClick={async () => {
-                                        const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '' };
+                                        const parsedTotal = parseFloat(staffTotalInput) || 0;
+                                        const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '', staffTotal: parsedTotal };
                                         setClientForm(newClientForm);
                                         if (account) {
                                             try {
@@ -3274,7 +3384,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     customerName: newClientForm.name,
                                                     clientDni: newClientForm.dni,
                                                     clientAddress: newClientForm.direccion,
-                                                    accountType: newClientForm.accountType
+                                                    accountType: newClientForm.accountType,
+                                                    staffTotal: parsedTotal
                                                 });
                                                 setAccount(res.data);
                                                 setIsEditingClient(false);
