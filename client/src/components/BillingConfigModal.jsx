@@ -821,16 +821,16 @@ const BillingConfigModal = ({ onClose }) => {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b bg-white">
+                <div className="flex border-b bg-white overflow-x-auto whitespace-nowrap scrollbar-none">
                     <button 
                         onClick={() => setActiveTab('history')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'history' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'history' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
                         <FileText size={18} /> Historial
                     </button>
                     <button 
                         onClick={() => setActiveTab('new')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'new' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'new' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
                         <Plus size={18} /> Nueva Emisión
                     </button>
@@ -838,13 +838,13 @@ const BillingConfigModal = ({ onClose }) => {
                         <>
                             <button 
                                 onClick={() => setActiveTab('config')}
-                                className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                                className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
                             >
                                 <Settings size={18} /> Configuración
                             </button>
                             <button 
                                 onClick={() => setActiveTab('printers')}
-                                className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'printers' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                                className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'printers' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
                             >
                                 <Printer size={18} /> Impresoras
                             </button>
