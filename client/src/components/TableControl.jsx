@@ -2118,7 +2118,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 >
                                     Liberar Mesa
                                 </button>
-                            ) : ['admin', 'cashier'].includes(user?.role) ? (
+                            ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
                                 <div className="flex gap-3 w-full">
                                     <button
                                         onClick={() => handlePrintPreCuenta(account.id)}
@@ -3337,7 +3337,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
                         ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                             <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
-                        ) : ['admin', 'cashier'].includes(user?.role) ? (
+                        ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
                             <div className="flex gap-2 w-full">
                                 <button 
                                     onClick={() => handlePrintPreCuenta(account.id)} 

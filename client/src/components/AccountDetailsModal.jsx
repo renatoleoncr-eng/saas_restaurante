@@ -138,7 +138,7 @@ const AccountDetailsModal = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {['admin', 'cashier'].includes(user?.role) && (
+                        {['admin', 'cashier', 'waiter'].includes(user?.role) && (
                             <button
                                 onClick={handlePrintPreCuenta}
                                 className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
