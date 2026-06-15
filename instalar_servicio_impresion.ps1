@@ -53,7 +53,9 @@ Write-Host ""
 Write-Host "[INFO] Verificando disponibilidad de Node.js..." -ForegroundColor Yellow
 
 # Paso 1: Buscar en el PATH del sistema
-$NodePath = (Get-Command node -ErrorAction SilentlyContinue)?.Source
+$NodeCmd = Get-Command node -ErrorAction SilentlyContinue
+$NodePath = $null
+if ($NodeCmd) { $NodePath = $NodeCmd.Source }
 
 if ($NodePath) {
     Write-Host "[OK] Node.js encontrado en el sistema: $NodePath" -ForegroundColor Green
