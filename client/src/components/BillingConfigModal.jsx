@@ -116,6 +116,10 @@ const BillingConfigModal = ({ onClose }) => {
     };
 
     const checkAgentStatus = async () => {
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            setAgentStatus('inactive');
+            return;
+        }
         try {
             const res = await fetch('http://localhost:6789/status', { signal: AbortSignal.timeout(2000) });
             const data = await res.json();
@@ -849,7 +853,7 @@ const BillingConfigModal = ({ onClose }) => {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-auto p-6 bg-white">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 bg-white">
                     
                     {activeTab === 'history' && (
                         <div className="space-y-6">
@@ -1421,54 +1425,68 @@ const BillingConfigModal = ({ onClose }) => {
                         <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
 
                             {/* === PANEL: INSTALAR AGENTE EN ESTA PC === */}
-                            <div className={`border rounded-xl p-5 space-y-3 ${agentStatus === 'active' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
-                                <div className="flex items-center gap-2">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${agentStatus === 'active' ? 'bg-green-600' : 'bg-blue-600'}`}>1</div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className={`font-bold text-sm ${agentStatus === 'active' ? 'text-green-900' : 'text-blue-900'}`}>Agente de Impresión en esta PC</h4>
-                                            {agentStatus === 'active' && (
-                                                <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block"></span>
-                                                    Activo
-                                                </span>
-                                            )}
-                                            {agentStatus === 'inactive' && (
-                                                <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
-                                                    No instalado en esta PC
-                                                </span>
-                                            )}
+                            {/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
+                                <div className="border rounded-xl p-5 space-y-3 bg-blue-50 border-blue-200">
+                                    <div className="flex items-start gap-2">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 bg-blue-600">1</div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-sm text-blue-900">Agente de Impresión</h4>
+                                            <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                                                La impresión desde celulares o tablets funciona automáticamente siempre que haya al menos una computadora del restaurante configurada correctamente con el agente de impresión activo. No necesitas instalar nada en este dispositivo.
+                                            </p>
                                         </div>
-                                        <p className={`text-xs ${agentStatus === 'active' ? 'text-green-700' : 'text-blue-700'}`}>
-                                            {agentStatus === 'active'
-                                                ? 'El agente está corriendo y arrancará automáticamente con Windows. No necesitas hacer nada más en esta PC.'
-                                                : 'Cada PC del restaurante que tenga una impresora conectada debe instalar el agente una sola vez. Funciona en segundo plano.'}
-                                        </p>
                                     </div>
                                 </div>
-                                {agentStatus !== 'active' && (
-                                    <div className="ml-10 space-y-2">
-                                        <div className="text-xs text-blue-800 space-y-1">
-                                            <p className="font-semibold">Pasos para esta PC:</p>
-                                            <ol className="list-decimal list-inside space-y-1 text-blue-700">
-                                                <li>Descarga el instalador haciendo clic en el botón de abajo</li>
-                                                <li>Ejecuta el archivo <strong>.ps1</strong> (doble clic o clic derecho → Ejecutar con PowerShell)</li>
-                                                <li>¡Listo! El instalador configura todo automáticamente — <strong>no necesitas instalar nada extra</strong></li>
-                                            </ol>
-                                            <p className="text-blue-500 mt-1">💡 Si Windows bloquea la ejecución, abre PowerShell y escribe: <code className="bg-blue-100 px-1 rounded">powershell -ExecutionPolicy Bypass -File instalar_servicio_impresion.ps1</code></p>
+                            ) : (
+                                <div className={`border rounded-xl p-5 space-y-3 ${agentStatus === 'active' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${agentStatus === 'active' ? 'bg-green-600' : 'bg-blue-600'}`}>1</div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className={`font-bold text-sm ${agentStatus === 'active' ? 'text-green-900' : 'text-blue-900'}`}>Agente de Impresión en esta PC</h4>
+                                                {agentStatus === 'active' && (
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block"></span>
+                                                        Activo
+                                                    </span>
+                                                )}
+                                                {agentStatus === 'inactive' && (
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                                                        No instalado en esta PC
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className={`text-xs ${agentStatus === 'active' ? 'text-green-700' : 'text-blue-700'}`}>
+                                                {agentStatus === 'active'
+                                                    ? 'El agente está corriendo y arrancará automáticamente con Windows. No necesitas hacer nada más en esta PC.'
+                                                    : 'Cada PC del restaurante que tenga una impresora conectada debe instalar el agente una sola vez. Funciona en segundo plano.'}
+                                            </p>
                                         </div>
-                                        <a
-                                            href="/api/config/printers/agent-download"
-                                            download="instalar_servicio_impresion.ps1"
-                                            className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                                        >
-                                            <Download size={14} />
-                                            Descargar Instalador del Agente (.ps1)
-                                        </a>
                                     </div>
-                                )}
-                            </div>
+                                    {agentStatus !== 'active' && (
+                                        <div className="ml-10 space-y-2">
+                                            <div className="text-xs text-blue-800 space-y-1">
+                                                <p className="font-semibold">Pasos para esta PC:</p>
+                                                <ol className="list-decimal list-inside space-y-1 text-blue-700">
+                                                    <li>Descarga el instalador haciendo clic en el botón de abajo</li>
+                                                    <li>Ejecuta el archivo <strong>.ps1</strong> (doble clic o clic derecho → Ejecutar con PowerShell)</li>
+                                                    <li>¡Listo! El instalador configura todo automáticamente — <strong>no necesitas instalar nada extra</strong></li>
+                                                </ol>
+                                                <p className="text-blue-500 mt-1">💡 Si Windows bloquea la ejecución, abre PowerShell y escribe: <code className="bg-blue-100 px-1 rounded break-all whitespace-normal">powershell -ExecutionPolicy Bypass -File instalar_servicio_impresion.ps1</code></p>
+                                            </div>
+                                            <a
+                                                href="/api/config/printers/agent-download"
+                                                download="instalar_servicio_impresion.ps1"
+                                                className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                            >
+                                                <Download size={14} />
+                                                Descargar Instalador del Agente (.ps1)
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* === PANEL: CONFIGURAR IMPRESORAS === */}
                             <div className="flex justify-between items-center border-b pb-3">

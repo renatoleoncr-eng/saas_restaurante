@@ -641,13 +641,6 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     useEffect(() => {
-        loadTableData();
-        fetchProducts();
-        fetchAccount();
-        fetchDailyMenu();
-        fetchDrinkPromotions(); // Loading 2x1 promos
-        fetchBillingConfig();
-
         // Escape Key Listener
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
@@ -667,7 +660,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [tableId, refreshTrigger, showPaymentModal, pendingVariantProduct]);
+    }, [showPaymentModal, showTransferModal, pendingVariantProduct, isEditingClient]);
 
     // Explicitly fetching products to ensure real-time sync
     const fetchProducts = async () => {
@@ -692,12 +685,22 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             const accRes = await axios.get(url);
             if (accRes.data) {
                 setAccount(accRes.data);
-                setClientForm({
-                    name: accRes.data.customerName,
-                    dni: accRes.data.clientDni || '',
-                    direccion: accRes.data.clientAddress || '',
-                    accountType: accRes.data.accountType || 'standard',
-                    staffTotal: accRes.data.accountType === 'staff' ? parseFloat(accRes.data.total) : 0
+                setClientForm(prev => {
+                    const newName = accRes.data.customerName;
+                    const newDni = accRes.data.clientDni || '';
+                    const newDireccion = accRes.data.clientAddress || '';
+                    const newAccountType = accRes.data.accountType || 'standard';
+                    const newStaffTotal = accRes.data.accountType === 'staff' ? parseFloat(accRes.data.total) : 0;
+                    if (prev.name === newName && prev.dni === newDni && prev.direccion === newDireccion && prev.accountType === newAccountType && prev.staffTotal === newStaffTotal) {
+                        return prev;
+                    }
+                    return {
+                        name: newName,
+                        dni: newDni,
+                        direccion: newDireccion,
+                        accountType: newAccountType,
+                        staffTotal: newStaffTotal
+                    };
                 });
 
                 // If viewing a history account and we didn't pass tableId, try to load its historical table
@@ -706,7 +709,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             } else {
                 setAccount(null);
-                setClientForm(prev => ({ name: 'Cliente', dni: '', direccion: '', accountType: prev.accountType || 'standard' }));
+                setClientForm(prev => {
+                    const targetType = prev.accountType || 'standard';
+                    if (prev.name === 'Cliente' && prev.dni === '' && prev.direccion === '' && prev.accountType === targetType) {
+                        return prev;
+                    }
+                    return { name: 'Cliente', dni: '', direccion: '', accountType: targetType };
+                });
             }
         } catch (aErr) {
             console.error("Error loading account:", aErr);
@@ -742,6 +751,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         fetchAccount();
         fetchDailyMenu();
         fetchDrinkPromotions();
+        fetchBillingConfig();
     }, [tableId, accountId, refreshTrigger]);
 
     // DIRECT SOCKET LISTENER (Redundancy for safety)
@@ -3188,9 +3198,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     <span className="text-blue-600 ml-1">
                                                         {isStaff ? (
                                                             o.quantity > 1 ? (
-                                                                <span className="text-orange-600">({o.quantity}x <span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> = <span className="line-through text-gray-400">S/ {Number((o.quantity * parseFloat(originalP || 0)).toFixed(1))}</span> a costo S/ 0)</span>
+                                                                <span className="text-orange-600">({o.quantity}x S/ {Number(parseFloat(o.priceAtOrder || 0).toFixed(1))} = S/ {Number((o.quantity * parseFloat(o.priceAtOrder || 0)).toFixed(1))})</span>
                                                             ) : (
-                                                                <span className="text-orange-600">(<span className="line-through text-gray-400">S/ {Number(parseFloat(originalP || 0).toFixed(1))}</span> a costo S/ 0)</span>
+                                                                <span className="text-orange-600">(S/ {Number(parseFloat(o.priceAtOrder || 0).toFixed(1))})</span>
                                                             )
                                                         ) : (
                                                             o.quantity > 1 ? (
