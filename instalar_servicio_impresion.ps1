@@ -74,32 +74,41 @@ if (-not $NodePath) {
     Write-Host "[INFO] Esto puede tardar unos segundos segun la velocidad de internet (~35MB)..." -ForegroundColor Yellow
     Write-Host ""
     
-    try {
-        # Usar BITS (Servicio de Transferencia Inteligente en Segundo Plano) para mostrar progreso
-        # Fallback a Invoke-WebRequest si BITS no esta disponible
-        $bitsAvailable = Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue
-        
-        if ($bitsAvailable) {
+    $downloaded = $false
+    $bitsAvailable = Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue
+    
+    # Intento 1: BITS (si esta disponible)
+    if ($bitsAvailable) {
+        try {
+            Write-Host "[INFO] Iniciando descarga con BITS..." -ForegroundColor Yellow
             Start-BitsTransfer -Source $NodePortableUrl -Destination $NodePortablePath -DisplayName "Descargando Node.js $NodeVersion" -ErrorAction Stop
-        } else {
-            # Mostrar progreso manual con Invoke-WebRequest
+            $downloaded = $true
+        } catch {
+            Write-Host "[WARN] Fallo la descarga con BITS. Intentando metodo alternativo..." -ForegroundColor Yellow
+        }
+    }
+    
+    # Intento 2: Invoke-WebRequest (si BITS no estuvo disponible o fallo)
+    if (-not $downloaded) {
+        try {
+            Write-Host "[INFO] Descargando mediante Invoke-WebRequest..." -ForegroundColor Yellow
             $ProgressPreference = 'SilentlyContinue'
             Invoke-WebRequest -Uri $NodePortableUrl -OutFile $NodePortablePath -UseBasicParsing -ErrorAction Stop
             $ProgressPreference = 'Continue'
+            $downloaded = $true
+        } catch {
+            Write-Host "[ERROR] Metodo alternativo de descarga fallo: $_" -ForegroundColor Red
         }
-        
-        if (Test-Path $NodePortablePath) {
-            $sizeMB = [math]::Round((Get-Item $NodePortablePath).Length / 1MB, 1)
-            Write-Host "[OK] Node.js portable descargado correctamente ($sizeMB MB)." -ForegroundColor Green
-            $NodePath = $NodePortablePath
-        } else {
-            throw "El archivo no fue creado correctamente."
-        }
-    } catch {
+    }
+    
+    if ($downloaded -and (Test-Path $NodePortablePath)) {
+        $sizeMB = [math]::Round((Get-Item $NodePortablePath).Length / 1MB, 1)
+        Write-Host "[OK] Node.js portable descargado correctamente ($sizeMB MB)." -ForegroundColor Green
+        $NodePath = $NodePortablePath
+    } else {
         Write-Host ""
         Write-Host "[ERROR] No se pudo descargar Node.js automaticamente." -ForegroundColor Red
         Write-Host "        Verifica tu conexion a internet e intenta de nuevo." -ForegroundColor Yellow
-        Write-Host "        Detalles: $_" -ForegroundColor DarkGray
         Write-Host ""
         Write-Host "        Alternativa manual: descarga node.exe desde:" -ForegroundColor Yellow
         Write-Host "        $NodePortableUrl" -ForegroundColor Cyan
