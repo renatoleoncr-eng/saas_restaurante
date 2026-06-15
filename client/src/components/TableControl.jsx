@@ -801,6 +801,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     // --- NEW: Custom Staff Confirmation ---
     const [showStaffConfirm, setShowStaffConfirm] = useState(false);
     const [staffTotalInput, setStaffTotalInput] = useState('');
+    const [staffCommentInput, setStaffCommentInput] = useState('');
     // --------------------------------------
 
     useModalBackHandler(true, onClose);
@@ -1742,6 +1743,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     onChange={async (e) => {
                                                         if (e.target.checked) {
                                                             setStaffTotalInput(clientForm.staffTotal || 0);
+                                                            setStaffCommentInput(clientForm.direccion || '');
                                                             setShowStaffConfirm(true); // Open custom modal
                                                         } else {
                                                             const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
@@ -1896,6 +1898,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             onChange={(e) => {
                                                 if (e.target.checked) {
                                                     setStaffTotalInput(clientForm.staffTotal || 0);
+                                                    setStaffCommentInput(clientForm.direccion || '');
                                                     setShowStaffConfirm(true); // Open custom modal
                                                 } else {
                                                     setClientForm({ ...clientForm, accountType: 'standard' });
@@ -2986,6 +2989,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             onChange={async (e) => {
                                                 if (e.target.checked) {
                                                     setStaffTotalInput(clientForm.staffTotal || 0);
+                                                    setStaffCommentInput(clientForm.direccion || '');
                                                     setShowStaffConfirm(true); // Open custom modal
                                                 } else {
                                                     const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
@@ -3107,6 +3111,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         onChange={(e) => {
                                             if (e.target.checked) {
                                                 setStaffTotalInput(clientForm.staffTotal || 0);
+                                                setStaffCommentInput(clientForm.direccion || '');
                                                 setShowStaffConfirm(true); // Open custom modal
                                             } else {
                                                 setClientForm({ ...clientForm, accountType: 'standard', staffTotal: 0 });
@@ -3372,16 +3377,28 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     Los productos mantendrán su precio original, pero el total de la cuenta se ajustará al valor ingresado.
                                 </span>
                             </p>
-                            <div className="flex flex-col gap-1 mb-6 text-left">
-                                <label className="text-xs font-bold text-gray-700">Total a cobrar (S/)</label>
-                                <input 
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    className="w-full border p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-white" 
-                                    value={staffTotalInput} 
-                                    onChange={e => setStaffTotalInput(e.target.value)} 
-                                />
+                             <div className="flex flex-col gap-3 mb-6 text-left">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-gray-700">Total a cobrar (S/)</label>
+                                    <input 
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        className="w-full border p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-white" 
+                                        value={staffTotalInput} 
+                                        onChange={e => setStaffTotalInput(e.target.value)} 
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-gray-700">Comentario / Nota de Consumo</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full border p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-white" 
+                                        value={staffCommentInput} 
+                                        onChange={e => setStaffCommentInput(e.target.value)} 
+                                        placeholder="Escriba un comentario (ej: Juan Pérez)"
+                                    />
+                                </div>
                             </div>
                             <div className="flex gap-3">
                                 <button
@@ -3393,14 +3410,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <button
                                     onClick={async () => {
                                         const parsedTotal = parseFloat(staffTotalInput) || 0;
-                                        const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '', staffTotal: parsedTotal };
+                                        const comment = staffCommentInput;
+                                        const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '', staffTotal: parsedTotal, direccion: comment };
                                         setClientForm(newClientForm);
                                         if (account) {
                                             try {
                                                 const res = await axios.put(`/api/accounts/${account.id}`, {
                                                     customerName: newClientForm.name,
                                                     clientDni: newClientForm.dni,
-                                                    clientAddress: newClientForm.direccion,
+                                                    clientAddress: comment,
                                                     accountType: newClientForm.accountType,
                                                     staffTotal: parsedTotal
                                                 });
