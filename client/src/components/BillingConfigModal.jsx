@@ -1452,11 +1452,11 @@ const BillingConfigModal = ({ onClose }) => {
                                         <div className="text-xs text-blue-800 space-y-1">
                                             <p className="font-semibold">Pasos para esta PC:</p>
                                             <ol className="list-decimal list-inside space-y-1 text-blue-700">
-                                                <li>Instala <strong>Node.js</strong> si no está instalado (<a href="https://nodejs.org" target="_blank" rel="noreferrer" className="underline">nodejs.org</a>)</li>
                                                 <li>Descarga el instalador haciendo clic en el botón de abajo</li>
-                                                <li>Clic derecho sobre el archivo → <strong>"Ejecutar como Administrador"</strong></li>
-                                                <li>¡Listo! El agente arranca automáticamente con cada inicio de sesión</li>
+                                                <li>Ejecuta el archivo <strong>.ps1</strong> (doble clic o clic derecho → Ejecutar con PowerShell)</li>
+                                                <li>¡Listo! El instalador configura todo automáticamente — <strong>no necesitas instalar nada extra</strong></li>
                                             </ol>
+                                            <p className="text-blue-500 mt-1">💡 Si Windows bloquea la ejecución, abre PowerShell y escribe: <code className="bg-blue-100 px-1 rounded">powershell -ExecutionPolicy Bypass -File instalar_servicio_impresion.ps1</code></p>
                                         </div>
                                         <a
                                             href="/api/config/printers/agent-download"
