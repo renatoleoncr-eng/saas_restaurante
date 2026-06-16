@@ -1863,24 +1863,66 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex justify-between items-start mt-2">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm text-gray-800 font-bold">{account.customerName}</span>
-                                                        {account.accountType === 'staff' && (
-                                                            <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
+                                            <div className="flex flex-col mt-2 gap-2">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-gray-800 font-bold">{account.customerName}</span>
+                                                            {account.accountType === 'staff' && (
+                                                                <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
+                                                            )}
+                                                        </div>
+                                                        {account.clientDni && (
+                                                            <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
+                                                        )}
+                                                        {account.accountType === 'staff' && account.clientAddress && (
+                                                            <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
+                                                                Nota: {account.clientAddress}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    {account.clientDni && (
-                                                        <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
-                                                    )}
-                                                    {account.accountType === 'staff' && account.clientAddress && (
-                                                        <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
-                                                            Nota: {account.clientAddress}
-                                                        </div>
+                                                    <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-bold px-2 py-1 rounded bg-white border border-blue-200 hover:bg-blue-50">Editar Cliente</button>
+                                                </div>
+
+                                                {/* Direct check for employee consumption */}
+                                                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100 mt-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="staff_toggle_direct_mobile"
+                                                        checked={account.accountType === 'staff'}
+                                                        onChange={async (e) => {
+                                                            if (e.target.checked) {
+                                                                setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
+                                                                setStaffCommentInput(account.clientAddress || '');
+                                                                setShowStaffConfirm(true);
+                                                            } else {
+                                                                const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
+                                                                setClientForm(newClientForm);
+                                                                try {
+                                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                                        customerName: newClientForm.name,
+                                                                        clientDni: newClientForm.dni,
+                                                                        clientAddress: newClientForm.direccion,
+                                                                        accountType: newClientForm.accountType
+                                                                    });
+                                                                    setAccount(res.data);
+                                                                } catch (err) {
+                                                                    console.error("Error setting account to standard:", err);
+                                                                    alert('Error al actualizar la cuenta a consumo estándar');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
+                                                    />
+                                                    <label htmlFor="staff_toggle_direct_mobile" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
+                                                        Consumo de Trabajador
+                                                    </label>
+                                                    {account.accountType === 'staff' && (
+                                                        <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
+                                                            S/ {Number(account.total).toFixed(1)}
+                                                        </span>
                                                     )}
                                                 </div>
-                                                <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-bold px-2 py-1 rounded bg-white border border-blue-200 hover:bg-blue-50">Editar Cliente</button>
                                             </div>
                                         </div>
                                     )}
@@ -3079,7 +3121,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex flex-col mt-2">
+                                <div className="flex flex-col mt-2 gap-2">
                                     <div className="flex justify-between items-start">
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
@@ -3098,6 +3140,46 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             )}
                                         </div>
                                         <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-semibold px-2 py-1 rounded hover:bg-blue-50">Editar Cliente</button>
+                                    </div>
+
+                                    {/* Direct check for employee consumption */}
+                                    <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100 mt-1">
+                                        <input
+                                            type="checkbox"
+                                            id="staff_toggle_direct_desktop"
+                                            checked={account.accountType === 'staff'}
+                                            onChange={async (e) => {
+                                                if (e.target.checked) {
+                                                    setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
+                                                    setStaffCommentInput(account.clientAddress || '');
+                                                    setShowStaffConfirm(true);
+                                                } else {
+                                                    const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
+                                                    setClientForm(newClientForm);
+                                                    try {
+                                                        const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                            customerName: newClientForm.name,
+                                                            clientDni: newClientForm.dni,
+                                                            clientAddress: newClientForm.direccion,
+                                                            accountType: newClientForm.accountType
+                                                        });
+                                                        setAccount(res.data);
+                                                    } catch (err) {
+                                                        console.error("Error setting account to standard:", err);
+                                                        alert('Error al actualizar la cuenta a consumo estándar');
+                                                    }
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
+                                        />
+                                        <label htmlFor="staff_toggle_direct_desktop" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
+                                            Consumo de Trabajador
+                                        </label>
+                                        {account.accountType === 'staff' && (
+                                            <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
+                                                S/ {Number(account.total).toFixed(1)}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             )
