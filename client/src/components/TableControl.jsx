@@ -1725,7 +1725,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 {showMobileCart && (
                     <div className="md:hidden absolute inset-0 bg-white z-20 flex flex-col animate-in slide-in-from-right">
                         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                            <h2 className="text-lg font-bold flex items-center gap-2"><ShoppingCart size={20} /> Carrito</h2>
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <ShoppingCart size={20} /> Carrito
+                                {account && <span className="text-sm font-normal text-gray-500 ml-2">Cuenta #{account.id}</span>}
+                            </h2>
                             <button onClick={() => setShowMobileCart(false)} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
                         </div>
 
@@ -1834,36 +1837,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         </div>
                                     ) : (
                                         <div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-gray-600 text-sm">Cuenta #{account.id}</span>
-                                                <div className="flex flex-col items-end">
-                                                    {isStaff ? (
-                                                        <div className="flex flex-col items-end">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="text-xs text-gray-400 line-through">
-                                                                    S/ {Number(originalOrdersTotal).toFixed(1)}
-                                                                </span>
-                                                                <span className="font-bold text-lg text-blue-800">
-                                                                    S/ {Number(accountTotal).toFixed(1)}
-                                                                </span>
-                                                            </div>
-                                                            {totalPaid > 0 && (
-                                                                <span className="text-xs text-gray-500">
-                                                                    Abonado: S/ {totalPaid.toFixed(1)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ) : totalPaid > 0 ? (
-                                                        <>
-                                                            <span className="text-xs text-gray-500 line-through">Total: S/ {accountTotal.toFixed(2)}</span>
-                                                            <span className="font-bold text-lg text-blue-800">Saldo: S/ {remaining.toFixed(2)}</span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="font-bold text-lg text-blue-800">Total: S/ {Number(accountTotal.toFixed(1))}</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col mt-2 gap-2">
+                                            <div className="flex flex-col gap-2">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
