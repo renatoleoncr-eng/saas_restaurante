@@ -3490,7 +3490,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <button
                                     onClick={async () => {
                                         const parsedTotal = parseFloat(staffTotalInput) || 0;
-                                        const comment = staffCommentInput;
+                                        const comment = staffCommentInput.trim();
+                                        if (!comment) {
+                                            alert("Por favor ingrese un comentario o nota para el consumo de personal.");
+                                            return;
+                                        }
                                         const newClientForm = { ...clientForm, accountType: 'staff', name: 'Personal', dni: '', staffTotal: parsedTotal, direccion: comment };
                                         setClientForm(newClientForm);
                                         if (account) {
@@ -4055,7 +4059,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         !clientForm.name?.trim() || 
                                         ((invoiceType === 'factura' || clientForm.dni?.trim().length === 11) && !clientForm.direccion?.trim())
                                     );
-                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid || isInvoiceDataMissing;
+                                    const isStaffCommentMissing = isStaff && (!clientForm.direccion || !clientForm.direccion.trim());
+                                    const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid || isInvoiceDataMissing || isStaffCommentMissing;
                                     const isPartial = enteredVal < (remaining - 0.01);
 
                                     return (
@@ -4073,6 +4078,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             {issueInvoice && isInvoiceDataMissing && (
                                                 <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
                                                     * Busque/complete los datos del cliente {(invoiceType === 'factura' || clientForm.dni?.trim().length === 11) ? '(DNI/RUC, nombre y dirección)' : '(DNI y nombre)'} para cobrar.
+                                                </p>
+                                            )}
+                                            {isStaffCommentMissing && (
+                                                <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
+                                                    * Es obligatorio ingresar un comentario o nota para el consumo de personal.
                                                 </p>
                                             )}
                                             <div className="flex gap-3 mt-4">
