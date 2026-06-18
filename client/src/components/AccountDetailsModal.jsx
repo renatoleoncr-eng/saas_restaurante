@@ -119,6 +119,11 @@ const AccountDetailsModal = ({
 
     if (!account) return null;
 
+    const originalTotal = account.Orders ? account.Orders.reduce((sum, ord) => {
+        const itemPrice = ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? ord.priceAtOrder : (ord.Product?.price || 0);
+        return sum + (itemPrice * ord.quantity);
+    }, 0) : account.total;
+
     const formatCurrency = (amount) => {
         return `S/ ${Number(amount || 0).toFixed(2)}`;
     };
@@ -254,7 +259,7 @@ const AccountDetailsModal = ({
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Total Consumos:</span>
                                 <span className={`font-medium ${account.accountType === 'staff' && account.status === 'closed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                                    {formatCurrency(account.total)}
+                                    {formatCurrency(originalTotal)}
                                 </span>
                             </div>
                             {account.accountType === 'staff' && account.status === 'closed' && (
