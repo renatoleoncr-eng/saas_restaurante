@@ -256,6 +256,15 @@ const AccountDetailsModal = ({
                         </div>
                     </section>
 
+                    {account.accountType === 'staff' && account.clientAddress && (
+                        <section>
+                            <h4 className="text-sm font-bold text-gray-500 mb-3">Nota de Consumo</h4>
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 text-orange-800 text-sm italic">
+                                "{account.clientAddress}"
+                            </div>
+                        </section>
+                    )}
+
                     {/* RESUMEN SECTION */}
                     <section>
                         <h4 className="text-sm font-bold text-gray-500 mb-3">Resumen de la Cuenta</h4>

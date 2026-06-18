@@ -1782,7 +1782,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                             step="1"
                                                             className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                                                             value={clientForm.staffTotal} 
-                                                            onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                            onChange={e => {
+                                                                let val = e.target.value;
+                                                                if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
+                                                                    val = accountTotal;
+                                                                }
+                                                                setClientForm({ ...clientForm, staffTotal: val });
+                                                            }} 
                                                         />
                                                     </div>
                                                     <div className="flex flex-col gap-1">
@@ -1934,7 +1940,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     step="1"
                                                     className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                                                     value={clientForm.staffTotal} 
-                                                    onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                    onChange={e => {
+                                                        let val = e.target.value;
+                                                        if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
+                                                            val = accountTotal;
+                                                        }
+                                                        setClientForm({ ...clientForm, staffTotal: val });
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex flex-col gap-1">
@@ -3041,7 +3053,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                     step="1"
                                                     className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                                                     value={clientForm.staffTotal} 
-                                                    onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                    onChange={e => {
+                                                        let val = e.target.value;
+                                                        if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
+                                                            val = accountTotal;
+                                                        }
+                                                        setClientForm({ ...clientForm, staffTotal: val });
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex flex-col gap-1">
@@ -3187,7 +3205,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                 step="1"
                                                 className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                                                 value={clientForm.staffTotal} 
-                                                onChange={e => setClientForm({ ...clientForm, staffTotal: e.target.value })} 
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
+                                                        val = accountTotal;
+                                                    }
+                                                    setClientForm({ ...clientForm, staffTotal: val });
+                                                }}
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1">
