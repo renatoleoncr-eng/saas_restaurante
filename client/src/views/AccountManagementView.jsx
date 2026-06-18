@@ -458,6 +458,7 @@ export default function AccountManagementView() {
                                 <th className="p-4 font-bold text-gray-600 text-sm">Estado</th>
                                 <th className="p-4 font-bold text-gray-600 text-sm">Mesa</th>
                                 <th className="p-4 font-bold text-gray-600 text-sm">Fecha</th>
+                                <th className="p-4 font-bold text-gray-600 text-sm text-right">Total</th>
                                 <th className="p-4 font-bold text-gray-600 text-sm text-right">Debe</th>
                                 <th className="p-4 font-bold text-gray-600 text-sm text-center">Acciones</th>
                             </tr>
@@ -465,11 +466,11 @@ export default function AccountManagementView() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center p-8 text-gray-500">Cargando cuentas...</td>
+                                    <td colSpan="8" className="text-center p-8 text-gray-500">Cargando cuentas...</td>
                                 </tr>
                             ) : accounts.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center p-8 text-gray-500">No se encontraron cuentas.</td>
+                                    <td colSpan="8" className="text-center p-8 text-gray-500">No se encontraron cuentas.</td>
                                 </tr>
                             ) : (
                                 accounts.map((acc) => {
@@ -515,6 +516,11 @@ export default function AccountManagementView() {
                                             <td className="p-4 font-medium text-gray-800">{acc.Table ? formatTableName(acc.Table) : `Mesa #${acc.TableId}`}</td>
                                             <td className="p-4 text-gray-500 text-sm">
                                                 {new Date(acc.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <span className="font-bold text-gray-800">
+                                                    S/ {Number(acc.total || 0).toFixed(2)}
+                                                </span>
                                             </td>
                                             <td className="p-4 text-right">
                                                 <span className={`font-bold ${acc.deuda > 0 ? 'text-red-600' : 'text-gray-500'}`}>

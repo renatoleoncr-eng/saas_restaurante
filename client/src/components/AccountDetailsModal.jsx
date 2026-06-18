@@ -247,6 +247,35 @@ const AccountDetailsModal = ({
                         </div>
                     </section>
 
+                    {/* RESUMEN SECTION */}
+                    <section>
+                        <h4 className="text-sm font-bold text-gray-500 mb-3">Resumen de la Cuenta</h4>
+                        <div className="bg-gray-50 border rounded-lg p-4 space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Total Consumos:</span>
+                                <span className={`font-medium ${account.accountType === 'staff' && account.status === 'closed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                    {formatCurrency(account.total)}
+                                </span>
+                            </div>
+                            {account.accountType === 'staff' && account.status === 'closed' && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-orange-600 font-bold">Monto Real Pagado:</span>
+                                    <span className="font-bold text-gray-800">
+                                        {formatCurrency(account.totalPaid)}
+                                    </span>
+                                </div>
+                            )}
+                            {!(account.accountType === 'staff' && account.status === 'closed') && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Total Pagado:</span>
+                                    <span className="font-medium text-gray-800">
+                                        {formatCurrency(account.totalPaid)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
                     {/* COMPROBANTES SECTION */}
                     {account.Invoices && account.Invoices.length > 0 && (
                         <section>
