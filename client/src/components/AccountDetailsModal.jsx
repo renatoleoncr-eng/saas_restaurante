@@ -258,22 +258,30 @@ const AccountDetailsModal = ({
                         <div className="bg-gray-50 border rounded-lg p-4 space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Total Consumos:</span>
-                                <span className={`font-medium ${account.accountType === 'staff' && account.status === 'closed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                <span className={`font-medium ${account.accountType === 'staff' && account.status === 'closed' ? 'line-through decoration-red-500 decoration-2 text-gray-500' : 'text-gray-800'}`}>
                                     {formatCurrency(originalTotal)}
                                 </span>
                             </div>
                             {account.accountType === 'staff' && account.status === 'closed' && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-orange-600 font-bold">Monto Real Pagado:</span>
-                                    <span className="font-bold text-gray-800">
-                                        {formatCurrency(account.totalPaid)}
-                                    </span>
-                                </div>
+                                <>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Total Final Staff:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {formatCurrency(account.total)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm pt-2 mt-2 border-t border-gray-200">
+                                        <span className="text-orange-600 font-bold">Monto Real Pagado:</span>
+                                        <span className="font-bold text-gray-800">
+                                            {formatCurrency(account.totalPaid)}
+                                        </span>
+                                    </div>
+                                </>
                             )}
                             {!(account.accountType === 'staff' && account.status === 'closed') && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Total Pagado:</span>
-                                    <span className="font-medium text-gray-800">
+                                <div className="flex justify-between text-sm pt-2 mt-2 border-t border-gray-200">
+                                    <span className="text-gray-600 font-bold">Total Pagado:</span>
+                                    <span className="font-bold text-gray-800">
                                         {formatCurrency(account.totalPaid)}
                                     </span>
                                 </div>
