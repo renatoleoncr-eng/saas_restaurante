@@ -124,6 +124,10 @@ const AccountDetailsModal = ({
         return sum + (itemPrice * ord.quantity);
     }, 0) : account.total;
 
+    const actualTotalPaid = account.Payments && account.Payments.length > 0
+        ? account.Payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        : Number(account.totalPaid || 0);
+
     const formatCurrency = (amount) => {
         return `S/ ${Number(amount || 0).toFixed(2)}`;
     };
@@ -273,7 +277,7 @@ const AccountDetailsModal = ({
                                     <div className="flex justify-between text-sm pt-2 mt-2 border-t border-gray-200">
                                         <span className="text-orange-600 font-bold">Monto Real Pagado:</span>
                                         <span className="font-bold text-gray-800">
-                                            {formatCurrency(account.totalPaid)}
+                                            {formatCurrency(actualTotalPaid)}
                                         </span>
                                     </div>
                                 </>
@@ -282,7 +286,7 @@ const AccountDetailsModal = ({
                                 <div className="flex justify-between text-sm pt-2 mt-2 border-t border-gray-200">
                                     <span className="text-gray-600 font-bold">Total Pagado:</span>
                                     <span className="font-bold text-gray-800">
-                                        {formatCurrency(account.totalPaid)}
+                                        {formatCurrency(actualTotalPaid)}
                                     </span>
                                 </div>
                             )}
