@@ -345,7 +345,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                 </div>
 
                 {/* Body */}
-                <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/50">
+                <div className="p-4 sm:p-6 min-h-0 overflow-y-auto overscroll-y-contain space-y-5 flex-1 bg-gray-50/50">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 space-y-3">
                             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
