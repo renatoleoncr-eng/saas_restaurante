@@ -1509,53 +1509,29 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 </div>
                             )}
 
-                            {activeTab === 'prepared' && (
-                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
+                            {activeTab === 'prepared' && !readOnly && (
+                                <div className="flex mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => setPreparedTab(preparedTab === 'stock' ? 'movements' : 'stock')}
-                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        onClick={() => handleCreate()}
+                                        className="w-full md:w-auto px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
                                     >
-                                        {preparedTab === 'stock' ? (
-                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
-                                        ) : (
-                                            <><ChefHat size={16} /> <span className="truncate">Productos</span></>
-                                        )}
+                                        <Plus size={16} /> <span className="truncate">Producto</span>
                                     </button>
-                                    {!readOnly && (
-                                        <button
-                                            onClick={() => handleCreate()}
-                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
-                                        >
-                                            <Plus size={16} /> <span className="truncate">Producto</span>
-                                        </button>
-                                    )}
                                 </div>
                             )}
 
-                            {activeTab === 'free' && (
-                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
+                            {activeTab === 'free' && !readOnly && (
+                                <div className="flex mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => setFreeTab(freeTab === 'stock' ? 'movements' : 'stock')}
-                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        onClick={() => handleCreate()}
+                                        className="w-full md:w-auto px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
                                     >
-                                        {freeTab === 'stock' ? (
-                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
-                                        ) : (
-                                            <><Zap size={16} /> <span className="truncate">Productos</span></>
-                                        )}
+                                        <Plus size={16} /> <span className="truncate">Producto</span>
                                     </button>
-                                    {!readOnly && (
-                                        <button
-                                            onClick={() => handleCreate()}
-                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
-                                        >
-                                            <Plus size={16} /> <span className="truncate">Producto</span>
-                                        </button>
-                                    )}
                                 </div>
                             )}
 
-                            {(activeTab === 'finished' && finishedTab === 'movements') || (activeTab === 'prepared' && preparedTab === 'movements') || (activeTab === 'free' && freeTab === 'movements') ? (
+                            {activeTab === 'finished' && finishedTab === 'movements' ? (
                                 <div className="bg-white rounded-lg shadow overflow-x-auto animate-in fade-in">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 border-b text-xs uppercase text-gray-500 font-bold">

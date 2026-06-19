@@ -9,7 +9,7 @@ export default function MobileTabMenu({ tabs, activeTab, onTabChange }) {
     const ActiveIcon = activeTabObj?.icon || List;
 
     return (
-        <div className="md:hidden mb-4 relative z-10">
+        <div className="md:hidden relative z-10">
             {/* BACKDROP */}
             {isOpen && (
                 <div
