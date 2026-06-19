@@ -108,7 +108,19 @@ const BillingConfigModal = ({ onClose }) => {
             const res = await axios.get('/api/config/printers/agent-status');
             if (res.data?.active) {
                 setAgentStatus('active');
-                setWindowsPrinters(res.data.printers || []);
+                
+                // Extraer e identificar las impresoras de todas las PCs conectadas
+                const allPrinters = [];
+                if (res.data.agents) {
+                    res.data.agents.forEach(agent => {
+                        if (agent.printers) {
+                            agent.printers.forEach(p => {
+                                allPrinters.push(`[${agent.agentId}] ${p}`);
+                            });
+                        }
+                    });
+                }
+                setWindowsPrinters(allPrinters);
             } else {
                 setAgentStatus('inactive');
                 setWindowsPrinters([]);

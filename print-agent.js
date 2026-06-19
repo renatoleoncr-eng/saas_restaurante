@@ -14,6 +14,7 @@ const http  = require('http');
 const { execFile } = require('child_process');
 const path  = require('path');
 const fs    = require('fs');
+const os    = require('os');
 
 const serverUrl  = process.argv[2] || 'https://makala.maksuites.com.pe';
 const scriptPath = path.join(__dirname, 'server', 'utils', 'print_raw.ps1');
@@ -58,7 +59,7 @@ function poll() {
     const client = serverUrl.startsWith('https') ? https : http;
     
     const enabledPrinters = getEnabledLocalPrinters();
-    let pendingUrl = `${serverUrl}/api/config/printers/pending`;
+    let pendingUrl = `${serverUrl}/api/config/printers/pending?agentId=${encodeURIComponent(os.hostname())}`;
     
     if (enabledPrinters !== null) {
         if (enabledPrinters.length === 0) {
@@ -66,7 +67,7 @@ function poll() {
             setTimeout(poll, POLL_INTERVAL_ERR);
             return;
         }
-        pendingUrl += `?printers=${enabledPrinters.join(',')}`;
+        pendingUrl += `&printers=${enabledPrinters.join(',')}`;
     }
 
     const urlObj = new URL(pendingUrl);
@@ -170,6 +171,7 @@ function pingServer() {
 
             const payload = JSON.stringify({
                 agent: 'RestauranteAgentePrint',
+                agentId: os.hostname(),
                 printers: printers
             });
 

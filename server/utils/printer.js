@@ -648,27 +648,65 @@ async function triggerInvoicePrint(invoice, account) {
     return await printTicket('caja', builder);
 }
 
-function getPendingJobs() {
-    const jobs = [...pendingJobs];
-    pendingJobs.length = 0;
-    return jobs;
-}
-
-function getPendingJobsForPrinters(printerKeys) {
+function filterJobsByAgent(jobsArray, agentId) {
     const jobsToReturn = [];
     const jobsToKeep = [];
 
-    for (const job of pendingJobs) {
-        if (!job.printerKey || printerKeys.includes(job.printerKey.toLowerCase())) {
+    for (const job of jobsArray) {
+        if (!job.printerConfig || !job.printerConfig.printerName) {
             jobsToReturn.push(job);
+            continue;
+        }
+
+        const printerName = job.printerConfig.printerName;
+        const match = printerName.match(/^\[(.*?)\]\s*(.*)$/);
+        
+        if (match) {
+            const targetAgentId = match[1];
+            if (agentId && targetAgentId === agentId) {
+                // Strip the tag and return it to this agent
+                const jobClone = JSON.parse(JSON.stringify(job));
+                jobClone.printerConfig.printerName = match[2];
+                jobsToReturn.push(jobClone);
+            } else {
+                // Belong to another agent, keep in queue
+                jobsToKeep.push(job);
+            }
         } else {
-            jobsToKeep.push(job);
+            // Un-tagged printer, can go to any agent
+            jobsToReturn.push(job);
         }
     }
+    
+    return { jobsToReturn, jobsToKeep };
+}
 
+function getPendingJobs(agentId) {
+    const result = filterJobsByAgent(pendingJobs, agentId);
     pendingJobs.length = 0;
-    pendingJobs.push(...jobsToKeep);
-    return jobsToReturn;
+    pendingJobs.push(...result.jobsToKeep);
+    return result.jobsToReturn;
+}
+
+function getPendingJobsForPrinters(printerKeys, agentId) {
+    const preFilteredToKeep = [];
+    const jobsToExamine = [];
+    
+    for (const job of pendingJobs) {
+        if (!job.printerKey || printerKeys.includes(job.printerKey.toLowerCase())) {
+            jobsToExamine.push(job);
+        } else {
+            preFilteredToKeep.push(job);
+        }
+    }
+    
+    const result = filterJobsByAgent(jobsToExamine, agentId);
+    
+    pendingJobs.length = 0;
+    pendingJobs.push(...preFilteredToKeep);
+    pendingJobs.push(...result.jobsToKeep);
+    
+    return result.jobsToReturn;
 }
 
 module.exports = {

@@ -116,13 +116,13 @@ router.post('/config/printers/test', async (req, res) => {
 // GET pending print jobs for local print agent
 router.get('/config/printers/pending', (req, res) => {
     try {
-        const { printers } = req.query;
+        const { printers, agentId } = req.query;
         let jobs;
         if (printers) {
             const keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
-            jobs = getPendingJobsForPrinters(keys);
+            jobs = getPendingJobsForPrinters(keys, agentId);
         } else {
-            jobs = getPendingJobs();
+            jobs = getPendingJobs(agentId);
         }
         res.json(jobs);
     } catch (err) {
@@ -202,19 +202,19 @@ router.get('/config/printers/print-raw-ps1', (req, res) => {
     fs.createReadStream(filePath).pipe(res);
 });
 
-// Variables globales efímeras para rastrear el estado del agente
-global.agentLastSeen = 0;
-global.agentPrinters = [];
+// Variable global efímera para rastrear múltiples agentes
+global.connectedAgents = global.connectedAgents || {};
 
 // POST ping from local print agent
 router.post('/config/printers/agent-ping', (req, res) => {
     try {
-        const { agent, printers } = req.body;
+        const { agent, agentId, printers } = req.body;
         if (agent === 'RestauranteAgentePrint') {
-            global.agentLastSeen = Date.now();
-            if (Array.isArray(printers)) {
-                global.agentPrinters = printers;
-            }
+            const id = agentId || 'Agente-Desconocido';
+            global.connectedAgents[id] = {
+                lastSeen: Date.now(),
+                printers: Array.isArray(printers) ? printers : []
+            };
             res.json({ success: true });
         } else {
             res.status(400).json({ error: 'Agente no reconocido.' });
@@ -227,11 +227,25 @@ router.post('/config/printers/agent-ping', (req, res) => {
 // GET status for frontend dashboard
 router.get('/config/printers/agent-status', (req, res) => {
     try {
-        // Consider agent active if pinged within the last 15 seconds
-        const isActive = (Date.now() - global.agentLastSeen) < 15000;
+        const now = Date.now();
+        const activeAgents = [];
+        
+        // Filtrar agentes que hicieron ping en los ultimos 15 segundos
+        Object.keys(global.connectedAgents).forEach(id => {
+            if ((now - global.connectedAgents[id].lastSeen) < 15000) {
+                activeAgents.push({
+                    agentId: id,
+                    printers: global.connectedAgents[id].printers
+                });
+            } else {
+                // Clean up dead agents
+                delete global.connectedAgents[id];
+            }
+        });
+
         res.json({
-            active: isActive,
-            printers: isActive ? global.agentPrinters : []
+            active: activeAgents.length > 0,
+            agents: activeAgents
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
