@@ -177,9 +177,14 @@ const BillingConfigModal = ({ onClose }) => {
         fetchConfig();
         fetchInvoices();
         fetchPrintersConfig();
-        fetchWindowsPrinters();
         checkAgentStatus();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'printers') {
+            checkAgentStatus();
+        }
+    }, [activeTab]);
 
     useEffect(() => {
         if (activeTab === 'new' && config.billingMode === 'reserva') {

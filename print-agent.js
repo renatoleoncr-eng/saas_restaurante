@@ -131,6 +131,7 @@ function processJobs(jobs) {
     }
 
     const args = [
+        '-WindowStyle', 'Hidden',
         '-NoProfile', '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
         '-PrinterType', printerConfig.type || 'disabled',
@@ -158,11 +159,24 @@ function processJobs(jobs) {
 const LOCAL_PORT = 6789;
 
 const localServer = http.createServer((req, res) => {
-    // CORS: permite que cualquier origen (el frontend web) pueda consultar
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    // CORS: PNA estricto para Chrome 120+
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+
+    const reqHeaders = req.headers['access-control-request-headers'];
+    if (reqHeaders) {
+        res.setHeader('Access-Control-Allow-Headers', reqHeaders);
+    } else {
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cachear preflight
     res.setHeader('Content-Type', 'application/json');
 
     if (req.method === 'OPTIONS') {
@@ -179,7 +193,7 @@ const localServer = http.createServer((req, res) => {
 
     if (req.url === '/windows-printers') {
         execFile('powershell.exe',
-            ['-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'],
+            ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'],
             { timeout: 8000, windowsHide: true },
             (err, stdout) => {
                 if (err || !stdout.trim()) {
