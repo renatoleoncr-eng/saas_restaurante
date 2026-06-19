@@ -103,10 +103,10 @@ const BillingConfigModal = ({ onClose }) => {
         }
     };
 
-    const fetchWindowsPrinters = async () => {
+    const fetchWindowsPrinters = async (baseUrl = 'http://localhost:6789') => {
         try {
             // Consulta al agente local en esta PC (no al servidor en la nube)
-            const res = await fetch('http://localhost:6789/windows-printers', { signal: AbortSignal.timeout(3000) });
+            const res = await fetch(`${baseUrl}/windows-printers`, { signal: AbortSignal.timeout(3000) });
             const data = await res.json();
             if (Array.isArray(data)) setWindowsPrinters(data);
         } catch (err) {
@@ -120,17 +120,27 @@ const BillingConfigModal = ({ onClose }) => {
             setAgentStatus('inactive');
             return;
         }
+        let successUrl = null;
         try {
-            const res = await fetch('http://localhost:6789/status', { signal: AbortSignal.timeout(2000) });
+            const res = await fetch('http://127.0.0.1:6789/status', { signal: AbortSignal.timeout(2000) });
             const data = await res.json();
             if (data?.ok) {
-                setAgentStatus('active');
-                // Si el agente está corriendo, también trae la lista de impresoras
-                fetchWindowsPrinters();
-            } else {
-                setAgentStatus('inactive');
+                successUrl = 'http://127.0.0.1:6789';
             }
         } catch {
+            try {
+                const res = await fetch('http://localhost:6789/status', { signal: AbortSignal.timeout(2000) });
+                const data = await res.json();
+                if (data?.ok) {
+                    successUrl = 'http://localhost:6789';
+                }
+            } catch {}
+        }
+
+        if (successUrl) {
+            setAgentStatus('active');
+            fetchWindowsPrinters(successUrl);
+        } else {
             setAgentStatus('inactive');
         }
     };
