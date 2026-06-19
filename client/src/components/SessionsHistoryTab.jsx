@@ -7,6 +7,7 @@ import {
     Coffee, Utensils, Sparkles, Clock, Receipt, Printer 
 } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import AccountDetailsModal from './AccountDetailsModal';
 
 export default function SessionsHistoryTab() {
     const [sessions, setSessions] = useState([]);
@@ -109,6 +110,8 @@ export default function SessionsHistoryTab() {
                                         totalDiff += (counted - expected);
                                     });
                                     
+                                    if (Math.abs(totalDiff) < 0.01) totalDiff = 0;
+
                                     if (totalDiff === 0) {
                                         diffBadge = (
                                             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
@@ -181,10 +184,10 @@ export default function SessionsHistoryTab() {
 
 // Inner Component: SessionDetailsModal
 function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
-    const [expandedCategory, setExpandedCategory] = useState(null);
-    const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
-
     useModalBackHandler(isOpen, onClose);
+    const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
+    const [expandedCategory, setExpandedCategory] = useState(null);
+    const [selectedAccountId, setSelectedAccountId] = useState(null);
 
     const handlePrintSessionReport = async (type) => {
         try {
@@ -272,6 +275,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
         totalDiff += (cnt - exp);
     });
 
+    if (Math.abs(totalDiff) < 0.01) totalDiff = 0;
+
     const getMovements = () => {
         if (!details) return [];
         
@@ -282,7 +287,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             method: p.method || 'efectivo',
             time: p.createdAt,
             user: p.User ? (p.User.displayName || p.User.username) : '-',
-            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
+            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar',
+            accountId: p.AccountId || p.Account?.id
         }));
 
         const expensesList = (details.expenses || []).map(e => ({
@@ -305,7 +311,9 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
     return createPortal(
         <div 
-            onClick={onClose} 
+            onPointerDown={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
             className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 session-modal-overlay"
         >
             <div 
@@ -447,7 +455,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                             {methods.map(m => {
                                                 const exp = Number(expectedValues[m] || 0);
                                                 const cnt = Number(countedValues[m] || 0);
-                                                const diff = cnt - exp;
+                                                let diff = cnt - exp;
+                                                if (Math.abs(diff) < 0.01) diff = 0;
                                                 const isSelected = selectedMethodFilter === m;
                                                 
                                                 return (
@@ -542,8 +551,20 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                 <div className="font-semibold text-gray-700 max-w-[150px] truncate" title={m.reference}>
                                                                     {m.reference}
                                                                 </div>
-                                                                <div className="text-[10px] text-gray-400 capitalize">
-                                                                    {m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}
+                                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                    {m.type === 'ingreso' && m.accountId ? (
+                                                                        <button 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedAccountId(m.accountId);
+                                                                            }}
+                                                                            className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                                                                        >
+                                                                            Cuenta #{m.accountId}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                             <td className="p-2 text-gray-500 font-medium truncate max-w-[100px]" title={m.user}>
@@ -714,6 +735,12 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                     </button>
                 </div>
             </div>
+            {selectedAccountId && (
+                <AccountDetailsModal
+                    accountId={selectedAccountId}
+                    onClose={() => setSelectedAccountId(null)}
+                />
+            )}
         </div>,
         document.body
     );

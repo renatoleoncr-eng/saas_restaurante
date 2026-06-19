@@ -1625,11 +1625,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     return product.isStockManaged && !excludedTypes.includes(product.type);
                                                 }
                                                 if (activeTab === 'prepared') {
-                                                    if (preparedTab === 'movements') return false;
                                                     return !product.isStockManaged && product.requiresPreparation && !excludedTypes.includes(product.type);
                                                 }
                                                 if (activeTab === 'free') {
-                                                    if (freeTab === 'movements') return false;
                                                     return !product.isStockManaged && !product.requiresPreparation && !excludedTypes.includes(product.type);
                                                 }
                                                 return true;
@@ -1902,7 +1900,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                  Or simply render standard cards.
                             */}
                             {
-                                ((activeTab === 'finished' && finishedTab === 'stock') || (activeTab === 'prepared' && preparedTab === 'stock') || (activeTab === 'free' && freeTab === 'stock')) && (
+                                ((activeTab === 'finished' && finishedTab === 'stock') || activeTab === 'prepared' || activeTab === 'free') && (
                                     <div className="md:hidden grid grid-cols-1 gap-4">
                                         {products.filter(p => {
                                             const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];

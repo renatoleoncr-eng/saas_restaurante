@@ -443,7 +443,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                 const expected = sessionData.expected[m] || 0;
                                                 const countedStr = countedValues[m];
                                                 const counted = parseFloat(countedStr) || 0;
-                                                const diff = countedStr !== '' ? counted - expected : 0;
+                                                let diff = countedStr !== '' ? counted - expected : 0;
+                                                if (Math.abs(diff) < 0.01) diff = 0;
                                                 
                                                 return (
                                                     <React.Fragment key={m}>
@@ -516,7 +517,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                     const expected = sessionData.expected[m] || 0;
                                     const countedStr = countedValues[m];
                                     const counted = parseFloat(countedStr) || 0;
-                                    const diff = countedStr !== '' ? counted - expected : 0;
+                                    let diff = countedStr !== '' ? counted - expected : 0;
+                                    if (Math.abs(diff) < 0.01) diff = 0;
                                     
                                     return (
                                         <div key={m} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
@@ -866,10 +868,14 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
             {/* CONFIRMATION CLOSE MODAL */}
             {showConfirmCloseModal && (() => {
-                    const diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
-                    const diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
-                    const diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
-                    const diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+                    let diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
+                    if (Math.abs(diffEfectivo) < 0.01) diffEfectivo = 0;
+                    let diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
+                    if (Math.abs(diffTarjeta) < 0.01) diffTarjeta = 0;
+                    let diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
+                    if (Math.abs(diffYape) < 0.01) diffYape = 0;
+                    let diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+                    if (Math.abs(diffTransferencia) < 0.01) diffTransferencia = 0;
                     
                     const hasDifferences = diffEfectivo !== 0 || diffTarjeta !== 0 || diffYape !== 0 || diffTransferencia !== 0;
                     
@@ -906,7 +912,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         {['efectivo', 'tarjeta', 'yape', 'transferencia'].map(m => {
                                             const expected = sessionData.expected[m] || 0;
                                             const counted = parseFloat(countedValues[m]) || 0;
-                                            const diff = counted - expected;
+                                            let diff = counted - expected;
+                                            if (Math.abs(diff) < 0.01) diff = 0;
                                             
                                             return (
                                                 <div key={m} className="py-2 flex justify-between items-center">
