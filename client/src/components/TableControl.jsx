@@ -1729,181 +1729,54 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <ShoppingCart size={20} /> Carrito
                                 {account && <span className="text-sm font-normal text-gray-500 ml-2">Cuenta #{account.id}</span>}
                             </h2>
-                            <button onClick={() => setShowMobileCart(false)} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
+                            <button onClick={handleClose} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {/* Account Info in Cart View */}
                             {account && (
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-                                    {isEditingClient ? (
-                                        <div className="bg-white p-3 rounded border shadow-sm space-y-2">
-                                            <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
-                                                <input
-                                                    type="checkbox"
-                                                    id="staff_toggle_edit_mobile"
-                                                    checked={clientForm.accountType === 'staff'}
-                                                    onChange={async (e) => {
-                                                        if (e.target.checked) {
-                                                            setStaffTotalInput(clientForm.staffTotal || 0);
-                                                            setStaffCommentInput(clientForm.direccion || '');
-                                                            setShowStaffConfirm(true); // Open custom modal
-                                                        } else {
-                                                            const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
-                                                            setClientForm(newClientForm);
-                                                            if (account) {
-                                                                try {
-                                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                                        customerName: newClientForm.name,
-                                                                        clientDni: newClientForm.dni,
-                                                                        clientAddress: newClientForm.direccion,
-                                                                        accountType: newClientForm.accountType
-                                                                    });
-                                                                    setAccount(res.data);
-                                                                    setIsEditingClient(false);
-                                                                } catch (err) {
-                                                                    console.error("Error setting account to standard:", err);
-                                                                    alert('Error al actualizar la cuenta a consumo estándar');
-                                                                }
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                                />
-                                                <label htmlFor="staff_toggle_edit_mobile" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
-                                            </div>
-                                            {clientForm.accountType === 'staff' ? (
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
-                                                        <input 
-                                                            type="number"
-                                                            min="0"
-                                                            step="1"
-                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                            value={clientForm.staffTotal} 
-                                                            onChange={e => {
-                                                                let val = e.target.value;
-                                                                if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
-                                                                    val = accountTotal;
-                                                                }
-                                                                setClientForm({ ...clientForm, staffTotal: val });
-                                                            }} 
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                                        <input 
-                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                            value={clientForm.direccion || ''} 
-                                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                            placeholder="Escriba un comentario (ej: Juan Pérez)" 
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                            value={clientForm.dni} 
-                                                            onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
-                                                            placeholder="DNI / RUC" 
-                                                            onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
-                                                        />
-                                                        <button 
-                                                            onClick={searchClientData} 
-                                                            disabled={isSearchingClient} 
-                                                            className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
-                                                            title="Buscar datos"
-                                                        >
-                                                            {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
-                                                        </button>
-                                                    </div>
-                                                    <input 
-                                                        className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                        value={clientForm.name} 
-                                                        onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
-                                                        placeholder="Nombre / Razón Social" 
-                                                    />
-                                                    {clientForm.dni && clientForm.dni.trim().length === 11 && (
-                                                        <input 
-                                                            className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1 bg-white" 
-                                                            value={clientForm.direccion || ''} 
-                                                            onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                            placeholder="Dirección Fiscal" 
-                                                        />
-                                                    )}
-                                                </>
-                                            )}
-                                            <div className="flex gap-2">
-                                                <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm font-medium">Cancelar</button>
-                                                <button onClick={updateClientInfo} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm font-medium">Guardar</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-gray-800 font-bold">{account.customerName}</span>
-                                                            {account.accountType === 'staff' && (
-                                                                <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
-                                                            )}
-                                                        </div>
-                                                        {account.clientDni && (
-                                                            <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
-                                                        )}
-                                                        {account.accountType === 'staff' && account.clientAddress && (
-                                                            <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
-                                                                Nota: {account.clientAddress}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-bold px-2 py-1 rounded bg-white border border-blue-200 hover:bg-blue-50">Editar Cliente</button>
-                                                </div>
-
-                                                {/* Direct check for employee consumption */}
-                                                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100 mt-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        id="staff_toggle_direct_mobile"
-                                                        checked={account.accountType === 'staff'}
-                                                        onChange={async (e) => {
-                                                            if (e.target.checked) {
-                                                                setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
-                                                                setStaffCommentInput(account.clientAddress || '');
-                                                                setShowStaffConfirm(true);
-                                                            } else {
-                                                                const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
-                                                                setClientForm(newClientForm);
-                                                                try {
-                                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                                        customerName: newClientForm.name,
-                                                                        clientDni: newClientForm.dni,
-                                                                        clientAddress: newClientForm.direccion,
-                                                                        accountType: newClientForm.accountType
-                                                                    });
-                                                                    setAccount(res.data);
-                                                                } catch (err) {
-                                                                    console.error("Error setting account to standard:", err);
-                                                                    alert('Error al actualizar la cuenta a consumo estándar');
-                                                                }
-                                                            }
-                                                        }}
-                                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
-                                                    />
-                                                    <label htmlFor="staff_toggle_direct_mobile" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
-                                                        Consumo de Trabajador
-                                                    </label>
-                                                    {account.accountType === 'staff' && (
-                                                        <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
-                                                            S/ {Number(account.total).toFixed(1)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="staff_toggle_direct_mobile"
+                                            checked={account.accountType === 'staff'}
+                                            onChange={async (e) => {
+                                                if (e.target.checked) {
+                                                    setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
+                                                    setStaffCommentInput(account.clientAddress || '');
+                                                    setShowStaffConfirm(true);
+                                                } else {
+                                                    const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
+                                                    setClientForm(newClientForm);
+                                                    try {
+                                                        const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                            customerName: newClientForm.name,
+                                                            clientDni: newClientForm.dni,
+                                                            clientAddress: newClientForm.direccion,
+                                                            accountType: newClientForm.accountType
+                                                        });
+                                                        setAccount(res.data);
+                                                    } catch (err) {
+                                                        console.error("Error setting account to standard:", err);
+                                                        alert('Error al actualizar la cuenta a consumo estándar');
+                                                    }
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
+                                        />
+                                        <label htmlFor="staff_toggle_direct_mobile" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
+                                            Consumo de Trabajador
+                                        </label>
+                                        {account.accountType === 'staff' && (
+                                            <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
+                                                S/ {Number(account.total).toFixed(1)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {account.accountType === 'staff' && account.clientAddress && (
+                                        <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-2 font-medium italic">
+                                            Nota: {account.clientAddress}
                                         </div>
                                     )}
                                 </div>
@@ -3007,174 +2880,51 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         OR: We could store clientForm in state and send it with open.
                         For now: Only show if account exists. */}
                         {account ? (
-                            isEditingClient ? (
-                                <div className="mt-3 bg-white p-3 rounded border shadow-sm space-y-2">
-                                    <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
-                                        <input
-                                            type="checkbox"
-                                            id="staff_toggle_edit"
-                                            checked={clientForm.accountType === 'staff'}
-                                            onChange={async (e) => {
-                                                if (e.target.checked) {
-                                                    setStaffTotalInput(clientForm.staffTotal || 0);
-                                                    setStaffCommentInput(clientForm.direccion || '');
-                                                    setShowStaffConfirm(true); // Open custom modal
-                                                } else {
-                                                    const newClientForm = { ...clientForm, accountType: 'standard', name: 'Cliente', dni: '', staffTotal: 0 };
-                                                    setClientForm(newClientForm);
-                                                    if (account) {
-                                                        try {
-                                                            const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                                customerName: newClientForm.name,
-                                                                clientDni: newClientForm.dni,
-                                                                clientAddress: newClientForm.direccion,
-                                                                accountType: newClientForm.accountType
-                                                            });
-                                                            setAccount(res.data);
-                                                            setIsEditingClient(false);
-                                                        } catch (err) {
-                                                            console.error("Error setting account to standard:", err);
-                                                            alert('Error al actualizar la cuenta a consumo estándar');
-                                                        }
-                                                    }
+                            <div className="mt-3 bg-orange-50 p-3 rounded-lg border border-orange-100 mb-2">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="staff_toggle_direct_desktop"
+                                        checked={account.accountType === 'staff'}
+                                        onChange={async (e) => {
+                                            if (e.target.checked) {
+                                                setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
+                                                setStaffCommentInput(account.clientAddress || '');
+                                                setShowStaffConfirm(true);
+                                            } else {
+                                                const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
+                                                setClientForm(newClientForm);
+                                                try {
+                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
+                                                        customerName: newClientForm.name,
+                                                        clientDni: newClientForm.dni,
+                                                        clientAddress: newClientForm.direccion,
+                                                        accountType: newClientForm.accountType
+                                                    });
+                                                    setAccount(res.data);
+                                                } catch (err) {
+                                                    console.error("Error setting account to standard:", err);
+                                                    alert('Error al actualizar la cuenta a consumo estándar');
                                                 }
-                                            }}
-                                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="staff_toggle_edit" className="text-xs font-bold text-gray-700 cursor-pointer">Consumo de Trabajador</label>
-                                    </div>
-                                    {clientForm.accountType === 'staff' ? (
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex flex-col gap-1">
-                                                <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
-                                                <input 
-                                                    type="number"
-                                                    min="0"
-                                                    step="1"
-                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                    value={clientForm.staffTotal} 
-                                                    onChange={e => {
-                                                        let val = e.target.value;
-                                                        if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
-                                                            val = accountTotal;
-                                                        }
-                                                        setClientForm({ ...clientForm, staffTotal: val });
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                                <input 
-                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                                    value={clientForm.direccion || ''} 
-                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                    placeholder="Escriba un comentario (ej: Juan Pérez)" 
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex gap-2">
-                                                <input 
-                                                    className="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                                    value={clientForm.dni} 
-                                                    onChange={e => setClientForm({ ...clientForm, dni: e.target.value })} 
-                                                    placeholder="DNI / RUC" 
-                                                    onKeyDown={(e) => { if(e.key === 'Enter') searchClientData() }}
-                                                />
-                                                <button 
-                                                    onClick={searchClientData} 
-                                                    disabled={isSearchingClient} 
-                                                    className="bg-gray-100 p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[36px]"
-                                                    title="Buscar datos"
-                                                >
-                                                    {isSearchingClient ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Search size={16} />}
-                                                </button>
-                                            </div>
-                                            <input 
-                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" 
-                                                value={clientForm.name} 
-                                                onChange={e => setClientForm({ ...clientForm, name: e.target.value })} 
-                                                placeholder="Nombre / Razón Social" 
-                                            />
-                                            {clientForm.dni && clientForm.dni.trim().length === 11 && (
-                                                <input 
-                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1" 
-                                                    value={clientForm.direccion || ''} 
-                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                    placeholder="Dirección Fiscal" 
-                                                />
-                                            )}
-                                        </>
+                                            }
+                                        }}
+                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
+                                    />
+                                    <label htmlFor="staff_toggle_direct_desktop" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
+                                        Consumo de Trabajador
+                                    </label>
+                                    {account.accountType === 'staff' && (
+                                        <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
+                                            S/ {Number(account.total).toFixed(1)}
+                                        </span>
                                     )}
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setIsEditingClient(false)} className="flex-1 bg-gray-100 text-gray-600 py-1.5 rounded text-sm">Cancelar</button>
-                                        <button onClick={updateClientInfo} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm">Guardar</button>
-                                    </div>
                                 </div>
-                            ) : (
-                                <div className="flex flex-col mt-2 gap-2">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-800 font-medium">{account.customerName}</span>
-                                                {account.accountType === 'staff' && (
-                                                    <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Staff</span>
-                                                )}
-                                            </div>
-                                            {account.clientDni && (
-                                                <span className="text-xs text-gray-500 font-semibold mt-0.5">DNI/RUC: {account.clientDni}</span>
-                                            )}
-                                            {account.accountType === 'staff' && account.clientAddress && (
-                                                <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-1 font-medium italic">
-                                                    Nota: {account.clientAddress}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button onClick={() => setIsEditingClient(true)} className="text-xs text-blue-600 font-semibold px-2 py-1 rounded hover:bg-blue-50">Editar Cliente</button>
+                                {account.accountType === 'staff' && account.clientAddress && (
+                                    <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-2 font-medium italic">
+                                        Nota: {account.clientAddress}
                                     </div>
-
-                                    {/* Direct check for employee consumption */}
-                                    <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100 mt-1">
-                                        <input
-                                            type="checkbox"
-                                            id="staff_toggle_direct_desktop"
-                                            checked={account.accountType === 'staff'}
-                                            onChange={async (e) => {
-                                                if (e.target.checked) {
-                                                    setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
-                                                    setStaffCommentInput(account.clientAddress || '');
-                                                    setShowStaffConfirm(true);
-                                                } else {
-                                                    const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
-                                                    setClientForm(newClientForm);
-                                                    try {
-                                                        const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                            customerName: newClientForm.name,
-                                                            clientDni: newClientForm.dni,
-                                                            clientAddress: newClientForm.direccion,
-                                                            accountType: newClientForm.accountType
-                                                        });
-                                                        setAccount(res.data);
-                                                    } catch (err) {
-                                                        console.error("Error setting account to standard:", err);
-                                                        alert('Error al actualizar la cuenta a consumo estándar');
-                                                    }
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
-                                        />
-                                        <label htmlFor="staff_toggle_direct_desktop" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
-                                            Consumo de Trabajador
-                                        </label>
-                                        {account.accountType === 'staff' && (
-                                            <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
-                                                S/ {Number(account.total).toFixed(1)}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            )
+                                )}
+                            </div>
                         ) : (
                             <div className="mt-3 space-y-3">
                                 <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100">
