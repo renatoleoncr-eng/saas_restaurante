@@ -189,5 +189,40 @@ router.get('/config/printers/print-raw-ps1', (req, res) => {
     fs.createReadStream(filePath).pipe(res);
 });
 
-module.exports = router;
+// Variables globales efímeras para rastrear el estado del agente
+global.agentLastSeen = 0;
+global.agentPrinters = [];
 
+// POST ping from local print agent
+router.post('/config/printers/agent-ping', (req, res) => {
+    try {
+        const { agent, printers } = req.body;
+        if (agent === 'RestauranteAgentePrint') {
+            global.agentLastSeen = Date.now();
+            if (Array.isArray(printers)) {
+                global.agentPrinters = printers;
+            }
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Agente no reconocido.' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET status for frontend dashboard
+router.get('/config/printers/agent-status', (req, res) => {
+    try {
+        // Consider agent active if pinged within the last 15 seconds
+        const isActive = (Date.now() - global.agentLastSeen) < 15000;
+        res.json({
+            active: isActive,
+            printers: isActive ? global.agentPrinters : []
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+module.exports = router;
