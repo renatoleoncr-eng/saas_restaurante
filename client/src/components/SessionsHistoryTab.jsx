@@ -327,10 +327,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                             <Calculator size={22} className="text-white" />
                         </div>
                         <div>
-                            <h2 className="text-base sm:text-lg font-bold">Arqueo e Historial de Turno #{sessionId}</h2>
-                            <p className="text-blue-100 text-[10px] sm:text-xs opacity-90">
-                                Apertura por {session?.Opener?.displayName || session?.Opener?.username || 'Sistema'}
-                            </p>
+                            <h2 className="text-base sm:text-lg font-bold">Cierre de turno #{sessionId}</h2>
                         </div>
                     </div>
                     <button 
@@ -477,9 +474,9 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                             }`}></span>
                                                             {m}
                                                         </td>
-                                                        <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs">S/ {exp.toFixed(2)}</td>
-                                                        <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs">S/ {cnt.toFixed(2)}</td>
-                                                        <td className={`px-3 md:px-5 py-3 text-right font-bold font-mono text-xs ${
+                                                        <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs whitespace-nowrap">S/ {exp.toFixed(2)}</td>
+                                                        <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs whitespace-nowrap">S/ {cnt.toFixed(2)}</td>
+                                                        <td className={`px-3 md:px-5 py-3 text-right font-bold font-mono text-xs whitespace-nowrap ${
                                                             diff < 0 ? 'text-rose-600' : diff > 0 ? 'text-emerald-600' : 'text-blue-500'
                                                         }`}>
                                                             {diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK'}
@@ -560,7 +557,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                             }}
                                                                             className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
                                                                         >
-                                                                            Cuenta #{m.accountId}
+                                                                            #{m.accountId}
                                                                         </button>
                                                                     ) : (
                                                                         <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
@@ -580,7 +577,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                     {m.method}
                                                                 </span>
                                                             </td>
-                                                            <td className={`p-2 text-right font-mono font-bold ${
+                                                            <td className={`p-2 text-right font-mono font-bold whitespace-nowrap ${
                                                                 m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
                                                             }`}>
                                                                 {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
@@ -667,24 +664,24 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                     
                                                     {/* Expanded Category Items */}
                                                     {isCatExpanded && (
-                                                        <div className="bg-gray-50 p-2.5 border-t border-gray-100 max-h-48 overflow-y-auto flex-1">
+                                                        <div className="bg-gray-50 p-3 sm:p-4 border-t border-gray-100 flex-1">
                                                             {catData.items && catData.items.length > 0 ? (
-                                                                <ul className="space-y-2">
+                                                                <ul className="space-y-3">
                                                                     {catData.items.map((item, idx) => (
-                                                                        <li key={idx} className="flex justify-between items-start text-[9px] border-b border-gray-200/50 pb-2 last:border-0 last:pb-0">
-                                                                            <div className="flex flex-col flex-1 pr-1">
-                                                                                <span className="font-semibold text-gray-700 leading-tight">{item.name}</span>
-                                                                                {item.presentation && <span className="text-[7px] text-gray-500">{item.presentation}</span>}
+                                                                        <li key={idx} className="flex justify-between items-start text-xs sm:text-sm border-b border-gray-200/50 pb-3 last:border-0 last:pb-0">
+                                                                            <div className="flex flex-col flex-1 pr-3">
+                                                                                <span className="font-bold text-gray-700 leading-tight">{item.name}</span>
+                                                                                {item.presentation && <span className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{item.presentation}</span>}
                                                                             </div>
-                                                                            <div className="flex flex-col items-end shrink-0">
-                                                                                <span className="font-bold text-gray-400">{item.quantity} x S/ {parseFloat(item.price || 0).toFixed(2)}</span>
-                                                                                <span className="font-mono font-bold text-gray-800">S/ {parseFloat(item.total || 0).toFixed(2)}</span>
+                                                                            <div className="flex flex-col items-end shrink-0 gap-0.5">
+                                                                                <span className="font-medium text-gray-500 text-[10px] sm:text-xs">{item.quantity} x S/ {parseFloat(item.price || 0).toFixed(2)}</span>
+                                                                                <span className="font-mono font-bold text-gray-800 text-sm">S/ {parseFloat(item.total || 0).toFixed(2)}</span>
                                                                             </div>
                                                                         </li>
                                                                     ))}
                                                                 </ul>
                                                             ) : (
-                                                                <div className="text-[8px] text-gray-400 italic text-center py-2">Sin ventas</div>
+                                                                <div className="text-xs text-gray-400 italic text-center py-3">Sin ventas</div>
                                                             )}
                                                         </div>
                                                     )}

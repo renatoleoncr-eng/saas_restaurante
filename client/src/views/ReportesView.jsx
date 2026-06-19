@@ -326,7 +326,7 @@ export default function ReportesView() {
                                                 )}
                                             </div>
                                             <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
-                                                <span>{new Date(t.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="whitespace-nowrap">{new Date(t.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                 <span>•</span>
                                                 <span className="truncate">{t.user}</span>
                                             </div>
