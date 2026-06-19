@@ -464,7 +464,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     </div>
                 </div>
             ) : (
-                <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4 md:gap-6`}>
+                <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-3 md:mb-6'} gap-3 md:gap-6`}>
 
                     {/* TABS CONTROLLERS (Order 3 on mobile, Order 1 on desktop) */}
                     <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
@@ -1503,7 +1503,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         onClick={() => setFinishedTab('stock')}
                                         className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${finishedTab === 'stock' ? 'bg-white text-blue-700 shadow ring-1 ring-blue-100' : 'text-gray-500 hover:bg-gray-100'}`}
                                     >
-                                        <Package size={16} /> <span className="truncate">Stock Actual ({products.filter(p => p.isStockManaged && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
+                                        <Package size={16} /> <span className="truncate">Productos</span>
                                     </button>
                                     <button
                                         onClick={() => setFinishedTab('movements')}
@@ -1520,7 +1520,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         onClick={() => setPreparedTab('stock')}
                                         className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${preparedTab === 'stock' ? 'bg-white text-orange-700 shadow ring-1 ring-orange-100' : 'text-gray-500 hover:bg-gray-100'}`}
                                     >
-                                        <ChefHat size={16} /> <span className="truncate">Platos ({products.filter(p => !p.isStockManaged && p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
+                                        <ChefHat size={16} /> <span className="truncate">Productos</span>
                                     </button>
                                     <button
                                         onClick={() => setPreparedTab('movements')}
@@ -1537,7 +1537,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                         onClick={() => setFreeTab('stock')}
                                         className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${freeTab === 'stock' ? 'bg-white text-emerald-700 shadow ring-1 ring-emerald-100' : 'text-gray-500 hover:bg-gray-100'}`}
                                     >
-                                        <Zap size={16} /> <span className="truncate">Libres ({products.filter(p => !p.isStockManaged && !p.requiresPreparation && !['daily_entry', 'daily_main', 'daily_option', 'menu'].includes(p.type)).length})</span>
+                                        <Zap size={16} /> <span className="truncate">Productos</span>
                                     </button>
                                     <button
                                         onClick={() => setFreeTab('movements')}
