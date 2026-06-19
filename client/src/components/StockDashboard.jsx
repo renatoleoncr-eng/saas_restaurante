@@ -464,10 +464,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     </div>
                 </div>
             ) : (
-                <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4`}>
+                <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-6'} gap-4 md:gap-6`}>
 
-                    {/* TABS CONTROLLERS */}
-                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    {/* TABS CONTROLLERS (Order 3 on mobile, Order 1 on desktop) */}
+                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
                         {/* MOBILE TABS (TOP) */}
                         {mode !== 'menu_only' && (
                             <div className="md:hidden w-full">
@@ -486,28 +486,28 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
                         {/* DESKTOP TABS */}
                         {mode !== 'menu_only' && (
-                            <div className="hidden md:flex bg-gray-100 p-1 rounded-lg overflow-x-auto">
+                            <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
                                 <button
                                     onClick={() => setActiveTab('finished')}
-                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     Terminados ({countFinished})
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('prepared')}
-                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     Preparados ({countPrepared})
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('free')}
-                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     Libres ({countFree})
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('ingredients')}
-                                    className={`px-3 py-2 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     Insumos ({countIngredients})
                                 </button>
@@ -515,26 +515,26 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         )}
                     </div>
 
-                    {/* SEARCH AND ACTION BAR */}
-                    <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+                    {/* SEARCH AND ACTION BAR (Order 1 & 2 on mobile, Order 2 on desktop) */}
+                    <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 items-center w-full md:w-auto order-1 md:order-2">
                         {/* Search Bar */}
-                        <div className="relative w-full sm:w-64">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                        <div className="relative w-full sm:w-72">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400">
                                 <Search size={18} />
                             </span>
                             <input
                                 type="text"
                                 placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : activeTab === 'menu_options' ? "Buscar opción..." : "Buscar producto..."}
-                                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                                className="w-full pl-10 pr-10 py-3 sm:py-2.5 border border-gray-300 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base sm:text-sm font-medium shadow-sm transition-all"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-650"
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-650"
                                 >
-                                    <X size={16} />
+                                    <X size={18} />
                                 </button>
                             )}
                         </div>
@@ -543,13 +543,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
                             <button
                                 onClick={() => handleCreate()}
-                                className={`w-full sm:w-auto px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm text-white transition-colors whitespace-nowrap
-                                    ${activeTab === 'prepared' ? 'bg-orange-600 hover:bg-orange-700' :
-                                        activeTab === 'free' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                            'bg-blue-600 hover:bg-blue-700'}`}
+                                className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl sm:rounded-lg flex items-center justify-center gap-2 font-bold shadow-md sm:shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all whitespace-nowrap text-base sm:text-sm active:scale-[0.98]"
                             >
-                                <Plus size={18} />
-                                {activeTab === 'prepared' ? 'Nuevo Plato' : activeTab === 'free' ? 'Nuevo Libre' : 'Nuevo Producto'}
+                                <Plus size={20} className="sm:w-[18px] sm:h-[18px]" />
+                                Nuevo Producto
                             </button>
                         )}
                     </div>
