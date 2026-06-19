@@ -343,6 +343,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                     price: '0.00'
                 }));
             } else {
+                if (savedProduct.requiresPreparation && (!editForm.id || !editForm.initialRequiresPreparation)) {
+                    setRecipeProduct(savedProduct);
+                }
                 setCreatingSection(null);
                 setEditForm({});
             }
@@ -394,6 +397,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
         setEditForm({
             ...product,
+            initialRequiresPreparation: product.requiresPreparation,
             presentationsList: parsedPresentations
         });
 
@@ -658,7 +662,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/30">
                                     {/* ---------------- GROUPED FIELDS (PRODUCT LEVEL) ---------------- */}
                                     <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas (Tipo inmutable tras creación)</h4>
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas {user?.role !== 'admin' && '(Tipo inmutable tras creación)'}</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="col-span-1 md:col-span-2">
                                                 <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Producto</label>
@@ -674,10 +678,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-700 mb-1">Tipo</label>
                                                 <select
-                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${editForm.id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`}
+                                                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${editForm.id && user?.role !== 'admin' ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`}
                                                     value={editForm.type}
-                                                    onChange={e => !editForm.id && setEditForm({ ...editForm, type: e.target.value })}
-                                                    disabled={!!editForm.id}
+                                                    onChange={e => (!editForm.id || user?.role === 'admin') && setEditForm({ ...editForm, type: e.target.value })}
+                                                    disabled={!!editForm.id && user?.role !== 'admin'}
                                                 >
                                                     <option value="dish">Plato</option>
                                                     <option value="drink">Bebida</option>
@@ -685,6 +689,41 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     <option value="other">Otro</option>
                                                 </select>
                                             </div>
+                                        </div>
+
+                                        <div className="mt-4 pt-4 border-t border-gray-100">
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Categoría de Control</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                <label className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${editForm.isStockManaged ? 'bg-blue-50 border-blue-500 text-blue-800 shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'}`}>
+                                                    <input type="radio" className="hidden"
+                                                        checked={editForm.isStockManaged}
+                                                        onChange={() => setEditForm({ ...editForm, isStockManaged: true, requiresPreparation: false, stock: editForm.stock || 0 })}
+                                                    />
+                                                    <Package size={18} />
+                                                    <span className="font-bold text-sm">Terminado</span>
+                                                </label>
+                                                <label className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${!editForm.isStockManaged && editForm.requiresPreparation ? 'bg-green-50 border-green-500 text-green-800 shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:border-green-300'}`}>
+                                                    <input type="radio" className="hidden"
+                                                        checked={!editForm.isStockManaged && editForm.requiresPreparation}
+                                                        onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: true, stock: 0 })}
+                                                    />
+                                                    <ChefHat size={18} />
+                                                    <span className="font-bold text-sm">Preparado</span>
+                                                </label>
+                                                <label className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${!editForm.isStockManaged && !editForm.requiresPreparation ? 'bg-orange-50 border-orange-500 text-orange-800 shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300'}`}>
+                                                    <input type="radio" className="hidden"
+                                                        checked={!editForm.isStockManaged && !editForm.requiresPreparation}
+                                                        onChange={() => setEditForm({ ...editForm, isStockManaged: false, requiresPreparation: false, stock: 0 })}
+                                                    />
+                                                    <Zap size={18} />
+                                                    <span className="font-bold text-sm">Libre</span>
+                                                </label>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-2 font-medium">
+                                                {editForm.isStockManaged ? 'Controla stock mediante compras e inventario.' :
+                                                 !editForm.isStockManaged && editForm.requiresPreparation ? 'Requiere receta. El stock depende de los ingredientes.' :
+                                                 'Sin control de stock ni receta (ej. servicios, propinas, genéricos).'}
+                                            </p>
                                         </div>
                                     </div>
 

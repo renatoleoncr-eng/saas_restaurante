@@ -1729,7 +1729,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <ShoppingCart size={20} /> Carrito
                                 {account && <span className="text-sm font-normal text-gray-500 ml-2">Cuenta #{account.id}</span>}
                             </h2>
-                            <button onClick={handleClose} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
+                            <button onClick={() => setShowMobileCart(false)} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
