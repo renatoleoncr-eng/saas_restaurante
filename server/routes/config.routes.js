@@ -163,6 +163,19 @@ router.get('/config/printers/agent-download', (req, res) => {
     fs.createReadStream(scriptPath).pipe(res);
 });
 
+// GET download the graphical agent installer (MakalaAgentSetup.exe)
+router.get('/config/printers/agent-setup-exe', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const exePath = path.resolve(__dirname, '../bin/MakalaAgentSetup.exe');
+    if (!fs.existsSync(exePath)) {
+        return res.status(404).json({ error: 'Instalador .exe no encontrado en el servidor.' });
+    }
+    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
+    res.setHeader('Content-Disposition', 'attachment; filename="MakalaAgentSetup.exe"');
+    fs.createReadStream(exePath).pipe(res);
+});
+
 // GET download print-agent.js (el agente en sí, para instalación automática en nuevas PCs)
 router.get('/config/printers/agent-js', (req, res) => {
     const fs = require('fs');

@@ -1464,18 +1464,17 @@ const BillingConfigModal = ({ onClose }) => {
                                                 <p className="font-semibold">Pasos para esta PC:</p>
                                                 <ol className="list-decimal list-inside space-y-1 text-blue-700">
                                                     <li>Descarga el instalador haciendo clic en el botón de abajo</li>
-                                                    <li>Ejecuta el archivo <strong>.ps1</strong> (doble clic o clic derecho → Ejecutar con PowerShell)</li>
-                                                    <li>¡Listo! El instalador configura todo automáticamente — <strong>no necesitas instalar nada extra</strong></li>
+                                                    <li>Abre el archivo descargado (MakalaAgentSetup.exe)</li>
+                                                    <li>Haz clic en <strong>Instalar</strong> y espera a que termine</li>
                                                 </ol>
-                                                <p className="text-blue-500 mt-1">💡 Si Windows bloquea la ejecución, abre PowerShell y escribe: <code className="bg-blue-100 px-1 rounded break-all whitespace-normal">powershell -ExecutionPolicy Bypass -File instalar_servicio_impresion.ps1</code></p>
                                             </div>
                                             <a
-                                                href="/api/config/printers/agent-download"
-                                                download="instalar_servicio_impresion.ps1"
+                                                href="/api/config/printers/agent-setup-exe"
+                                                download="MakalaAgentSetup.exe"
                                                 className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                                             >
                                                 <Download size={14} />
-                                                Descargar Instalador del Agente (.ps1)
+                                                Descargar Instalador del Agente (.exe)
                                             </a>
                                         </div>
                                     )}

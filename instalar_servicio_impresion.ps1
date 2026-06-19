@@ -114,7 +114,7 @@ if (-not $NodePath) {
         Write-Host "        $NodePortableUrl" -ForegroundColor Cyan
         Write-Host "        y coloca el archivo en: $InstallDir\node.exe" -ForegroundColor Cyan
         Write-Host ""
-        Read-Host "Presiona Enter para salir"
+
         exit 1
     }
 }
@@ -137,7 +137,7 @@ try {
         Write-Host "[WARN] Descarga fallida, usando copia local." -ForegroundColor Yellow
     } else {
         Write-Host "[ERROR] No se pudo obtener el agente: $_" -ForegroundColor Red
-        Read-Host "Presiona Enter para salir"
+
         exit 1
     }
 }
@@ -220,7 +220,7 @@ Write-Host "[INFO] Registrando tarea programada '$TaskName'..." -ForegroundColor
 schtasks /Create /XML $xmlFile /TN $TaskName /F 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] No se pudo crear la tarea programada." -ForegroundColor Red
-    Read-Host "Presiona Enter para salir"
+
     exit 1
 }
 Write-Host "[OK] Tarea programada creada." -ForegroundColor Green
@@ -250,4 +250,4 @@ Write-Host ""
 Write-Host "  Para desinstalar: ejecute desinstalar_servicio_impresion.ps1" -ForegroundColor White
 Write-Host ""
 
-Read-Host "Presiona Enter para cerrar"
+
