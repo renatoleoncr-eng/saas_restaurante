@@ -172,7 +172,7 @@ export default function ReportesView() {
             </div>
 
             {/* STATS CARDS GRID */}
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
                 {/* 1. INGRESOS */}
                 <div className="bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-green-500 relative overflow-hidden group">
                     <div className="relative z-10">
@@ -206,7 +206,7 @@ export default function ReportesView() {
                 </div>
 
                 {/* 3. BALANCE */}
-                <div className="bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-blue-500 relative overflow-hidden group">
+                <div className="hidden md:block bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl shadow-sm border-t-2 md:border-t-0 md:border-l-4 border-blue-500 relative overflow-hidden group">
                     <div className="relative z-10">
                         <div className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate">
                             <span className="hidden sm:inline">Balance Periodo</span>

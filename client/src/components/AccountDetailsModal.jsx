@@ -153,7 +153,7 @@ const AccountDetailsModal = ({
                                 className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
                             >
                                 <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
-                                <span>Imprimir Consumos</span>
+                                <span className="hidden sm:inline">Imprimir Consumos</span>
                             </button>
                         )}
                         {account.status === 'closed' && (
@@ -166,9 +166,9 @@ const AccountDetailsModal = ({
                                 }`}
                             >
                                 {account.Invoices?.some(i => i.status !== 'anulado') ? (
-                                    <><FileText size={16} className="sm:w-[18px] sm:h-[18px]" /> <span>Comprobantes</span></>
+                                    <><FileText size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px]" /> <span>Comprobantes</span></>
                                 ) : (
-                                    <><Receipt size={16} className="sm:w-[18px] sm:h-[18px]" /> <span>Facturar</span></>
+                                    <><Receipt size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px]" /> <span>Facturar</span></>
                                 )}
                             </button>
                         )}
