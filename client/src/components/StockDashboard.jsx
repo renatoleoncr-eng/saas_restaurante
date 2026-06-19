@@ -1947,8 +1947,17 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         <div className="flex-1">
                                                             <div className="font-bold text-lg text-gray-800">{product.name}</div>
                                                             <div className="text-sm text-gray-500 mb-1">
-                                                                <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'daily_option' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                                    {product.type === 'daily_option' ? 'Opción Menú' : product.type}
+                                                                <span className={`px-2 py-0.5 rounded text-xs mr-2 ${product.type === 'drink' ? 'bg-blue-100 text-blue-800' :
+                                                                    product.type === 'daily_entry' ? 'bg-purple-100 text-purple-800' :
+                                                                    product.type === 'daily_main' ? 'bg-pink-100 text-pink-800' :
+                                                                    product.type === 'daily_option' ? 'bg-gray-100 text-gray-800' :
+                                                                    product.type === 'menu' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                    {product.type === 'drink' ? 'Bebida' :
+                                                                        product.type === 'dish' ? 'Plato' :
+                                                                        product.type === 'daily_entry' ? 'Entrada Menú' :
+                                                                        product.type === 'daily_main' ? 'Segundo Menú' :
+                                                                        product.type === 'daily_option' ? 'Opción Menú' :
+                                                                        product.type === 'menu' ? 'Menú' : 'Otro'}
                                                                 </span>
                                                                 <span>
                                                                     {hasMultipleVariants 

@@ -223,6 +223,7 @@ router.put('/products/:id', async (req, res) => {
         await product.update({
             name,
             price,
+            type: actualType,
             stock: stock !== undefined ? Math.max(0, stock) : product.stock,
             isStockManaged: isStockManaged !== undefined ? isStockManaged : product.isStockManaged,
             category,
