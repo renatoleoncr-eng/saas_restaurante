@@ -79,8 +79,8 @@ export default function Dashboard() {
     }, [isLocked]);
 
     // --- SWIPE GESTURE LOGIC START ---
-    const [touchStart, setTouchStart] = useState(null);
-    const [touchEnd, setTouchEnd] = useState(null);
+    const touchStartRef = useRef(null);
+    const touchEndRef = useRef(null);
 
     // Minimum distance (in px) to be considered a swipe
     const minSwipeDistance = 50;
@@ -89,17 +89,17 @@ export default function Dashboard() {
     const maxSwipeRightEdge = 40;
 
     const onTouchStart = (e) => {
-        setTouchEnd(null); // Reset touch end
-        setTouchStart(e.targetTouches[0].clientX);
+        touchEndRef.current = null; // Reset touch end
+        touchStartRef.current = e.targetTouches[0].clientX;
     };
 
     const onTouchMove = (e) => {
-        setTouchEnd(e.targetTouches[0].clientX);
+        touchEndRef.current = e.targetTouches[0].clientX;
     };
 
     const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
+        if (!touchStartRef.current || !touchEndRef.current) return;
+        const distance = touchStartRef.current - touchEndRef.current;
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
             if (isLeftSwipe && !isCollapsed) {
                 // Swipe Left: Close open menu anywhere
                 setIsCollapsed(true);
-            } else if (isRightSwipe && isCollapsed && touchStart <= maxSwipeRightEdge) {
+            } else if (isRightSwipe && isCollapsed && touchStartRef.current <= maxSwipeRightEdge) {
                 // Swipe Right: Open menu only if started from the far-left edge
                 setIsCollapsed(false);
             }
