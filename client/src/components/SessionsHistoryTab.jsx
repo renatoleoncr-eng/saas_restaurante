@@ -639,7 +639,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                             return (
                                                 <div 
                                                     key={catKey} 
-                                                    className={`bg-white border rounded-xl overflow-hidden shadow-xs flex flex-col ${catColorClass} ${
+                                                    className={`bg-white border rounded-xl shadow-xs flex flex-col ${catColorClass} ${
                                                         isCatExpanded ? 'col-span-2 sm:col-span-4 lg:col-span-5' : ''
                                                     }`}
                                                 >

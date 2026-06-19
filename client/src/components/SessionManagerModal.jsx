@@ -706,7 +706,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                             .map(([catKey, catData]) => (
                                             <div 
                                                 key={catKey} 
-                                                className={`bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col transition-all duration-200 ${
+                                                className={`bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col transition-all duration-200 ${
                                                     expandedCategory === catKey ? 'col-span-2 md:col-span-4' : ''
                                                 }`}
                                             >
@@ -729,7 +729,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                 
                                                 {/* Expanded Category Items */}
                                                 {expandedCategory === catKey && (
-                                                    <div className="bg-gray-50 p-3 border-t border-gray-100 max-h-48 overflow-y-auto flex-1">
+                                                    <div className="bg-gray-50 p-3 border-t border-gray-100 flex-1">
                                                         {catData.items.length > 0 ? (
                                                             <ul className="space-y-2">
                                                                 {catData.items.map((item, idx) => (
