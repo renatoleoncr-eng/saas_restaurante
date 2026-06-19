@@ -666,7 +666,10 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                     
                                                     {/* Expanded Category Items */}
                                                     {isCatExpanded && (
-                                                        <div className="bg-gray-50 p-3 sm:p-4 border-t border-gray-100 flex-1">
+                                                        <div 
+                                                            className="bg-gray-50 p-3 sm:p-4 border-t border-gray-100 max-h-[40vh] overflow-y-auto touch-pan-y" 
+                                                            style={{ WebkitOverflowScrolling: 'touch' }}
+                                                        >
                                                             {catData.items && catData.items.length > 0 ? (
                                                                 <ul className="space-y-3">
                                                                     {catData.items.map((item, idx) => (
