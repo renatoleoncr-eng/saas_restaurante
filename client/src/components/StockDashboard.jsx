@@ -538,17 +538,6 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 </button>
                             )}
                         </div>
-
-                        {/* Action Button */}
-                        {activeTab !== 'ingredients' && activeTab !== 'menu_options' && !readOnly && (
-                            <button
-                                onClick={() => handleCreate()}
-                                className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl sm:rounded-lg flex items-center justify-center gap-2 font-bold shadow-md sm:shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all whitespace-nowrap text-base sm:text-sm active:scale-[0.98]"
-                            >
-                                <Plus size={20} className="sm:w-[18px] sm:h-[18px]" />
-                                Nuevo Producto
-                            </button>
-                        )}
                     </div>
                 </div>
             )}
@@ -1500,51 +1489,69 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                             {activeTab === 'finished' && (
                                 <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => setFinishedTab('stock')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${finishedTab === 'stock' ? 'bg-white text-blue-700 shadow ring-1 ring-blue-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                                        onClick={() => setFinishedTab(finishedTab === 'stock' ? 'movements' : 'stock')}
+                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     >
-                                        <Package size={16} /> <span className="truncate">Productos</span>
+                                        {finishedTab === 'stock' ? (
+                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
+                                        ) : (
+                                            <><Package size={16} /> <span className="truncate">Productos</span></>
+                                        )}
                                     </button>
-                                    <button
-                                        onClick={() => setFinishedTab('movements')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${finishedTab === 'movements' ? 'bg-white text-blue-700 shadow ring-1 ring-blue-100' : 'text-gray-500 hover:bg-gray-100'}`}
-                                    >
-                                        <History size={16} /> <span className="truncate">Movimientos</span>
-                                    </button>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => handleCreate()}
+                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
                             {activeTab === 'prepared' && (
                                 <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => setPreparedTab('stock')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${preparedTab === 'stock' ? 'bg-white text-orange-700 shadow ring-1 ring-orange-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                                        onClick={() => setPreparedTab(preparedTab === 'stock' ? 'movements' : 'stock')}
+                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     >
-                                        <ChefHat size={16} /> <span className="truncate">Productos</span>
+                                        {preparedTab === 'stock' ? (
+                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
+                                        ) : (
+                                            <><ChefHat size={16} /> <span className="truncate">Productos</span></>
+                                        )}
                                     </button>
-                                    <button
-                                        onClick={() => setPreparedTab('movements')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${preparedTab === 'movements' ? 'bg-white text-orange-700 shadow ring-1 ring-orange-100' : 'text-gray-500 hover:bg-gray-100'}`}
-                                    >
-                                        <History size={16} /> <span className="truncate">Movimientos</span>
-                                    </button>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => handleCreate()}
+                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
                             {activeTab === 'free' && (
                                 <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => setFreeTab('stock')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${freeTab === 'stock' ? 'bg-white text-emerald-700 shadow ring-1 ring-emerald-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                                        onClick={() => setFreeTab(freeTab === 'stock' ? 'movements' : 'stock')}
+                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     >
-                                        <Zap size={16} /> <span className="truncate">Productos</span>
+                                        {freeTab === 'stock' ? (
+                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
+                                        ) : (
+                                            <><Zap size={16} /> <span className="truncate">Productos</span></>
+                                        )}
                                     </button>
-                                    <button
-                                        onClick={() => setFreeTab('movements')}
-                                        className={`px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${freeTab === 'movements' ? 'bg-white text-emerald-700 shadow ring-1 ring-emerald-100' : 'text-gray-500 hover:bg-gray-100'}`}
-                                    >
-                                        <History size={16} /> <span className="truncate">Movimientos</span>
-                                    </button>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => handleCreate()}
+                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
