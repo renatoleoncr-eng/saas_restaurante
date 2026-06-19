@@ -139,7 +139,7 @@ function processJobs(jobs) {
         '-HexData', job.hexData
     ];
 
-    execFile('powershell.exe', args, { timeout: 15000 }, (error, stdout, stderr) => {
+    execFile('powershell.exe', args, { timeout: 15000, windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             log(`[ERROR] Trabajo #${job.id} fallo: ${error.message}`);
             if (stderr) log(`[ERROR] Detalle: ${stderr.trim()}`);
@@ -180,7 +180,7 @@ const localServer = http.createServer((req, res) => {
     if (req.url === '/windows-printers') {
         execFile('powershell.exe',
             ['-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'],
-            { timeout: 8000 },
+            { timeout: 8000, windowsHide: true },
             (err, stdout) => {
                 if (err || !stdout.trim()) {
                     res.writeHead(200);
