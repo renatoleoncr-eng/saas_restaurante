@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Instala el Agente de Impresion del Restaurante como una Tarea Programada de Windows.
@@ -20,13 +21,13 @@
     powershell -ExecutionPolicy Bypass -File .\instalar_servicio_impresion.ps1
 
 .NOTE
-    NO requiere privilegios de Administrador - corre como el usuario actual.
+    Requiere privilegios de Administrador - corre en segundo plano profundo.
     NO requiere instalar Node.js - se descarga automaticamente si es necesario.
 #>
 
 $TaskName   = "RestauranteAgentePrint"
 $ServerUrl  = "https://makala.maksuites.com.pe"
-$InstallDir = "$env:LOCALAPPDATA\RestauranteAgente"
+$InstallDir = "$env:ProgramData\RestauranteAgente"
 $AgentFile  = "$InstallDir\print-agent.js"
 
 # Version LTS de Node.js portable (binario standalone, sin instalador)
@@ -180,11 +181,16 @@ $xmlContent = @"
   <RegistrationInfo>
     <Description>Agente de impresion local para Restaurante El Makala. Conecta con el servidor en la nube y envia trabajos a la impresora termica local. Se inicia automaticamente al encender la PC.</Description>
   </RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
   <Triggers>
-    <LogonTrigger>
+    <BootTrigger>
       <Enabled>true</Enabled>
-      <UserId>$env:USERDOMAIN\$env:USERNAME</UserId>
-    </LogonTrigger>
+    </BootTrigger>
   </Triggers>
   <Settings>
     <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>

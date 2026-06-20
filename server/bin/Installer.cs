@@ -98,6 +98,7 @@ namespace MakalaInstaller
             psi.FileName = "powershell.exe";
             psi.Arguments = string.Format("-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command \"{0}\"", command);
             psi.UseShellExecute = true;
+            psi.Verb = "runas";
             psi.WindowStyle = ProcessWindowStyle.Hidden;
             psi.CreateNoWindow = true;
 
