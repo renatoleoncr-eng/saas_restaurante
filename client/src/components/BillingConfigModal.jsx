@@ -18,7 +18,7 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
 
 const BillingConfigModal = ({ onClose }) => {
     const { user } = useRestaurant();
-    const [activeTab, setActiveTab] = useState('history');
+    const [activeTab, setActiveTab] = useState('config');
     const [viewMode, setViewMode] = useState('comprobantes');
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState({
@@ -949,123 +949,152 @@ const BillingConfigModal = ({ onClose }) => {
                                     </div>
                                 </div>
 
-                                {/* Lista de Comprobantes (Card Layout) */}
-                                <div className="max-w-5xl mx-auto space-y-3 pb-8">
-                                    {invoices.length === 0 ? (
-                                        <div className="text-center py-12 bg-white rounded-[20px] border border-gray-100 shadow-sm">
-                                            <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                <FileText size={24} className="text-gray-300" />
-                                            </div>
-                                            <p className="text-sm font-bold text-gray-400">No hay comprobantes emitidos en este rango</p>
+                                {/* Lista de Comprobantes (List Layout) */}
+                                <div className="max-w-5xl mx-auto pb-8">
+                                    <div className="bg-white rounded-[20px] border border-gray-100 shadow-sm overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse whitespace-nowrap">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                                        <th className="p-4 pl-6">Documento</th>
+                                                        <th className="p-4">Cuenta</th>
+                                                        <th className="p-4">Cliente</th>
+                                                        <th className="p-4">Fecha</th>
+                                                        <th className="p-4">Total</th>
+                                                        <th className="p-4">Estado</th>
+                                                        <th className="p-4 pr-6 text-right">Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-50">
+                                                    {invoices.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="7" className="text-center py-12">
+                                                                <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                                    <FileText size={24} className="text-gray-300" />
+                                                                </div>
+                                                                <p className="text-sm font-bold text-gray-400">No hay comprobantes emitidos en este rango</p>
+                                                            </td>
+                                                        </tr>
+                                                    ) : invoices.map(inv => {
+                                                        const { pdf } = getSunatUrls(inv.sunatResponse);
+                                                        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+                                                        
+                                                        const formatDate = (dateStr) => {
+                                                            if (!dateStr) return 'N/A';
+                                                            try {
+                                                                const d = new Date(dateStr);
+                                                                const day = String(d.getDate()).padStart(2, '0');
+                                                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                                const year = String(d.getFullYear()).slice(-2);
+                                                                const hours = String(d.getHours()).padStart(2, '0');
+                                                                const minutes = String(d.getMinutes()).padStart(2, '0');
+                                                                return `${day}/${month}/${year} ${hours}:${minutes}`;
+                                                            } catch (e) {
+                                                                return new Date(dateStr).toLocaleString();
+                                                            }
+                                                        };
+
+                                                        return (
+                                                            <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                                                                <td className="p-4 pl-6 align-middle">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm font-black text-[#1d263b]">{docId}</span>
+                                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                                            <span className="text-[10px] font-bold text-gray-400">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
+                                                                            {(() => { try { const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items; return items?.some(i => i.description?.includes('Abono')); } catch { return false; } })() && (
+                                                                                <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold px-1.5 py-0 rounded-full uppercase">Abono</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    {inv.accountId ? (
+                                                                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest shadow-sm">
+                                                                            Cuenta #{inv.accountId}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[11px] font-bold text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[13px] font-bold text-gray-700 truncate max-w-[200px]" title={inv.clienteNombre}>
+                                                                            {inv.clienteNombre}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-medium text-gray-400 mt-0.5 font-mono">{inv.clienteDocumento}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    <span className="text-[12px] font-medium text-gray-600">{formatDate(inv.emitidoAt)}</span>
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    <span className="text-[14px] font-black text-[#1d263b]">
+                                                                        S/ {parseFloat(inv.total).toFixed(2)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${
+                                                                        inv.status === 'anulado' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+                                                                    }`}>
+                                                                        {inv.status === 'anulado' ? 'ANULADA' : 'ACEPTADA'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-4 pr-6 align-middle">
+                                                                    <div className="flex items-center justify-end gap-1.5">
+                                                                        <button 
+                                                                            onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
+                                                                            className="p-2 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
+                                                                            title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
+                                                                        >
+                                                                            <ExternalLink size={16} />
+                                                                        </button>
+
+                                                                        {inv.status !== 'anulado' && (
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    try {
+                                                                                        setLoading(true);
+                                                                                        await axios.post(`/api/billing/invoices/${inv.id}/print`);
+                                                                                        alert('✅ Comprobante enviado a la impresora térmica.');
+                                                                                    } catch (e) {
+                                                                                        alert('❌ Error al imprimir ticket: ' + (e.response?.data?.error || e.message));
+                                                                                    } finally {
+                                                                                        setLoading(false);
+                                                                                    }
+                                                                                }}
+                                                                                className="p-2 text-orange-500 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
+                                                                                title="Imprimir Ticket Térmico"
+                                                                            >
+                                                                                <Printer size={16} />
+                                                                            </button>
+                                                                        )}
+
+                                                                        <button
+                                                                            onClick={() => handleShareWhatsapp(inv, inv.status === 'anulado' ? 'nc' : 'invoice')}
+                                                                            className="p-2 text-green-500 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
+                                                                            title="Compartir por WhatsApp"
+                                                                        >
+                                                                            <WhatsAppIcon size={16} />
+                                                                        </button>
+
+                                                                        {inv.status !== 'anulado' && (
+                                                                            <button
+                                                                                onClick={() => handleAnnulInvoice(inv)}
+                                                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
+                                                                                title="Anular"
+                                                                            >
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    ) : invoices.map(inv => {
-                                        const { pdf } = getSunatUrls(inv.sunatResponse);
-                                        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
-                                        
-                                        const formatDate = (dateStr) => {
-                                            if (!dateStr) return 'N/A';
-                                            try {
-                                                const d = new Date(dateStr);
-                                                const day = String(d.getDate()).padStart(2, '0');
-                                                const month = String(d.getMonth() + 1).padStart(2, '0');
-                                                const year = String(d.getFullYear()).slice(-2);
-                                                const hours = String(d.getHours()).padStart(2, '0');
-                                                const minutes = String(d.getMinutes()).padStart(2, '0');
-                                                return `${day}/${month}/${year} ${hours}:${minutes}`;
-                                            } catch (e) {
-                                                return new Date(dateStr).toLocaleString();
-                                            }
-                                        };
-
-                                        return (
-                                            <div key={inv.id} className="bg-white p-4 md:p-5 rounded-[20px] border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 hover:shadow-md transition-shadow">
-                                                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-                                                    <div className="flex justify-between items-start md:flex-col md:w-36">
-                                                        <span className="text-[15px] md:text-base font-black text-[#1d263b] tracking-tight">{docId}</span>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            <span className="text-[10px] font-bold text-gray-400">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
-                                                            {(() => { try { const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items; return items?.some(i => i.description?.includes('Abono')); } catch { return false; } })() && (
-                                                                <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold px-1.5 py-0 rounded-full uppercase">Abono</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] md:max-w-[300px]" title={inv.clienteNombre}>
-                                                            {inv.clienteNombre}
-                                                        </span>
-                                                        <span className="text-[11px] font-medium text-gray-400 mt-0.5 font-mono">{inv.clienteDocumento}</span>
-                                                    </div>
-
-                                                    <div className="hidden md:flex flex-col">
-                                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fecha</span>
-                                                        <span className="text-sm font-medium text-gray-600">{formatDate(inv.emitidoAt)}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between md:justify-end gap-4 md:gap-8 border-t md:border-none border-gray-50 pt-3 md:pt-0 mt-1 md:mt-0">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-lg md:text-xl font-black text-[#1d263b] leading-none mb-1">
-                                                            S/ {parseFloat(inv.total).toFixed(2)}
-                                                        </span>
-                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded w-fit uppercase tracking-widest ${
-                                                            inv.status === 'anulado' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
-                                                        }`}>
-                                                            {inv.status === 'anulado' ? 'ANULADA' : 'ACEPTADA'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1.5 bg-[#f8fafc] p-1.5 rounded-[14px]">
-                                                        <button 
-                                                            onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
-                                                            className="p-2 md:p-2.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all"
-                                                            title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
-                                                        >
-                                                            <ExternalLink size={18} />
-                                                        </button>
-
-                                                        {inv.status !== 'anulado' && (
-                                                            <button
-                                                                onClick={async () => {
-                                                                    try {
-                                                                        setLoading(true);
-                                                                        await axios.post(`/api/billing/invoices/${inv.id}/print`);
-                                                                        alert('✅ Comprobante enviado a la impresora térmica.');
-                                                                    } catch (e) {
-                                                                        alert('❌ Error al imprimir ticket: ' + (e.response?.data?.error || e.message));
-                                                                    } finally {
-                                                                        setLoading(false);
-                                                                    }
-                                                                }}
-                                                                className="p-2 md:p-2.5 text-orange-500 hover:bg-white hover:shadow-sm rounded-xl transition-all"
-                                                                title="Imprimir Ticket Térmico"
-                                                            >
-                                                                <Printer size={18} />
-                                                            </button>
-                                                        )}
-
-                                                        <button
-                                                            onClick={() => handleShareWhatsapp(inv, inv.status === 'anulado' ? 'nc' : 'invoice')}
-                                                            className="p-2 md:p-2.5 text-green-500 hover:bg-white hover:shadow-sm rounded-xl transition-all"
-                                                            title="Compartir por WhatsApp"
-                                                        >
-                                                            <WhatsAppIcon size={18} />
-                                                        </button>
-
-                                                        {inv.status !== 'anulado' && (
-                                                            <button
-                                                                onClick={() => handleAnnulInvoice(inv)}
-                                                                className="p-2 md:p-2.5 text-gray-400 hover:text-red-500 hover:bg-white hover:shadow-sm rounded-xl transition-all ml-0.5"
-                                                                title="Anular"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    </div>
                                 </div>
                             </div>
                         </div>

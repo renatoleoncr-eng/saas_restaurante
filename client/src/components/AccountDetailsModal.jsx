@@ -137,7 +137,7 @@ const AccountDetailsModal = ({
             <div className="bg-white shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-xl overflow-hidden flex flex-col">
                 {/* HEADER */}
                 <div 
-                    className="p-4 sm:p-6 border-b flex justify-between items-center bg-white gap-4 sm:!pt-6"
+                    className="relative z-20 p-4 sm:p-6 border-b flex justify-between items-center bg-white gap-4 sm:!pt-6"
                     style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
                 >
                     <div className="min-w-0 flex-1">
@@ -149,8 +149,12 @@ const AccountDetailsModal = ({
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         {['admin', 'cashier', 'waiter'].includes(user?.role) && (
                             <button
-                                onClick={handlePrintPreCuenta}
-                                className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handlePrintPreCuenta();
+                                }}
+                                className="relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
                             >
                                 <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
                                 <span className="hidden sm:inline">Imprimir Consumos</span>
@@ -158,8 +162,12 @@ const AccountDetailsModal = ({
                         )}
                         {account.status === 'closed' && (
                             <button
-                                onClick={() => setShowInvoiceModal(true)}
-                                className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors ${
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowInvoiceModal(true);
+                                }}
+                                className={`relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors ${
                                     account.Invoices?.some(i => i.status !== 'anulado') 
                                         ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                                         : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/30'
@@ -179,7 +187,7 @@ const AccountDetailsModal = ({
                                 e.stopPropagation();
                                 onClose();
                             }} 
-                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center"
+                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center relative z-10"
                             aria-label="Cerrar"
                         >
                             <X size={20} className="sm:w-[24px] sm:h-[24px]" strokeWidth={2} />
