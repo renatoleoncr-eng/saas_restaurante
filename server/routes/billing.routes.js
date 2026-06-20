@@ -91,11 +91,22 @@ router.get('/billing/consulta', async (req, res) => {
 router.get('/billing/invoices', async (req, res) => {
     try {
         const where = {};
-        if (req.query.documento) where.clienteDocumento = { [Op.like]: `%${req.query.documento}%` };
+        if (req.query.documento) {
+            const docFilters = [
+                { clienteDocumento: { [Op.like]: `%${req.query.documento}%` } },
+                { clienteNombre: { [Op.like]: `%${req.query.documento}%` } },
+                { serie: { [Op.like]: `%${req.query.documento}%` } }
+            ];
+            const num = parseInt(req.query.documento, 10);
+            if (!isNaN(num)) {
+                docFilters.push({ correlativo: num });
+            }
+            where[Op.or] = docFilters;
+        }
         if (req.query.desde || req.query.hasta) {
             where.emitidoAt = {};
-            if (req.query.desde) where.emitidoAt[Op.gte] = new Date(req.query.desde + 'T00:00:00');
-            if (req.query.hasta) where.emitidoAt[Op.lte] = new Date(req.query.hasta + 'T23:59:59');
+            if (req.query.desde) where.emitidoAt[Op.gte] = new Date(req.query.desde + 'T00:00:00.000-05:00');
+            if (req.query.hasta) where.emitidoAt[Op.lte] = new Date(req.query.hasta + 'T23:59:59.999-05:00');
         }
 
         const invoices = await Invoice.findAll({

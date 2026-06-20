@@ -837,7 +837,7 @@ const BillingConfigModal = ({ onClose }) => {
                                 }}
                                 className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-bold text-[10px] md:text-xs tracking-wider uppercase transition-colors whitespace-nowrap"
                             >
-                                {viewMode === 'comprobantes' ? 'VOLVER A CONFIG' : 'VER COMPROBANTES'}
+                                {viewMode === 'comprobantes' ? 'Volver a configuración' : 'Ver comprobantes'}
                             </button>
                         )}
                         <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors shrink-0">
@@ -1008,9 +1008,9 @@ const BillingConfigModal = ({ onClose }) => {
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-4 align-middle">
-                                                                    {inv.accountId ? (
+                                                                    {inv.AccountId ? (
                                                                         <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest shadow-sm">
-                                                                            Cuenta #{inv.accountId}
+                                                                            Cuenta #{inv.AccountId}
                                                                         </span>
                                                                     ) : (
                                                                         <span className="text-[11px] font-bold text-gray-400">-</span>
