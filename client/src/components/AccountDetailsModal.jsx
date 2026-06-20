@@ -81,7 +81,7 @@ const AccountDetailsModal = ({
 
     if (loading) {
         return createPortal(
-            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 flex flex-col items-center gap-4">
                     <Loader2 className="animate-spin text-blue-600" size={48} />
                     <p className="text-gray-600 font-medium">Cargando detalles...</p>
@@ -93,7 +93,7 @@ const AccountDetailsModal = ({
 
     if (error) {
         return createPortal(
-            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center gap-4 text-center">
                     <div className="bg-red-100 text-red-600 p-3 rounded-full">
                         <X size={32} />
@@ -133,7 +133,7 @@ const AccountDetailsModal = ({
     };
 
     return createPortal(
-        <div className="fixed inset-0 bg-black/50 z-[60] flex sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in">
+        <div className="fixed inset-0 bg-black/50 z-[110] flex sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in">
             <div className="bg-white shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-xl overflow-hidden flex flex-col">
                 {/* HEADER */}
                 <div 
@@ -407,7 +407,7 @@ const AccountDetailsModal = ({
 
             {/* FULL SCREEN IMAGE PREVIEW */}
             {previewImage && (
-                <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4 animate-in fade-in">
+                <div className="fixed inset-0 bg-black/90 z-[120] flex items-center justify-center p-4 animate-in fade-in">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

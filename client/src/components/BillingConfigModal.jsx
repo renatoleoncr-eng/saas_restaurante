@@ -808,51 +808,67 @@ const BillingConfigModal = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
                 
                 {/* Header */}
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                            <CreditCard size={24} />
+                <div className="px-6 py-5 flex justify-between items-center bg-white z-10 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-[#f4f7fe] text-[#1f63fb] rounded-2xl shadow-sm">
+                            <CreditCard size={26} strokeWidth={2.5} />
                         </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800">Configuración del Sistema</h2>
-                            <p className="text-sm text-gray-500">Gestión de comprobantes, impresoras y SUNAT</p>
+                        <div className="flex flex-col">
+                            <h2 className="text-[22px] font-black text-[#1d263b] tracking-tight leading-none mb-1.5">Configuración del Sistema</h2>
+                            <p className="text-[13px] font-medium text-gray-500 leading-none">Gestión de comprobantes, impresoras y SUNAT</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors shrink-0">
+                        <X size={24} />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b bg-white overflow-x-auto whitespace-nowrap scrollbar-none">
+                <div className="flex border-b border-gray-100 bg-white overflow-x-auto whitespace-nowrap scrollbar-none px-4 shrink-0">
                     <button 
-                        onClick={() => setActiveTab('history')}
-                        className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'history' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={(e) => {
+                            setActiveTab('history');
+                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }}
+                        className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'history' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
                     >
-                        <FileText size={18} /> Historial
+                        <FileText size={18} strokeWidth={activeTab === 'history' ? 2.5 : 2} /> Historial
+                        {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                     </button>
                     <button 
-                        onClick={() => setActiveTab('new')}
-                        className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'new' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={(e) => {
+                            setActiveTab('new');
+                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }}
+                        className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'new' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
                     >
-                        <Plus size={18} /> Nueva Emisión
+                        <Plus size={18} strokeWidth={activeTab === 'new' ? 2.5 : 2} /> Nueva Emisión
+                        {activeTab === 'new' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                     </button>
                     {user?.role === 'admin' && (
                         <>
                             <button 
-                                onClick={() => setActiveTab('config')}
-                                className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'config' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={(e) => {
+                                    setActiveTab('config');
+                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                }}
+                                className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'config' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
                             >
-                                <Settings size={18} /> Configuración
+                                <Settings size={18} strokeWidth={activeTab === 'config' ? 2.5 : 2} /> Configuración
+                                {activeTab === 'config' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                             </button>
                             <button 
-                                onClick={() => setActiveTab('printers')}
-                                className={`flex-1 shrink-0 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-all ${activeTab === 'printers' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={(e) => {
+                                    setActiveTab('printers');
+                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                }}
+                                className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'printers' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
                             >
-                                <Printer size={18} /> Impresoras
+                                <Printer size={18} strokeWidth={activeTab === 'printers' ? 2.5 : 2} /> Impresoras
+                                {activeTab === 'printers' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                             </button>
                         </>
                     )}
@@ -1289,14 +1305,15 @@ const BillingConfigModal = ({ onClose }) => {
                     )}
 
                     {activeTab === 'config' && user?.role === 'admin' && (
-                        <form onSubmit={handleSaveConfig} className="max-w-2xl mx-auto space-y-8 py-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">RUC de la Empresa</label>
+                        <form onSubmit={handleSaveConfig} className="max-w-xl mx-auto space-y-6 py-6 px-2">
+                            {/* RUC */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">RUC de la Empresa</label>
+                                <div className="relative">
                                     <input 
                                         type="text" 
                                         maxLength={11}
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                         placeholder="Ingrese RUC"
                                         value={config.ruc}
                                         onChange={async (e) => {
@@ -1312,58 +1329,114 @@ const BillingConfigModal = ({ onClose }) => {
                                             }
                                         }}
                                     />
+                                    <Search className="absolute right-4 top-3.5 text-gray-400" size={20} />
                                 </div>
+                            </div>
+
+                            {/* Razón Social */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Razón Social</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                                    value={config.razonSocial}
+                                    onChange={(e) => setConfig({...config, razonSocial: e.target.value})}
+                                />
+                            </div>
+
+                            {/* Facturación Electrónica Toggle */}
+                            <div className="bg-[#f4f7fe] border border-blue-100 p-5 rounded-xl flex items-center justify-between gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Razón Social</label>
+                                    <h4 className="text-blue-900 font-bold text-base">Encender Facturación Electrónica</h4>
+                                    <p className="text-blue-600/80 text-sm leading-snug">Habilita la emisión de comprobantes en el sistema.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
                                     <input 
-                                        type="text" 
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold"
-                                        value={config.razonSocial}
-                                        onChange={(e) => setConfig({...config, razonSocial: e.target.value})}
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={config.facturacionElectronica}
+                                        onChange={(e) => setConfig({...config, facturacionElectronica: e.target.checked})}
                                     />
+                                    <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+
+                            {/* IGV */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Tasa de IGV (%)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        className="w-full pl-4 pr-10 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                                        value={config.igvTasa}
+                                        onChange={(e) => setConfig({...config, igvTasa: e.target.value})}
+                                    />
+                                    <span className="absolute right-4 top-3.5 text-gray-400 font-bold text-base">%</span>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Dirección de la Empresa</label>
+                                <p className="text-gray-500 text-sm mt-1">Valor utilizado para calcular el IGV en la emision de comprobantes.</p>
+                            </div>
+
+                            {/* Operaciones Exoneradas */}
+                            <div className="bg-[#fff6ef] border border-orange-100 p-5 rounded-xl flex items-center justify-between gap-4">
+                                <div className="space-y-1.5 flex-1">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                                        <h4 className="text-[#8b3d16] font-bold text-base leading-tight">Operaciones<br className="hidden sm:block" /> Exoneradas</h4>
+                                        <span className="bg-[#ffdbb9] text-[#b3591b] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider w-max">LEY AMAZONÍA</span>
+                                    </div>
+                                    <p className="text-[#a54c1f] text-sm leading-snug font-medium">Usa código 20 y establece IGV a 0 en el comprobante.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={config.operacionesExoneradas}
+                                        onChange={(e) => setConfig({...config, operacionesExoneradas: e.target.checked})}
+                                    />
+                                    <div className="w-14 h-8 bg-[#cdd5ea] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            {/* Otros Campos (Dirección, Series, Modo Facturación, API Token) */}
+                            <div className="border-t pt-6 space-y-6 mt-6">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b pb-2">Configuraciones Adicionales</h3>
+                                
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700">Dirección de la Empresa</label>
                                     <input 
                                         type="text" 
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                         placeholder="Se autocompleta al buscar RUC o ingrese manualmente"
                                         value={config.direccion || ''}
                                         onChange={(e) => setConfig({...config, direccion: e.target.value})}
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Serie Factura</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-mono font-bold text-blue-600"
-                                        value={config.serieFactura}
-                                        onChange={(e) => setConfig({...config, serieFactura: e.target.value.toUpperCase()})}
-                                    />
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700">Serie Factura</label>
+                                        <input 
+                                            type="text" 
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-bold font-mono text-blue-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                                            value={config.serieFactura}
+                                            onChange={(e) => setConfig({...config, serieFactura: e.target.value.toUpperCase()})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700">Serie Boleta</label>
+                                        <input 
+                                            type="text" 
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-bold font-mono text-blue-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                                            value={config.serieBoleta}
+                                            onChange={(e) => setConfig({...config, serieBoleta: e.target.value.toUpperCase()})}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Serie Boleta</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-mono font-bold text-blue-600"
-                                        value={config.serieBoleta}
-                                        onChange={(e) => setConfig({...config, serieBoleta: e.target.value.toUpperCase()})}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Tasa IGV (%)</label>
-                                    <input 
-                                        type="number" 
-                                        step="0.01"
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm"
-                                        value={config.igvTasa}
-                                        onChange={(e) => setConfig({...config, igvTasa: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Modo de Facturación</label>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700">Modo de Facturación</label>
                                     <select 
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold bg-white"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                         value={config.billingMode || 'libre'}
                                         onChange={(e) => setConfig({...config, billingMode: e.target.value})}
                                     >
@@ -1371,57 +1444,35 @@ const BillingConfigModal = ({ onClose }) => {
                                         <option value="reserva">Ligado a Reserva / Mesa</option>
                                     </select>
                                 </div>
-                                <div className="flex items-end pb-1 gap-6">
-                                    <label className="flex items-center gap-3 cursor-pointer group">
-                                        <div className="relative">
-                                            <input 
-                                                type="checkbox" 
-                                                className="sr-only peer"
-                                                checked={config.operacionesExoneradas}
-                                                onChange={(e) => setConfig({...config, operacionesExoneradas: e.target.checked})}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </div>
-                                        <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600 transition">Amazonía (Exonerado)</span>
-                                    </label>
-                                </div>
-                            </div>
 
-                            <div className="space-y-4 pt-4 border-t">
-                                <div className="flex justify-between items-center">
-                                    <div className="space-y-1">
-                                        <h3 className="text-sm font-bold text-gray-800">Facturación Electrónica (Sunat Hub)</h3>
-                                        <p className="text-xs text-gray-500">Activa el envío real de documentos al servidor SUNAT</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            className="sr-only peer"
-                                            checked={config.facturacionElectronica}
-                                            onChange={(e) => setConfig({...config, facturacionElectronica: e.target.checked})}
-                                        />
-                                        <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
-                                    </label>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">API Token de Integración</label>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700">API Token de Integración</label>
                                     <input 
                                         type="password" 
-                                        className="w-full px-4 py-3 border rounded-xl text-sm font-mono"
-                                        placeholder="Ingrese el token proporcionado por Mak Suites"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-mono focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                                        placeholder="Ingrese el token proporcionado"
                                         value={config.apiToken}
                                         onChange={(e) => setConfig({...config, apiToken: e.target.value})}
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end pt-6">
+                            {/* Footer Buttons */}
+                            <div className="flex items-center justify-end gap-3 pt-6 border-t mt-8">
+                                <button 
+                                    type="button"
+                                    onClick={onClose}
+                                    className="px-6 py-3 border border-gray-300 bg-white rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition"
+                                >
+                                    Cancelar
+                                </button>
                                 <button 
                                     type="submit"
                                     disabled={loading}
-                                    className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 disabled:bg-gray-400"
+                                    className="bg-[#1f63fb] text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md disabled:bg-gray-400"
                                 >
-                                    {loading ? 'Guardando...' : 'Guardar Cambios'}
+                                    {loading ? <Loader size={18} className="animate-spin" /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>}
+                                    Guardar
                                 </button>
                             </div>
                         </form>
