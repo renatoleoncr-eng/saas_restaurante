@@ -19,6 +19,7 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
 const BillingConfigModal = ({ onClose }) => {
     const { user } = useRestaurant();
     const [activeTab, setActiveTab] = useState('history');
+    const [viewMode, setViewMode] = useState('comprobantes');
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState({
         ruc: '',
@@ -807,69 +808,95 @@ const BillingConfigModal = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] md:p-4">
+            <div className="bg-white md:rounded-[24px] shadow-2xl w-full h-full md:max-w-5xl md:h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
                 
                 {/* Header */}
-                <div className="px-6 py-5 flex justify-between items-center bg-white z-10 shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#f4f7fe] text-[#1f63fb] rounded-2xl shadow-sm">
-                            <CreditCard size={26} strokeWidth={2.5} />
+                <div className="px-4 md:px-6 py-4 flex justify-between items-center bg-white z-10 shrink-0 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-[#f4f7fe] text-[#1f63fb] rounded-xl shadow-sm">
+                            {viewMode === 'config' ? <Settings size={22} strokeWidth={2.5} /> : <FileText size={22} strokeWidth={2.5} />}
                         </div>
                         <div className="flex flex-col">
-                            <h2 className="text-[22px] font-black text-[#1d263b] tracking-tight leading-none mb-1.5">Configuración del Sistema</h2>
-                            <p className="text-[13px] font-medium text-gray-500 leading-none">Gestión de comprobantes, impresoras y SUNAT</p>
+                            <h2 className="text-[18px] md:text-[22px] font-black text-[#1d263b] tracking-tight leading-none">
+                                {viewMode === 'config' ? 'Configuración' : 'Gestión de Comprobantes'}
+                            </h2>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors shrink-0">
-                        <X size={24} />
-                    </button>
+                    <div className="flex items-center gap-2 md:gap-3">
+                        {user?.role === 'admin' && (
+                            <button 
+                                onClick={() => {
+                                    if (viewMode === 'comprobantes') {
+                                        setViewMode('config');
+                                        setActiveTab('config');
+                                    } else {
+                                        setViewMode('comprobantes');
+                                        setActiveTab('history');
+                                    }
+                                }}
+                                className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-bold text-[10px] md:text-xs tracking-wider uppercase transition-colors whitespace-nowrap"
+                            >
+                                {viewMode === 'comprobantes' ? 'VOLVER A CONFIG' : 'VER COMPROBANTES'}
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors shrink-0">
+                            <X size={20} className="md:w-6 md:h-6" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-100 bg-white overflow-x-auto whitespace-nowrap scrollbar-none px-4 shrink-0">
-                    <button 
-                        onClick={(e) => {
-                            setActiveTab('history');
-                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                        }}
-                        className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'history' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
-                    >
-                        <FileText size={18} strokeWidth={activeTab === 'history' ? 2.5 : 2} /> Historial
-                        {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
-                    </button>
-                    <button 
-                        onClick={(e) => {
-                            setActiveTab('new');
-                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                        }}
-                        className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'new' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
-                    >
-                        <Plus size={18} strokeWidth={activeTab === 'new' ? 2.5 : 2} /> Nueva Emisión
-                        {activeTab === 'new' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
-                    </button>
-                    {user?.role === 'admin' && (
+                <div className="flex border-b border-gray-100 bg-white overflow-x-auto whitespace-nowrap scrollbar-none px-2 md:px-4 shrink-0">
+                    {viewMode === 'comprobantes' ? (
                         <>
                             <button 
                                 onClick={(e) => {
-                                    setActiveTab('config');
+                                    setActiveTab('history');
                                     e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                                 }}
-                                className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'config' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
+                                className={`flex-1 md:flex-none py-3 md:py-4 px-3 md:px-5 text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'history' ? 'text-[#1f63fb] bg-blue-50/30' : 'text-gray-500 hover:text-gray-800'}`}
                             >
-                                <Settings size={18} strokeWidth={activeTab === 'config' ? 2.5 : 2} /> Configuración
-                                {activeTab === 'config' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
+                                <FileText size={16} strokeWidth={activeTab === 'history' ? 2.5 : 2} /> Comprobantes Generados
+                                {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                             </button>
                             <button 
                                 onClick={(e) => {
-                                    setActiveTab('printers');
+                                    setActiveTab('new');
                                     e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                                 }}
-                                className={`py-4 px-5 text-sm font-bold flex items-center justify-center gap-2.5 transition-all relative ${activeTab === 'printers' ? 'text-[#1f63fb]' : 'text-gray-500 hover:text-gray-800'}`}
+                                className={`flex-1 md:flex-none py-3 md:py-4 px-3 md:px-5 text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'new' ? 'text-[#1f63fb] bg-blue-50/30' : 'text-gray-500 hover:text-gray-800'}`}
                             >
-                                <Printer size={18} strokeWidth={activeTab === 'printers' ? 2.5 : 2} /> Impresoras
-                                {activeTab === 'printers' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
+                                <Plus size={16} strokeWidth={activeTab === 'new' ? 2.5 : 2} /> Emitir Nuevo
+                                {activeTab === 'new' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                             </button>
+                        </>
+                    ) : (
+                        <>
+                            {user?.role === 'admin' && (
+                                <button 
+                                    onClick={(e) => {
+                                        setActiveTab('config');
+                                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                    }}
+                                    className={`py-3 md:py-4 px-3 md:px-5 text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'config' ? 'text-[#1f63fb] bg-blue-50/30' : 'text-gray-500 hover:text-gray-800'}`}
+                                >
+                                    <Settings size={16} strokeWidth={activeTab === 'config' ? 2.5 : 2} /> Configuración
+                                    {activeTab === 'config' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
+                                </button>
+                            )}
+                            {user?.role === 'admin' && (
+                                <button 
+                                    onClick={(e) => {
+                                        setActiveTab('printers');
+                                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                    }}
+                                    className={`py-3 md:py-4 px-3 md:px-5 text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'printers' ? 'text-[#1f63fb] bg-blue-50/30' : 'text-gray-500 hover:text-gray-800'}`}
+                                >
+                                    <Printer size={16} strokeWidth={activeTab === 'printers' ? 2.5 : 2} /> Impresoras
+                                    {activeTab === 'printers' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
@@ -878,221 +905,183 @@ const BillingConfigModal = ({ onClose }) => {
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 bg-white">
                     
                     {activeTab === 'history' && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Documento Cliente</label>
-                                    <div className="relative">
-                                        <input 
-                                            type="text" 
-                                            placeholder="DNI / RUC" 
-                                            className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm"
-                                            value={filters.documento}
-                                            onChange={(e) => setFilters({...filters, documento: e.target.value})}
-                                        />
-                                        <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                        <div className="flex flex-col flex-1 h-full overflow-hidden bg-[#f8fafc]">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                                {/* Filtros en Tarjetas */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
+                                    <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-sm flex flex-col gap-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento Cliente</label>
+                                        <div className="relative">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Buscar por DNI o RUC..." 
+                                                className="w-full pl-10 pr-4 py-3 bg-[#f8fafc] border border-transparent rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
+                                                value={filters.documento}
+                                                onChange={(e) => setFilters({...filters, documento: e.target.value})}
+                                            />
+                                            <Search className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-sm flex flex-col gap-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rango de Fecha</label>
+                                            <button 
+                                                onClick={fetchInvoices}
+                                                className="text-[10px] bg-[#1f63fb] text-white px-4 py-1.5 rounded-lg font-bold uppercase tracking-widest hover:bg-blue-700 transition shadow-sm"
+                                            >
+                                                Filtrar
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="date" 
+                                                className="flex-1 px-3 py-3 bg-[#f8fafc] border border-transparent rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                                                value={filters.desde}
+                                                onChange={(e) => setFilters({...filters, desde: e.target.value})}
+                                            />
+                                            <input 
+                                                type="date" 
+                                                className="flex-1 px-3 py-3 bg-[#f8fafc] border border-transparent rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                                                value={filters.hasta}
+                                                onChange={(e) => setFilters({...filters, hasta: e.target.value})}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Desde</label>
-                                    <input 
-                                        type="date" 
-                                        className="w-full px-4 py-2 border rounded-lg text-sm"
-                                        value={filters.desde}
-                                        onChange={(e) => setFilters({...filters, desde: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Hasta</label>
-                                    <input 
-                                        type="date" 
-                                        className="w-full px-4 py-2 border rounded-lg text-sm"
-                                        value={filters.hasta}
-                                        onChange={(e) => setFilters({...filters, hasta: e.target.value})}
-                                    />
-                                </div>
-                                <div className="flex items-end">
-                                    <button 
-                                        onClick={fetchInvoices}
-                                        className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition"
-                                    >
-                                        Filtrar
-                                    </button>
-                                </div>
-                            </div>
 
-                            <div className="border rounded-xl overflow-hidden bg-white shadow-sm border-gray-100">
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-100 text-sm">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Reserva</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Monto</th>
-                                                <th className="px-4 py-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {invoices.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-400 italic">No hay comprobantes emitidos</td>
-                                                </tr>
-                                            ) : invoices.map(inv => {
-                                                const { pdf } = getSunatUrls(inv.sunatResponse);
-                                                const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
-                                                
-                                                // Format Date/Time helper
-                                                const formatDate = (dateStr) => {
-                                                    if (!dateStr) return 'N/A';
-                                                    try {
-                                                        const d = new Date(dateStr);
-                                                        const day = String(d.getDate()).padStart(2, '0');
-                                                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                                                        const year = String(d.getFullYear()).slice(-2);
-                                                        const hours = String(d.getHours()).padStart(2, '0');
-                                                        const minutes = String(d.getMinutes()).padStart(2, '0');
-                                                        return `${day}/${month}/${year} ${hours}:${minutes}`;
-                                                    } catch (e) {
-                                                        return new Date(dateStr).toLocaleString();
-                                                    }
-                                                };
+                                {/* Lista de Comprobantes (Card Layout) */}
+                                <div className="max-w-5xl mx-auto space-y-3 pb-8">
+                                    {invoices.length === 0 ? (
+                                        <div className="text-center py-12 bg-white rounded-[20px] border border-gray-100 shadow-sm">
+                                            <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <FileText size={24} className="text-gray-300" />
+                                            </div>
+                                            <p className="text-sm font-bold text-gray-400">No hay comprobantes emitidos en este rango</p>
+                                        </div>
+                                    ) : invoices.map(inv => {
+                                        const { pdf } = getSunatUrls(inv.sunatResponse);
+                                        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+                                        
+                                        const formatDate = (dateStr) => {
+                                            if (!dateStr) return 'N/A';
+                                            try {
+                                                const d = new Date(dateStr);
+                                                const day = String(d.getDate()).padStart(2, '0');
+                                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                const year = String(d.getFullYear()).slice(-2);
+                                                const hours = String(d.getHours()).padStart(2, '0');
+                                                const minutes = String(d.getMinutes()).padStart(2, '0');
+                                                return `${day}/${month}/${year} ${hours}:${minutes}`;
+                                            } catch (e) {
+                                                return new Date(dateStr).toLocaleString();
+                                            }
+                                        };
 
-                                                return (
-                                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition">
-                                                        <td className="px-4 py-3 whitespace-nowrap">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-bold text-gray-900">{docId}</span>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-[10px] text-gray-400 font-medium">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
-                                                                    {(() => { try { const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items; return items?.some(i => i.description?.includes('Abono')); } catch { return false; } })() && (
-                                                                        <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold px-1.5 py-0 rounded-full uppercase">Abono</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="text-sm text-gray-700 font-medium truncate max-w-[200px]" title={inv.clienteNombre}>
-                                                                {inv.clienteNombre}
-                                                            </div>
-                                                            <div className="text-[11px] text-gray-400 font-mono">{inv.clienteDocumento}</div>
-                                                        </td>
-                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                                            {formatDate(inv.emitidoAt)}
-                                                        </td>
-                                                        <td className="px-4 py-3 whitespace-nowrap">
-                                                            {inv.AccountId ? (
-                                                                <button
-                                                                    onClick={() => setSelectedAccountId(inv.AccountId)}
-                                                                    className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[11px] font-bold w-fit hover:bg-blue-100 transition cursor-pointer"
-                                                                >
-                                                                    Reserva #{inv.AccountId}
-                                                                    {inv.Account?.Table && (
-                                                                        <span className="text-[9px] text-gray-500 font-medium ml-1">
-                                                                            (Mesa {inv.Account.Table.number})
-                                                                        </span>
-                                                                    )}
-                                                                    <ArrowRight size={10} />
-                                                                </button>
-                                                            ) : (
-                                                                <span className="text-[11px] font-bold text-gray-300 italic">Libre</span>
+                                        return (
+                                            <div key={inv.id} className="bg-white p-4 md:p-5 rounded-[20px] border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 hover:shadow-md transition-shadow">
+                                                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                                                    <div className="flex justify-between items-start md:flex-col md:w-36">
+                                                        <span className="text-[15px] md:text-base font-black text-[#1d263b] tracking-tight">{docId}</span>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <span className="text-[10px] font-bold text-gray-400">{inv.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}</span>
+                                                            {(() => { try { const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items; return items?.some(i => i.description?.includes('Abono')); } catch { return false; } })() && (
+                                                                <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold px-1.5 py-0 rounded-full uppercase">Abono</span>
                                                             )}
-                                                        </td>
-                                                        <td className="px-4 py-3 whitespace-nowrap">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-black text-gray-900">S/ {parseFloat(inv.total).toFixed(2)}</span>
-                                                                <div className="flex flex-col gap-1 mt-1">
-                                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded w-fit ${
-                                                                        inv.status === 'anulado' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-                                                                    }`}>
-                                                                        {inv.status === 'anulado' ? 'ANULADA' : 'ACEPTADA'}
-                                                                    </span>
-                                                                    {inv.status === 'anulado' && inv.notaCredito && (
-                                                                        <span className="text-[8px] font-bold text-gray-400">NC: {inv.notaCredito}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                                                            <div className="flex items-center justify-end gap-1">
-                                                                <button 
-                                                                    onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
-                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                                    title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
-                                                                >
-                                                                    <ExternalLink size={18} />
-                                                                 </button>
+                                                        </div>
+                                                    </div>
 
-                                                                 {inv.status !== 'anulado' && (
-                                                                     <button
-                                                                         onClick={async () => {
-                                                                             try {
-                                                                                 setLoading(true);
-                                                                                 await axios.post(`/api/billing/invoices/${inv.id}/print`);
-                                                                                 alert('✅ Comprobante enviado a la impresora térmica.');
-                                                                             } catch (e) {
-                                                                                 alert('❌ Error al imprimir ticket: ' + (e.response?.data?.error || e.message));
-                                                                             } finally {
-                                                                                 setLoading(false);
-                                                                             }
-                                                                         }}
-                                                                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition border border-orange-100"
-                                                                         title="Imprimir Ticket Térmico"
-                                                                     >
-                                                                         <Printer size={18} />
-                                                                     </button>
-                                                                 )}
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] md:max-w-[300px]" title={inv.clienteNombre}>
+                                                            {inv.clienteNombre}
+                                                        </span>
+                                                        <span className="text-[11px] font-medium text-gray-400 mt-0.5 font-mono">{inv.clienteDocumento}</span>
+                                                    </div>
 
-                                                                {inv.status === 'anulado' && inv.notaCreditoUrl && (
-                                                                    <button
-                                                                        onClick={() => window.open(inv.notaCreditoUrl, '_blank')}
-                                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition border border-red-100"
-                                                                        title="Ver Nota de Crédito"
-                                                                    >
-                                                                        <FileText size={18} />
-                                                                    </button>
-                                                                )}
-                                                                
-                                                                <button
-                                                                    onClick={() => handleShareWhatsapp(inv, inv.status === 'anulado' ? 'nc' : 'invoice')}
-                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                                                    title="Compartir por WhatsApp"
-                                                                >
-                                                                    <WhatsAppIcon size={18} />
-                                                                </button>
+                                                    <div className="hidden md:flex flex-col">
+                                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fecha</span>
+                                                        <span className="text-sm font-medium text-gray-600">{formatDate(inv.emitidoAt)}</span>
+                                                    </div>
+                                                </div>
 
-                                                                {inv.status !== 'anulado' && (
-                                                                    <button
-                                                                        onClick={() => handleAnnulInvoice(inv)}
-                                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition ml-2 border-l pl-3"
-                                                                        title="Anular"
-                                                                    >
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                <div className="flex items-center justify-between md:justify-end gap-4 md:gap-8 border-t md:border-none border-gray-50 pt-3 md:pt-0 mt-1 md:mt-0">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-lg md:text-xl font-black text-[#1d263b] leading-none mb-1">
+                                                            S/ {parseFloat(inv.total).toFixed(2)}
+                                                        </span>
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded w-fit uppercase tracking-widest ${
+                                                            inv.status === 'anulado' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+                                                        }`}>
+                                                            {inv.status === 'anulado' ? 'ANULADA' : 'ACEPTADA'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 bg-[#f8fafc] p-1.5 rounded-[14px]">
+                                                        <button 
+                                                            onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
+                                                            className="p-2 md:p-2.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all"
+                                                            title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
+                                                        >
+                                                            <ExternalLink size={18} />
+                                                        </button>
+
+                                                        {inv.status !== 'anulado' && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        setLoading(true);
+                                                                        await axios.post(`/api/billing/invoices/${inv.id}/print`);
+                                                                        alert('✅ Comprobante enviado a la impresora térmica.');
+                                                                    } catch (e) {
+                                                                        alert('❌ Error al imprimir ticket: ' + (e.response?.data?.error || e.message));
+                                                                    } finally {
+                                                                        setLoading(false);
+                                                                    }
+                                                                }}
+                                                                className="p-2 md:p-2.5 text-orange-500 hover:bg-white hover:shadow-sm rounded-xl transition-all"
+                                                                title="Imprimir Ticket Térmico"
+                                                            >
+                                                                <Printer size={18} />
+                                                            </button>
+                                                        )}
+
+                                                        <button
+                                                            onClick={() => handleShareWhatsapp(inv, inv.status === 'anulado' ? 'nc' : 'invoice')}
+                                                            className="p-2 md:p-2.5 text-green-500 hover:bg-white hover:shadow-sm rounded-xl transition-all"
+                                                            title="Compartir por WhatsApp"
+                                                        >
+                                                            <WhatsAppIcon size={18} />
+                                                        </button>
+
+                                                        {inv.status !== 'anulado' && (
+                                                            <button
+                                                                onClick={() => handleAnnulInvoice(inv)}
+                                                                className="p-2 md:p-2.5 text-gray-400 hover:text-red-500 hover:bg-white hover:shadow-sm rounded-xl transition-all ml-0.5"
+                                                                title="Anular"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'new' && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-4">
-                            <div className="md:col-span-2 space-y-6">
+                        <div className="flex flex-col flex-1 h-full overflow-hidden bg-[#f8fafc]">
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
                                 {config.billingMode === 'reserva' && (
-                                    <section className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <section className="bg-white p-4 md:p-5 rounded-[16px] border border-gray-100 shadow-sm max-w-4xl mx-auto w-full">
+                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
                                             🏢 Vincular a Reserva / Mesa
                                         </h3>
                                         <select
-                                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                             value={newInvoice.accountId || ''}
                                             onChange={(e) => handleSelectAccount(e.target.value)}
                                         >
@@ -1106,20 +1095,25 @@ const BillingConfigModal = ({ onClose }) => {
                                     </section>
                                 )}
 
-                                <section className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
-                                    <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide border-b pb-3">
-                                        <Building2 size={16} className="text-blue-600" /> Datos del Cliente
+                                {/* DATOS DEL CLIENTE */}
+                                <section className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-5 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
+                                    <h3 className="text-[13px] font-black text-[#1d263b] flex items-center gap-3 uppercase tracking-wider border-b border-gray-100 pb-4">
+                                        <div className="bg-[#f0f4ff] text-[#1f63fb] p-2 rounded-xl">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        </div>
+                                        Datos del Cliente
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                        <div className="md:col-span-4 space-y-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{docLabel}</label>
+                                    
+                                    <div className="space-y-5">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Documento (DNI/RUC)</label>
                                             <div className="flex gap-2">
                                                 <input 
                                                     type="text" 
                                                     inputMode="numeric"
                                                     maxLength={maxDocLength}
-                                                    className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                                                    placeholder={docPlaceholder}
+                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
+                                                    placeholder="Buscar por DNI/RUC..."
                                                     value={newInvoice.clienteDocumento}
                                                     onChange={(e) => handleDocumentoChange(e.target.value)}
                                                     onKeyDown={(e) => { if (e.key === 'Enter') handleSearchClient(); }}
@@ -1128,82 +1122,89 @@ const BillingConfigModal = ({ onClose }) => {
                                                     type="button"
                                                     onClick={handleSearchClient}
                                                     disabled={loading}
-                                                    className="px-4 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition flex items-center justify-center disabled:bg-slate-300 min-w-[48px]"
-                                                    title="Buscar"
+                                                    className="px-6 bg-[#0f172a] text-white rounded-xl hover:bg-slate-800 transition flex items-center justify-center disabled:bg-slate-300 font-bold text-xs tracking-widest uppercase shrink-0"
                                                 >
-                                                    {loading ? <Loader size={16} className="animate-spin" /> : <Search size={16} />}
+                                                    {loading ? <Loader size={16} className="animate-spin" /> : 'Buscar'}
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="md:col-span-8 space-y-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{nameLabel}</label>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Tipo de Comprobante</label>
+                                            <div className="flex bg-white rounded-xl border border-gray-200 p-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'boleta'}))}
+                                                    className={`flex-1 py-3 text-xs font-bold tracking-widest rounded-lg transition-all uppercase ${newInvoice.tipo === 'boleta' ? 'bg-white border-blue-500 text-[#1f63fb] shadow-sm border' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
+                                                >
+                                                    Boleta
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'factura'}))}
+                                                    className={`flex-1 py-3 text-xs font-bold tracking-widest rounded-lg transition-all uppercase ${newInvoice.tipo === 'factura' ? 'bg-white border-blue-500 text-[#1f63fb] shadow-sm border' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
+                                                >
+                                                    Factura
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Razón Social / Nombre</label>
                                             <input 
                                                 type="text" 
-                                                className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                                                placeholder="Se autocompleta al buscar"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
+                                                placeholder=""
                                                 value={newInvoice.clienteNombre}
                                                 onChange={(e) => setNewInvoice(prev => ({...prev, clienteNombre: e.target.value}))}
                                             />
                                         </div>
                                         
-                                        <div className="md:col-span-4 space-y-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo Comprobante</label>
-                                            <div className="flex p-1 bg-slate-50 rounded-lg border border-slate-100">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'boleta'}))}
-                                                    className={`flex-1 py-1.5 text-[10px] font-black tracking-wider rounded-md transition-all ${newInvoice.tipo === 'boleta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                                >
-                                                    BOLETA
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setNewInvoice(prev => ({...prev, tipo: 'factura'}))}
-                                                    className={`flex-1 py-1.5 text-[10px] font-black tracking-wider rounded-md transition-all ${newInvoice.tipo === 'factura' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                                >
-                                                    FACTURA
-                                                </button>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Serie</label>
+                                                <input 
+                                                    type="text" 
+                                                    readOnly
+                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold font-mono text-[#1f63fb] outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                                                    value={newInvoice.tipo === 'factura' ? config.serieFactura : config.serieBoleta}
+                                                />
                                             </div>
-                                        </div>
-                                        <div className="md:col-span-2 space-y-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Serie</label>
-                                            <input 
-                                                type="text" 
-                                                readOnly
-                                                className="w-full px-4 py-2 bg-slate-100 border-transparent rounded-lg text-sm font-bold text-slate-500 outline-none cursor-not-allowed"
-                                                value={newInvoice.tipo === 'factura' ? config.serieFactura : config.serieBoleta}
-                                            />
-                                        </div>
-                                        <div className="md:col-span-6 space-y-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dirección (Opcional)</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full px-4 py-2 bg-slate-50 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                                                value={newInvoice.clienteDireccion}
-                                                onChange={(e) => setNewInvoice({...newInvoice, clienteDireccion: e.target.value})}
-                                            />
+                                            <div className="space-y-1.5">
+                                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Dirección (Opcional)</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
+                                                    value={newInvoice.clienteDireccion}
+                                                    onChange={(e) => setNewInvoice({...newInvoice, clienteDireccion: e.target.value})}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
 
-                                <section className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
-                                    <div className="flex justify-between items-center border-b pb-3">
-                                        <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide">
-                                            <FileText size={16} className="text-blue-600" /> Detalle del Comprobante
+                                {/* DETALLE DEL COMPROBANTE */}
+                                <section className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-5 md:p-6 space-y-5 max-w-4xl mx-auto w-full mb-8">
+                                    <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+                                        <h3 className="text-[13px] font-black text-[#1d263b] flex items-center gap-3 uppercase tracking-wider">
+                                            <div className="bg-[#f0f4ff] text-[#1f63fb] p-2 rounded-xl">
+                                                <FileText size={20} strokeWidth={2.5} />
+                                            </div>
+                                            Detalle del Comprobante
                                         </h3>
                                         <button 
                                             onClick={addItem}
-                                            className="text-[10px] text-blue-600 font-black uppercase tracking-widest hover:underline flex items-center gap-1"
+                                            className="px-4 py-2.5 text-[10px] md:text-xs text-[#1f63fb] border border-[#1f63fb]/20 bg-white hover:bg-[#f0f4ff] font-bold uppercase tracking-widest rounded-full transition-all flex items-center gap-1.5"
                                         >
-                                            <Plus size={14} /> Agregar Item
+                                            <Plus size={16} strokeWidth={2.5} /> Agregar Item
                                         </button>
                                     </div>
-                                    <div className="space-y-3">
-                                        <div className="hidden md:flex gap-3 px-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <div className="w-20">Cant</div>
+                                    <div className="space-y-4">
+                                        <div className="hidden md:flex gap-3 px-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                            <div className="w-16">Cant</div>
                                             <div className="flex-1">Descripción</div>
-                                            <div className="w-32">Precio Unit</div>
-                                            <div className="w-32 text-right">Subtotal</div>
+                                            <div className="w-28">Precio Unit</div>
+                                            <div className="w-28 text-right">Subtotal</div>
                                             <div className="w-10"></div>
                                         </div>
                                         
@@ -1213,32 +1214,33 @@ const BillingConfigModal = ({ onClose }) => {
                                             const unitPrice = qty > 0 ? (total / qty).toFixed(2) : '0.00';
                                             
                                             return (
-                                            <div key={idx} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-slate-50/50 p-3 rounded-lg border border-slate-100 animate-in fade-in duration-200">
-                                                <div className="w-full md:w-20 space-y-1">
+                                            <div key={idx} className="flex flex-col md:flex-row gap-3 items-start md:items-center py-3 md:py-0 border-b border-gray-50 md:border-none">
+                                                <div className="w-full md:w-16 space-y-1">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest md:hidden">Cant</label>
                                                     <input 
                                                         type="number" 
-                                                        placeholder="Cant"
-                                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-center font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                                        className="w-full px-3 py-3 bg-white border border-gray-200 rounded-xl text-sm text-center font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                                         value={item.quantity}
                                                         onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
                                                     />
                                                 </div>
                                                 <div className="w-full md:flex-1 space-y-1">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest md:hidden">Descripción</label>
                                                     <input 
                                                         type="text" 
+                                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:font-medium placeholder:text-gray-400"
                                                         placeholder="Concepto..."
-                                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
                                                         value={item.description}
                                                         onChange={(e) => updateItem(idx, 'description', e.target.value)}
                                                     />
                                                 </div>
-                                                <div className="w-full md:w-32 space-y-1">
+                                                <div className="w-full md:w-28 space-y-1">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest md:hidden">Precio Unit</label>
                                                     <div className="relative">
-                                                        <span className="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">S/</span>
+                                                        <span className="absolute left-3 top-[13px] text-gray-400 text-xs font-bold">S/</span>
                                                         <input 
                                                             type="number" 
-                                                            placeholder="0.00"
-                                                            className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-right font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                                            className="w-full pl-8 pr-3 py-3 bg-white border border-gray-200 rounded-xl text-sm text-right font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                                                             value={unitPrice}
                                                             onChange={(e) => {
                                                                 const newUnit = parseFloat(e.target.value) || 0;
@@ -1247,15 +1249,19 @@ const BillingConfigModal = ({ onClose }) => {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="w-full md:w-32 py-2 text-right">
-                                                    <span className="text-slate-400 text-xs font-bold mr-1">S/</span>
-                                                    <span className="text-sm font-black text-slate-800">{parseFloat(item.amount || 0).toFixed(2)}</span>
+                                                <div className="w-full md:w-28 md:py-2 flex flex-col md:items-end justify-between md:justify-end gap-1">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Subtotal</label>
+                                                    <div className="flex items-center gap-1 bg-[#f4f4f5] px-3 py-2.5 rounded-xl md:ml-auto w-full md:w-auto justify-end">
+                                                        <span className="text-gray-500 text-[11px] font-black">S/</span>
+                                                        <span className="text-[15px] font-black text-gray-900">{parseFloat(item.amount || 0).toFixed(2)}</span>
+                                                    </div>
                                                 </div>
                                                 <button 
                                                     onClick={() => removeItem(idx)}
-                                                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                    className="w-full md:w-auto p-3 md:mt-5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all flex items-center justify-center gap-2"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={20} />
+                                                    <span className="md:hidden text-xs font-bold uppercase tracking-widest text-red-500">Eliminar Item</span>
                                                 </button>
                                             </div>
                                         )})}
@@ -1263,42 +1269,27 @@ const BillingConfigModal = ({ onClose }) => {
                                 </section>
                             </div>
 
-                            <div className="md:col-span-1 space-y-6">
-                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 sticky top-6">
-                                    <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Resumen de Venta</h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between text-slate-500 font-bold">
-                                            <span>Subtotal</span>
-                                            <span>S/ {config.operacionesExoneradas ? calculateTotal() : (parseFloat(calculateTotal()) / (1 + config.igvTasa/100)).toFixed(2)}</span>
+                            {/* Sticky Footer */}
+                            <div className="bg-white border-t border-gray-200 p-5 md:p-6 shrink-0 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+                                <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-5">
+                                    <div className="flex flex-col text-center md:text-left w-full md:w-auto">
+                                        <div className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+                                            Subtotal: S/ {config.operacionesExoneradas ? calculateTotal() : (parseFloat(calculateTotal()) / (1 + config.igvTasa/100)).toFixed(2)} | IGV ({config.operacionesExoneradas ? '0' : config.igvTasa}%): S/ {config.operacionesExoneradas ? '0.00' : (parseFloat(calculateTotal()) - (parseFloat(calculateTotal()) / (1 + config.igvTasa/100))).toFixed(2)}
                                         </div>
-                                        <div className="flex justify-between text-slate-500 font-bold">
-                                            <span>IGV ({config.operacionesExoneradas ? '0' : config.igvTasa}%)</span>
-                                            <span>S/ {config.operacionesExoneradas ? '0.00' : (parseFloat(calculateTotal()) - (parseFloat(calculateTotal()) / (1 + config.igvTasa/100))).toFixed(2)}</span>
-                                        </div>
-                                        <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-end">
-                                            <span className="font-black text-slate-800">Total</span>
-                                            <span className="text-2xl font-black text-slate-900 tracking-tighter">S/ {calculateTotal()}</span>
+                                        <div className="flex flex-col md:flex-row md:items-end justify-center md:justify-start gap-1 md:gap-3 mt-1">
+                                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest pb-1.5">Total a Pagar</span>
+                                            <span className="text-[34px] font-black text-[#1d263b] tracking-tighter leading-none">S/ {calculateTotal()}</span>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={handleEmit}
                                         disabled={loading}
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none disabled:transform-none mt-6"
+                                        className="w-full md:w-auto bg-[#8ca8ff] text-white px-10 py-5 rounded-[16px] font-black text-sm md:text-base uppercase tracking-widest hover:bg-[#7294ff] active:scale-95 transition-all flex items-center justify-center gap-2.5 disabled:bg-gray-300 disabled:transform-none"
+                                        style={{backgroundColor: loading ? '' : '#83a5ff'}}
                                     >
-                                        {loading ? <Loader size={16} className="animate-spin" /> : <Zap size={16} fill="currentColor" />} 
+                                        {loading ? <Loader size={20} className="animate-spin" /> : <CheckCircle size={20} />} 
                                         Emitir Comprobante
                                     </button>
-                                    <div className="text-[9px] font-black text-slate-400 text-center uppercase tracking-widest flex items-center justify-center gap-1.5 mt-4">
-                                        <ShieldCheck size={12} className="text-blue-500" /> Conexión segura con Sunat Hub
-                                    </div>
-                                </div>
-                                <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-xl space-y-2">
-                                    <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
-                                        <AlertCircle size={14} /> Información
-                                    </div>
-                                    <p className="text-[11px] text-blue-600/80 font-medium leading-relaxed">
-                                        El comprobante se enviará automáticamente a SUNAT si la facturación electrónica está activada en la pestaña de configuración.
-                                    </p>
                                 </div>
                             </div>
                         </div>
