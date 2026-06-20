@@ -156,51 +156,63 @@ function processJobs(jobs) {
 // ─── CLOUD SYNC: REPORTE AL SERVIDOR ───────────────────────────────────────────
 // En lugar de escuchar en un puerto local, el agente hace ping a la nube
 // enviando la lista de impresoras Windows instaladas en esta PC.
-function pingServer() {
+
+let cachedPrinters = [];
+
+function fetchPrinters() {
     execFile('powershell.exe',
         ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name | ConvertTo-Json'],
         { timeout: 8000, windowsHide: true },
         (err, stdout) => {
-            let printers = [];
             if (!err && stdout.trim()) {
                 try {
                     const parsed = JSON.parse(stdout.trim());
-                    printers = Array.isArray(parsed) ? parsed : [parsed];
+                    cachedPrinters = Array.isArray(parsed) ? parsed : [parsed];
                 } catch (_) {}
             }
-
-            const payload = JSON.stringify({
-                agent: 'RestauranteAgentePrint',
-                agentId: os.hostname(),
-                printers: printers
-            });
-
-            const url = `${serverUrl}/api/config/printers/agent-ping`;
-            const options = {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(payload)
-                }
-            };
-
-            const client = url.startsWith('https') ? https : http;
-            const req = client.request(url, options, (res) => {
-                // Ignore response, just keep pinging silently
-                res.resume();
-            });
-
-            req.on('error', (e) => {
-                // Silently handle ping errors
-            });
-
-            req.write(payload);
-            req.end();
         }
     );
 }
 
-// Iniciar reporte a la nube cada 5 segundos
+// Actualizar la lista de impresoras cada 5 minutos (evita saturar la CPU)
+setInterval(fetchPrinters, 5 * 60 * 1000);
+fetchPrinters();
+
+function pingServer() {
+    const payload = JSON.stringify({
+        agent: 'RestauranteAgentePrint',
+        agentId: os.hostname(),
+        printers: cachedPrinters
+    });
+
+    const url = `${serverUrl}/api/config/printers/agent-ping`;
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload)
+        }
+    };
+
+    const client = url.startsWith('https') ? https : http;
+    const req = client.request(url, options, (res) => {
+        // Ignore response, just keep pinging silently
+        res.resume();
+    });
+
+    req.on('error', (e) => {
+        // Silently handle ping errors
+    });
+    
+    req.setTimeout(4000, () => {
+        req.destroy();
+    });
+
+    req.write(payload);
+    req.end();
+}
+
+// Iniciar reporte a la nube (ping liviano) cada 5 segundos
 setInterval(pingServer, 5000);
 pingServer();
 
