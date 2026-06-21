@@ -452,7 +452,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 <th className="px-3 md:px-5 py-2 md:py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">Método</th>
                                                 <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Esperado</th>
                                                 <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Contado</th>
-                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-right font-bold uppercase tracking-wider text-[10px]">Diferencia</th>
+                                                <th className="px-3 md:px-5 py-2 md:py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">Diferencia</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -483,12 +483,12 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                 m === 'tarjeta' ? 'bg-blue-500' :
                                                                 m === 'yape' ? 'bg-purple-500' : 'bg-orange-500'
                                                             }`}></span>
-                                                            {m}
+                                                            {m === 'transferencia' ? 'Tranf.' : m}
                                                             <ChevronDown size={14} className={`text-gray-400 transition-transform ${isSelected ? 'rotate-180 text-blue-500' : ''}`} />
                                                         </td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs whitespace-nowrap">S/ {exp.toFixed(2)}</td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs whitespace-nowrap">S/ {cnt.toFixed(2)}</td>
-                                                        <td className={`px-3 md:px-5 py-3 text-right font-bold font-mono text-xs whitespace-nowrap ${
+                                                        <td className={`px-3 md:px-5 py-3 text-left font-bold font-mono text-xs whitespace-nowrap ${
                                                             diff < 0 ? 'text-rose-600' : diff > 0 ? 'text-emerald-600' : 'text-blue-500'
                                                         }`}>
                                                             {diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK'}
