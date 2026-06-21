@@ -497,7 +497,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                     {isSelected && (
                                                         <tr className="bg-blue-50/40 border-b border-blue-100/50 shadow-inner">
                                                             <td colSpan="4" className="px-5 md:px-8 py-3">
-                                                                <div className="flex flex-col gap-1.5 text-xs font-mono max-w-[240px] ml-auto mr-0">
+                                                                <div className="flex flex-col gap-1.5 text-xs font-mono max-w-[260px] ml-8 md:ml-12 mr-auto">
                                                                     <div className="flex justify-between text-gray-600">
                                                                         <span>(+) Ingresos/Ventas</span>
                                                                         <span>S/ {ingresosMetodo.toFixed(2)}</span>

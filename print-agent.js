@@ -22,8 +22,8 @@ const logFile    = path.join(__dirname, 'print-agent.log');
 
 // Backoff settings for when server is unreachable
 const POLL_INTERVAL_OK    = 1000;   // 1s when server OK
-const POLL_INTERVAL_ERR   = 5000;   // 5s on first error
-const POLL_INTERVAL_MAX   = 30000;  // max 30s backoff
+const POLL_INTERVAL_ERR   = 1000;   // 1s on first error
+const POLL_INTERVAL_MAX   = 5000;   // max 5s backoff
 let   currentPollInterval = POLL_INTERVAL_OK;
 
 // Log to both console and file (max 500KB, then truncate)
@@ -212,8 +212,8 @@ function pingServer() {
     req.end();
 }
 
-// Iniciar reporte a la nube (ping liviano) cada 5 segundos
-setInterval(pingServer, 5000);
+// Iniciar reporte a la nube (ping liviano) cada 1 segundo
+setInterval(pingServer, 1000);
 pingServer();
 
 // Start polling
