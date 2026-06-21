@@ -558,7 +558,6 @@ export default function AccountsHistoryTab() {
                     </table>
                 </div>
             </div>
-            )}
 
             {/* Modals */}
             {selectedTableId && (
