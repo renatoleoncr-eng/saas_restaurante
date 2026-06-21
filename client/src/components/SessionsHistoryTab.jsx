@@ -379,8 +379,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                 <div className="space-y-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Fondo Inicial</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
-                                        <DollarSign size={13} className="text-gray-400 shrink-0" />
-                                        S/ {parseFloat(session?.openingCash || 0).toFixed(2)}
+                                        <span className="text-gray-400 shrink-0 font-bold">S/</span>
+                                        {parseFloat(session?.openingCash || 0).toFixed(2)}
                                     </div>
                                 </div>
                                 <div className="space-y-1">
