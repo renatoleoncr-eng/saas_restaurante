@@ -3,6 +3,7 @@ import { ArrowLeftRight, FileText, LayoutList } from 'lucide-react';
 import CashFlowTab from '../components/CashFlowTab';
 import SessionsHistoryTab from '../components/SessionsHistoryTab';
 import AccountsHistoryTab from '../components/AccountsHistoryTab';
+import MobileTabMenu from '../components/MobileTabMenu';
 
 export default function CashRegisterView() {
     const [activeTab, setActiveTab] = useState('cashflow'); // 'cashflow' | 'sessions' | 'accounts'
@@ -12,8 +13,8 @@ export default function CashRegisterView() {
             {/* Header and Tabs */}
             <div className="bg-white border-b shrink-0 pt-2 px-4 sm:px-6">
                 
-                {/* Mobile-friendly Tabs */}
-                <div className="flex overflow-x-auto custom-scrollbar -mb-px">
+                {/* Desktop Tabs */}
+                <div className="hidden sm:flex overflow-x-auto custom-scrollbar -mb-px">
                     <div className="flex gap-5 sm:gap-8 min-w-max text-sm sm:text-base pr-4">
                         <button
                             onClick={() => setActiveTab('cashflow')}
@@ -48,6 +49,19 @@ export default function CashRegisterView() {
                             {activeTab === 'accounts' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
                         </button>
                     </div>
+                </div>
+
+                {/* Mobile Dropdown Menu */}
+                <div className="sm:hidden mb-3">
+                    <MobileTabMenu
+                        tabs={[
+                            { id: 'cashflow', label: 'Ingresos/Egresos', icon: ArrowLeftRight },
+                            { id: 'sessions', label: 'Cierres de turno', icon: FileText },
+                            { id: 'accounts', label: 'Historial de cuentas', icon: LayoutList }
+                        ]}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                    />
                 </div>
             </div>
 
