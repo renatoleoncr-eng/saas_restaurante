@@ -6,6 +6,16 @@ const pendingJobs = [];
 let jobCounter = 0;
 const isWindows = process.platform === 'win32';
 
+const formatPrinterDate = (date) => {
+    if (!date) return '';
+    return cleanSpanishChars(
+        new Date(date).toLocaleString('es-PE')
+            .replace(/\u202f/g, ' ')
+            .replace(/p\.\s*m\./i, 'PM')
+            .replace(/a\.\s*m\./i, 'AM')
+    );
+};
+
 // Helper to remove accents and special Spanish characters for 100% printer compatibility
 function cleanSpanishChars(str) {
     if (typeof str !== 'string') return '';
@@ -248,7 +258,7 @@ async function triggerAperturaPrint(session, user) {
     builder.alignLeft();
     builder.line(`Sesion ID: #${session.id}`);
     builder.line(`Abierto por: ${user ? user.displayName : 'Staff'}`);
-    builder.line(`Fecha: ${new Date(session.openedAt).toLocaleString('es-PE')}`);
+    builder.line(`Fecha: ${formatPrinterDate(session.openedAt)}`);
     builder.line("-".repeat(42));
     
     const formattedVal = `S/ ${Number(session.openingCash).toFixed(2)}`;
@@ -264,10 +274,11 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
     builder.alignCenter().doubleSize().bold().line("CIERRE DE CAJA").doubleSize(false).bold(false).feed(1);
     builder.alignLeft();
     builder.line(`Sesion ID: #${session.id}`);
-    builder.line(`Abierto: ${new Date(session.openedAt).toLocaleString('es-PE')}`);
-    builder.line(`Cerrado: ${new Date(session.closedAt || new Date()).toLocaleString('es-PE')}`);
+    builder.line(`Abierto: ${formatPrinterDate(session.openedAt)}`);
+    builder.line(`Cerrado: ${formatPrinterDate(session.closedAt || new Date())}`);
     builder.line(`Abierto por: ${session.Opener ? session.Opener.displayName : 'Staff'}`);
-    builder.line(`Cerrado por: ${user ? user.displayName : 'Staff'}`);
+    const closedByName = session.Closer ? session.Closer.displayName : (user ? user.displayName : 'Staff');
+    builder.line(`Cerrado por: ${closedByName}`);
     builder.line("=".repeat(42));
     
     // Cash Summary
@@ -282,18 +293,28 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
     builder.line("-".repeat(42));
     builder.bold().line(formatLine(" EFECTIVO ESPERADO:", `S/ ${Number(expected.efectivo).toFixed(2)}`)).bold(false);
     
-    // Counted & Difference
-    const counted = countedDetails ? parseFloat(countedDetails.countedCash || 0) : 0;
-    const difference = counted - expected.efectivo;
-    builder.line(formatLine(" EFECTIVO CONTADO:", `S/ ${Number(counted).toFixed(2)}`));
-    builder.bold().line(formatLine(" DIFERENCIA:", `S/ ${Number(difference).toFixed(2)}`)).bold(false);
+    // Counted & Difference for Cash
+    const countedEfectivo = countedDetails?.counted?.efectivo || 0;
+    const diffEfectivo = countedDetails?.differences?.efectivo || 0;
+    builder.line(formatLine(" EFECTIVO CONTADO:", `S/ ${Number(countedEfectivo).toFixed(2)}`));
+    builder.bold().line(formatLine(" DIFERENCIA:", `S/ ${Number(diffEfectivo).toFixed(2)}`)).bold(false);
     
     builder.line("=".repeat(42));
     // Other Methods
     builder.bold().line("OTROS METODOS DE PAGO").bold(false);
-    builder.line(formatLine(" Tarjeta:", `S/ ${Number(expected.tarjeta || 0).toFixed(2)}`));
-    builder.line(formatLine(" Yape/Plin:", `S/ ${Number(expected.yape || 0).toFixed(2)}`));
-    builder.line(formatLine(" Transferencia:", `S/ ${Number(expected.transferencia || 0).toFixed(2)}`));
+    
+    const printMethodDetail = (name, exp, countedKey) => {
+        const countedVal = countedDetails?.counted?.[countedKey] || 0;
+        const diffVal = countedDetails?.differences?.[countedKey] || 0;
+        builder.line(` ${name.toUpperCase()}`);
+        builder.line(formatLine("   Esperado:", `S/ ${Number(exp || 0).toFixed(2)}`));
+        builder.line(formatLine("   Real:", `S/ ${Number(countedVal).toFixed(2)}`));
+        builder.line(formatLine("   Diferencia:", `S/ ${Number(diffVal).toFixed(2)}`));
+    };
+
+    printMethodDetail("Tarjeta", expected.tarjeta, 'tarjeta');
+    printMethodDetail("Yape/Plin", expected.yape, 'yape');
+    printMethodDetail("Transferencia", expected.transferencia, 'transferencia');
     builder.line("-".repeat(42));
     
     const totalSales = (expected.efectivoIn || 0) + (expected.tarjeta || 0) + (expected.yape || 0) + (expected.transferencia || 0);
@@ -307,6 +328,14 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
             if (data.count > 0) {
                 const label = `${cat} (${data.count})`;
                 builder.line(formatLine(label, `S/ ${Number(data.total).toFixed(2)}`));
+                // Add items detail
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const itemNameStr = `${item.quantity}x ${item.name} ${item.presentation ? item.presentation : ''}`;
+                        const itemName = cleanSpanishChars(itemNameStr.substring(0, 30));
+                        builder.line(formatLine(`   - ${itemName}`, `S/ ${Number(item.total).toFixed(2)}`));
+                    });
+                }
             }
         });
     }
@@ -368,7 +397,7 @@ async function triggerPreCuentaPrint(account, table, orders, payments, user) {
     builder.alignLeft();
     builder.line(`Mesa: ${table ? (table.number || table.id) : `Mesa #${account.TableId}`}`);
     builder.line(`Cuenta: #${account.id}`);
-    builder.line(`Fecha: ${new Date().toLocaleString('es-PE')}`);
+    builder.line(`Fecha: ${formatPrinterDate(new Date())}`);
     builder.line(`Atendido por: ${user ? user.displayName : 'Staff'}`);
     builder.line("-".repeat(42));
     
@@ -444,7 +473,7 @@ async function triggerComandaPrint(table, items, type, user) {
     builder.feed(1);
     
     builder.alignLeft();
-    builder.line(`Fecha: ${new Date().toLocaleString('es-PE')}`);
+    builder.line(`Fecha: ${formatPrinterDate(new Date())}`);
     builder.line(`Mesero: ${user ? user.displayName : 'Staff'}`);
     builder.line("=".repeat(42));
     

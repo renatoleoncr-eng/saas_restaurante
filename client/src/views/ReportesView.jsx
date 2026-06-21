@@ -377,7 +377,7 @@ export default function ReportesView() {
                                     onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">Monto (S/)</label>
                                     <input
@@ -389,18 +389,6 @@ export default function ReportesView() {
                                         value={expenseForm.amount}
                                         onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
                                     />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Método</label>
-                                    <select
-                                        className="w-full border rounded p-2"
-                                        value={expenseForm.paymentMethod}
-                                        onChange={e => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value })}
-                                    >
-                                        <option value="efectivo">Efectivo</option>
-                                        <option value="yape">Yape</option>
-                                        <option value="transferencia">Transferencia</option>
-                                    </select>
                                 </div>
                             </div>
                             <div>

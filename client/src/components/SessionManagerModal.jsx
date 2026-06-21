@@ -130,6 +130,10 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     };
 
     const handleRequestCloseSession = () => {
+        if (!closingNotes || closingNotes.trim() === '') {
+            alert("Es obligatorio ingresar las notas de cierre.");
+            return;
+        }
         setShowConfirmCloseModal(true);
     };
 
@@ -776,7 +780,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Notas de Cierre</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Notas de Cierre <span className="text-red-500">*</span></label>
                                 <textarea 
                                     value={closingNotes}
                                     onChange={e => setClosingNotes(e.target.value)}
@@ -828,7 +832,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                     placeholder="Ej. Compra de hielo, Pago proveedor..."
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Categoría</label>
                                     <select 
@@ -840,18 +844,6 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                         <option>Servicios</option>
                                         <option>Movilidad</option>
                                         <option>Otros</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pago de</label>
-                                    <select 
-                                        value={expenseForm.paymentMethod} onChange={e => setExpenseForm({...expenseForm, paymentMethod: e.target.value})}
-                                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none text-sm bg-white"
-                                    >
-                                        <option value="efectivo">Caja Efectivo</option>
-                                        <option value="yape">Yape/Plin</option>
-                                        <option value="tarjeta">Tarjeta</option>
-                                        <option value="transferencia">Bancos</option>
                                     </select>
                                 </div>
                             </div>

@@ -390,6 +390,10 @@ router.post('/sessions/close', async (req, res) => {
     try {
         const { sessionId, closingNotes, closingDetails, userId } = req.body;
 
+        if (!closingNotes || closingNotes.trim() === '') {
+            return res.status(400).json({ error: 'Es obligatorio ingresar las notas de cierre' });
+        }
+
         const session = await CashSession.findByPk(sessionId);
         if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
         if (session.status === 'closed') return res.status(400).json({ error: 'La sesión ya está cerrada' });

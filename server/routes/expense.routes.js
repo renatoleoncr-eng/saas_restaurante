@@ -28,7 +28,8 @@ router.get('/expenses', async (req, res) => {
 // CREATE Expense
 router.post('/expenses', async (req, res) => {
     try {
-        const { description, amount, category, paymentMethod, userId, date } = req.body;
+        const { description, amount, category, userId, date } = req.body;
+        const paymentMethod = 'efectivo'; // Always force cash
         const { Payment, Expense, CashSession } = require('../models');
 
         const activeSession = await CashSession.findOne({ where: { status: 'open' } });
