@@ -29,7 +29,7 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
     return (
         <tr className="bg-purple-50 border-y border-purple-100 block md:table-row">
             <td colSpan={4} className="p-3 md:p-4 block md:table-cell">
-                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                <div className="flex flex-col md:flex-row flex-wrap gap-3 items-stretch md:items-center">
                     <div className="flex-1">
                         <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
                         <input
@@ -66,7 +66,7 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
                             <option value="prepared">Preparado (Carta)</option>
                         </select>
                     </div>
-                    <div className="flex-1 min-w-[150px]">
+                    <div className="flex-1 min-w-[120px]">
                         {form.type !== 'free' && (
                             <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">
                                 {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
@@ -135,7 +135,7 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
     return (
         <tr className="bg-blue-50 border-y border-blue-100 block md:table-row">
             <td colSpan={4} className="p-3 md:p-4 block md:table-cell">
-                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                <div className="flex flex-col md:flex-row flex-wrap gap-3 items-stretch md:items-center">
                     <div className="flex-1">
                         <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
                         <input autoFocus type="text"
@@ -165,7 +165,7 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
                             <option value="prepared">Preparado (Carta)</option>
                         </select>
                     </div>
-                    <div className="flex-1 min-w-[150px]">
+                    <div className="flex-1 min-w-[120px]">
                         {form.type !== 'free' && (
                             <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">
                                 {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
@@ -376,7 +376,7 @@ export default function DrinkPromotionsConfig() {
             {/* ── Promotion sections Carousel ── */}
             <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start">
                 {promotions.map(promo => (
-                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-full sm:w-[500px] max-w-full">
+                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-full sm:w-[650px] lg:w-[750px] max-w-full">
 
                     {/* Section header */}
                     <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
