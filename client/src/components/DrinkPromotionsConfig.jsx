@@ -368,9 +368,9 @@ export default function DrinkPromotionsConfig() {
             )}
 
             {/* ── Promotion sections Carousel ── */}
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start">
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start snap-x snap-mandatory">
                 {promotions.map(promo => (
-                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-full sm:w-[650px] lg:w-[750px] max-w-full">
+                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-[88vw] sm:w-[650px] lg:w-[750px] max-w-full snap-start">
 
                     {/* Section header */}
                     <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
