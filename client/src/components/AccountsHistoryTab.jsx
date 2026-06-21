@@ -930,6 +930,7 @@ export default function AccountsHistoryTab() {
                         )}
                     </div>
                 </div>
+            )}
 
             {/* MODALS */}
             {viewingHistoryAccount && (
