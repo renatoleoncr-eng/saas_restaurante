@@ -84,17 +84,16 @@ export default function SessionsHistoryTab() {
                             <th className="p-4 font-bold text-gray-600 text-sm">Cierre</th>
                             <th className="p-4 font-bold text-gray-600 text-sm">Responsable (Cierre)</th>
                             <th className="p-4 font-bold text-gray-600 text-sm text-center">Diferencia Caja</th>
-                            <th className="p-4 font-bold text-gray-600 text-sm text-center">Detalle</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="6" className="text-center p-8 text-gray-500">Cargando historial de turnos...</td>
+                                <td colSpan="5" className="text-center p-8 text-gray-500">Cargando historial de turnos...</td>
                             </tr>
                         ) : sessions.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="text-center p-8 text-gray-500">No hay turnos cerrados aún.</td>
+                                <td colSpan="5" className="text-center p-8 text-gray-500">No hay turnos cerrados aún.</td>
                             </tr>
                         ) : (
                             sessions.map((session) => {
@@ -151,15 +150,12 @@ export default function SessionsHistoryTab() {
                                             </div>
                                         </td>
                                         <td className="p-4 text-center">
-                                            {diffBadge}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <button
+                                            <button 
                                                 onClick={() => handleOpenDetails(session.id)}
-                                                className="inline-flex items-center justify-center gap-1.5 px-4.5 py-1.5 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 active:scale-95 transition-all"
+                                                className="hover:scale-105 active:scale-95 transition-all focus:outline-none"
+                                                title="Ver detalle del cuadre"
                                             >
-                                                <Calculator size={14} />
-                                                Cuadre
+                                                {diffBadge}
                                             </button>
                                         </td>
                                     </tr>
@@ -277,6 +273,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
     if (Math.abs(totalDiff) < 0.01) totalDiff = 0;
 
+    const produccionTotal = (details?.payments || []).reduce((acc, p) => acc + Number(p.amount || 0), 0);
+
     const getMovements = () => {
         if (!details) return [];
         
@@ -392,9 +390,13 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                             </div>
 
                             {/* Cash Balance Cards Summary */}
-                            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Esperado</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Ingresos</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-blue-600 mt-1">S/ {produccionTotal.toFixed(2)}</span>
+                                </div>
+                                <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">En Caja (Esperado)</span>
                                     <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {totalExpected.toFixed(2)}</span>
                                 </div>
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
@@ -458,13 +460,17 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 if (Math.abs(diff) < 0.01) diff = 0;
                                                 const isSelected = selectedMethodFilter === m;
                                                 
+                                                const ingresosMetodo = (details?.payments || []).filter(p => (p.method || 'efectivo') === m).reduce((acc, p) => acc + Number(p.amount || 0), 0);
+                                                const egresosMetodo = (details?.expenses || []).filter(e => (e.paymentMethod || 'efectivo') === m).reduce((acc, e) => acc + Number(e.amount || 0), 0);
+                                                const fondoMetodo = m === 'efectivo' ? Number(session?.openingCash || 0) : 0;
+
                                                 return (
+                                                    <React.Fragment key={m}>
                                                     <tr 
-                                                        key={m} 
                                                         onClick={() => setSelectedMethodFilter(prev => prev === m ? 'todos' : m)}
                                                         className={`cursor-pointer transition-colors ${
                                                             isSelected 
-                                                                ? 'bg-blue-50 hover:bg-blue-100/80 font-bold border-l-4 border-blue-500' 
+                                                                ? 'bg-blue-50 font-bold border-l-4 border-blue-500' 
                                                                 : 'hover:bg-gray-50/30'
                                                         }`}
                                                     >
@@ -484,6 +490,33 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                             {diff !== 0 ? `S/ ${diff.toFixed(2)}` : 'OK'}
                                                         </td>
                                                     </tr>
+                                                    {isSelected && (
+                                                        <tr className="bg-blue-50/40 border-b border-blue-100/50 shadow-inner">
+                                                            <td colSpan="4" className="px-5 md:px-8 py-3">
+                                                                <div className="flex flex-col gap-1.5 text-xs font-mono max-w-[240px] ml-auto mr-0">
+                                                                    <div className="flex justify-between text-gray-600">
+                                                                        <span>(+) Ingresos/Ventas</span>
+                                                                        <span>S/ {ingresosMetodo.toFixed(2)}</span>
+                                                                    </div>
+                                                                    {m === 'efectivo' && (
+                                                                        <div className="flex justify-between text-gray-600">
+                                                                            <span>(+) Fondo Inicial</span>
+                                                                            <span>S/ {fondoMetodo.toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className={`flex justify-between font-medium ${egresosMetodo > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                                        <span>(-) Egresos/Gastos</span>
+                                                                        <span>S/ {egresosMetodo.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between font-bold text-gray-800 border-t border-gray-200 pt-1.5 mt-0.5">
+                                                                        <span>(=) Neto Esperado</span>
+                                                                        <span>S/ {exp.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    </React.Fragment>
                                                 );
                                             })}
                                         </tbody>
