@@ -10,12 +10,11 @@ export default function CashRegisterView() {
     return (
         <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
             {/* Header and Tabs */}
-            <div className="bg-white border-b shrink-0 pt-4 px-4 sm:px-6">
-                <h1 className="text-2xl font-bold text-gray-800 mb-4">Caja</h1>
+            <div className="bg-white border-b shrink-0 pt-2 px-4 sm:px-6">
                 
                 {/* Mobile-friendly Tabs */}
                 <div className="flex overflow-x-auto custom-scrollbar -mb-px">
-                    <div className="flex gap-4 sm:gap-8 min-w-max">
+                    <div className="flex gap-5 sm:gap-8 min-w-max text-sm sm:text-base pr-4">
                         <button
                             onClick={() => setActiveTab('cashflow')}
                             className={`pb-3 font-bold transition-colors relative flex items-center gap-2 whitespace-nowrap px-1 ${
