@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Plus, Trash2, Edit2, Save, X, Wine, ChefHat, ChevronDown, ChevronUp } from 'lucide-react';
 import RecipeModal from './RecipeModal';
 
-const TYPE_LABEL = { free: 'Libre', finished: 'Terminado', prepared: 'Preparado (Carta)' };
+const TYPE_LABEL = { free: 'Libre', finished: 'Terminado', prepared: 'Preparado' };
 const TYPE_COLOR = {
     free: 'bg-gray-100 text-gray-500',
     finished: 'bg-blue-100 text-blue-700',
@@ -28,86 +28,78 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
 
     return (
         <tr className="bg-purple-50 border-y border-purple-100 block md:table-row">
-            <td colSpan={4} className="p-3 md:p-4 block md:table-cell">
-                <div className="flex flex-col md:flex-row flex-wrap gap-3 items-stretch md:items-center">
-                    <div className="flex-1">
-                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
-                        <input
-                            autoFocus
-                            type="text"
-                            placeholder="Nombre del trago"
-                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-purple-400 outline-none bg-white font-semibold"
-                            value={form.name}
-                            onChange={e => upd('name', e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSave()}
-                        />
-                    </div>
-                    <div className="w-full md:w-32">
-                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Precio Individual</label>
-                        <div className="flex items-center gap-1 border border-purple-200 rounded-lg px-3 py-2 bg-white text-sm">
-                            <span className="text-gray-400">S/</span>
-                            <input
-                                type="number" step="0.01" placeholder="0.00"
-                                className="w-full outline-none font-bold"
-                                value={form.individualPrice}
-                                onChange={e => upd('individualPrice', e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <div className="w-full md:w-48">
-                        <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Tipo</label>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
+                <input
+                    autoFocus
+                    type="text"
+                    placeholder="Nombre del trago"
+                    className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-purple-400 outline-none bg-white font-semibold"
+                    value={form.name}
+                    onChange={e => upd('name', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                />
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Precio Individual</label>
+                <div className="flex items-center gap-1 border border-purple-200 rounded-lg px-3 py-2 bg-white text-sm w-full md:w-32">
+                    <span className="text-gray-400">S/</span>
+                    <input
+                        type="number" step="0.01" placeholder="0.00"
+                        className="w-full outline-none font-bold min-w-0"
+                        value={form.individualPrice}
+                        onChange={e => upd('individualPrice', e.target.value)}
+                    />
+                </div>
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Tipo</label>
+                <div className="flex flex-col gap-2">
+                    <select
+                        className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-purple-400"
+                        value={form.type}
+                        onChange={e => upd('type', e.target.value)}
+                    >
+                        <option value="free">Libre</option>
+                        <option value="finished">Terminado</option>
+                        <option value="prepared">Preparado</option>
+                    </select>
+                    {form.type === 'finished' && (
                         <select
-                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-purple-400"
-                            value={form.type}
-                            onChange={e => upd('type', e.target.value)}
+                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            value={form.linkedProductId}
+                            onChange={e => upd('linkedProductId', e.target.value)}
                         >
-                            <option value="free">Libre (sin stock)</option>
-                            <option value="finished">Terminado</option>
-                            <option value="prepared">Preparado (Carta)</option>
+                            <option value="">— Prod. Vinculado —</option>
+                            {allProducts
+                                .filter(p => !p.requiresPreparation)
+                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                    </div>
-                    <div className="flex-1 min-w-[120px]">
-                        {form.type !== 'free' && (
-                            <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">
-                                {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
-                            </label>
-                        )}
-                        {form.type === 'finished' ? (
-                            <select
-                                className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                                value={form.linkedProductId}
-                                onChange={e => upd('linkedProductId', e.target.value)}
-                            >
-                                <option value="">— Seleccionar Producto —</option>
-                                {allProducts
-                                    .filter(p => !p.requiresPreparation)
-                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        ) : form.type === 'prepared' ? (
-                            <select
-                                className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                                value={form.linkedProductId}
-                                onChange={e => upd('linkedProductId', e.target.value)}
-                            >
-                                <option value="">— Seleccionar Receta —</option>
-                                {allProducts
-                                    .filter(p => p.requiresPreparation)
-                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        ) : (
-                            <span className="hidden md:inline text-xs text-gray-400 italic">No aplica</span>
-                        )}
-                    </div>
-                    <div className="flex gap-2 justify-end pt-2 md:pt-0">
-                        <button onClick={handleSave}
-                            className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700 shadow-sm transition-colors">
-                            Guardar
-                        </button>
-                        <button onClick={onCancel}
-                            className="bg-white hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold border transition-colors">
-                            Cancelar
-                        </button>
-                    </div>
+                    )}
+                    {form.type === 'prepared' && (
+                        <select
+                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                            value={form.linkedProductId}
+                            onChange={e => upd('linkedProductId', e.target.value)}
+                        >
+                            <option value="">— Receta Vinculada —</option>
+                            {allProducts
+                                .filter(p => p.requiresPreparation)
+                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    )}
+                </div>
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <div className="flex gap-2 justify-end md:justify-center">
+                    <button onClick={handleSave}
+                        className="bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 shadow-sm transition-colors" title="Guardar">
+                        <Save size={18} />
+                    </button>
+                    <button onClick={onCancel}
+                        className="bg-white hover:bg-gray-100 text-gray-600 p-2 rounded-lg border transition-colors" title="Cancelar">
+                        <X size={18} />
+                    </button>
                 </div>
             </td>
         </tr>
@@ -134,73 +126,75 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
 
     return (
         <tr className="bg-blue-50 border-y border-blue-100 block md:table-row">
-            <td colSpan={4} className="p-3 md:p-4 block md:table-cell">
-                <div className="flex flex-col md:flex-row flex-wrap gap-3 items-stretch md:items-center">
-                    <div className="flex-1">
-                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
-                        <input autoFocus type="text"
-                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-400 outline-none bg-white font-semibold"
-                            value={form.name}
-                            onChange={e => upd('name', e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSave()}
-                        />
-                    </div>
-                    <div className="w-full md:w-32">
-                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Precio Individual</label>
-                        <div className="flex items-center gap-1 border border-blue-200 rounded-lg px-3 py-2 bg-white text-sm">
-                            <span className="text-gray-400">S/</span>
-                            <input type="number" step="0.01"
-                                className="w-full outline-none font-bold"
-                                value={form.individualPrice}
-                                onChange={e => upd('individualPrice', e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <div className="w-full md:w-48">
-                        <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Tipo</label>
-                        <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-blue-400" value={form.type}
-                            onChange={e => upd('type', e.target.value)}>
-                            <option value="free">Libre (sin stock)</option>
-                            <option value="finished">Terminado</option>
-                            <option value="prepared">Preparado (Carta)</option>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
+                <input autoFocus type="text"
+                    className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-400 outline-none bg-white font-semibold"
+                    value={form.name}
+                    onChange={e => upd('name', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                />
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Precio Individual</label>
+                <div className="flex items-center gap-1 border border-blue-200 rounded-lg px-3 py-2 bg-white text-sm w-full md:w-32">
+                    <span className="text-gray-400">S/</span>
+                    <input
+                        type="number" step="0.01" placeholder="0.00"
+                        className="w-full outline-none font-bold min-w-0"
+                        value={form.individualPrice}
+                        onChange={e => upd('individualPrice', e.target.value)}
+                    />
+                </div>
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Tipo</label>
+                <div className="flex flex-col gap-2">
+                    <select
+                        className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full bg-white outline-none focus:ring-2 focus:ring-blue-400"
+                        value={form.type}
+                        onChange={e => upd('type', e.target.value)}
+                    >
+                        <option value="free">Libre</option>
+                        <option value="finished">Terminado</option>
+                        <option value="prepared">Preparado</option>
+                    </select>
+                    {form.type === 'finished' && (
+                        <select
+                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            value={form.linkedProductId}
+                            onChange={e => upd('linkedProductId', e.target.value)}
+                        >
+                            <option value="">— Prod. Vinculado —</option>
+                            {allProducts
+                                .filter(p => !p.requiresPreparation)
+                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                    </div>
-                    <div className="flex-1 min-w-[120px]">
-                        {form.type !== 'free' && (
-                            <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">
-                                {form.type === 'finished' ? 'Producto Vinculado' : 'Receta Vinculada'}
-                            </label>
-                        )}
-                        {form.type === 'finished' ? (
-                            <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white" value={form.linkedProductId || ''}
-                                onChange={e => upd('linkedProductId', e.target.value)}>
-                                <option value="">— Seleccionar Producto —</option>
-                                {allProducts
-                                    .filter(p => !p.requiresPreparation)
-                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        ) : form.type === 'prepared' ? (
-                            <select className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white" value={form.linkedProductId || ''}
-                                onChange={e => upd('linkedProductId', e.target.value)}>
-                                <option value="">— Seleccionar Receta —</option>
-                                {allProducts
-                                    .filter(p => p.requiresPreparation)
-                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        ) : (
-                            <span className="hidden md:inline text-xs text-gray-400 italic">No aplica</span>
-                        )}
-                    </div>
-                    <div className="flex gap-2 justify-end pt-2 md:pt-0">
-                        <button onClick={handleSave}
-                            className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-600 shadow-sm transition-colors">
-                            Guardar
-                        </button>
-                        <button onClick={onCancel}
-                            className="bg-white hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold border transition-colors">
-                            Cancelar
-                        </button>
-                    </div>
+                    )}
+                    {form.type === 'prepared' && (
+                        <select
+                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                            value={form.linkedProductId}
+                            onChange={e => upd('linkedProductId', e.target.value)}
+                        >
+                            <option value="">— Receta Vinculada —</option>
+                            {allProducts
+                                .filter(p => p.requiresPreparation)
+                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    )}
+                </div>
+            </td>
+            <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
+                <div className="flex gap-2 justify-end md:justify-center">
+                    <button onClick={handleSave}
+                        className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 shadow-sm transition-colors" title="Guardar">
+                        <Save size={18} />
+                    </button>
+                    <button onClick={onCancel}
+                        className="bg-white hover:bg-gray-100 text-gray-600 p-2 rounded-lg border transition-colors" title="Cancelar">
+                        <X size={18} />
+                    </button>
                 </div>
             </td>
         </tr>
