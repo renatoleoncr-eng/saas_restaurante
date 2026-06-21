@@ -274,6 +274,9 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     if (Math.abs(totalDiff) < 0.01) totalDiff = 0;
 
     const produccionTotal = (details?.payments || []).reduce((acc, p) => acc + Number(p.amount || 0), 0);
+    const fondoInicial = parseFloat(session?.openingCash || 0);
+    const esperadoSinFondo = totalExpected - fondoInicial;
+    const contadoSinFondo = totalCounted - fondoInicial;
 
     const getMovements = () => {
         if (!details) return [];
@@ -397,11 +400,11 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                 </div>
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
                                     <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">En Caja (Esperado)</span>
-                                    <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {totalExpected.toFixed(2)}</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {esperadoSinFondo.toFixed(2)}</span>
                                 </div>
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
                                     <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Contado</span>
-                                    <span className="text-sm sm:text-xl font-extrabold text-gray-900 mt-1">S/ {totalCounted.toFixed(2)}</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-gray-900 mt-1">S/ {contadoSinFondo.toFixed(2)}</span>
                                 </div>
                                 <div className={`p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between ${
                                     totalDiff === 0 
@@ -481,6 +484,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                 m === 'yape' ? 'bg-purple-500' : 'bg-orange-500'
                                                             }`}></span>
                                                             {m}
+                                                            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isSelected ? 'rotate-180 text-blue-500' : ''}`} />
                                                         </td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs whitespace-nowrap">S/ {exp.toFixed(2)}</td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs whitespace-nowrap">S/ {cnt.toFixed(2)}</td>
