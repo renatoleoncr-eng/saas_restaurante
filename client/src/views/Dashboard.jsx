@@ -4,10 +4,9 @@ import AdminDashboard from './AdminDashboard';
 import WaiterMap from '../components/WaiterMap';
 import StockDashboard from '../components/StockDashboard';
 import MenuView from './MenuView';
-import ReportesView from './ReportesView';
+import CashRegisterView from './CashRegisterView';
 import UserManagementModal from '../components/UserManagementModal';
 import PasswordChangeModal from '../components/PasswordChangeModal';
-import AccountManagementView from './AccountManagementView';
 import { useNavigate } from 'react-router-dom';
 import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
 import BillingConfigModal from '../components/BillingConfigModal';
@@ -35,7 +34,7 @@ export default function Dashboard() {
         const restrictedViews = {
             waiter: ['drink_promos', 'audit'],
             cashier: ['drink_promos', 'audit'], 
-            kitchen: ['stock', 'menu', 'reports', 'accounts', 'drink_promos', 'qr_management', 'audit']
+            kitchen: ['stock', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit']
         };
 
         if (user && restrictedViews[user.role]?.includes(currentView)) {
@@ -128,10 +127,7 @@ export default function Dashboard() {
             return <MenuView />;
         }
         if (currentView === 'reports') {
-            return <ReportesView />;
-        }
-        if (currentView === 'accounts') {
-            return <AccountManagementView />;
+            return <CashRegisterView />;
         }
         if (currentView === 'drink_promos') {
             return <DrinkPromotionsConfig />;
@@ -339,27 +335,15 @@ export default function Dashboard() {
                             </button>
                         )}
 
-                        {/* Accounts - Admin, Waiter, Cashier */}
-                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
-                            <button
-                                onClick={() => { setCurrentView('accounts'); if (window.innerWidth < 768) setIsCollapsed(true); }}
-                                title="Historial Cuentas"
-                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'accounts' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
-                            >
-                                <FileText size={20} />
-                                {!isCollapsed && <span>Historial Cuentas</span>}
-                            </button>
-                        )}
-
                         {/* Reports - Admin & Cashier */}
                         {['admin', 'cashier', 'waiter'].includes(user.role) && (
                             <button
                                 onClick={() => { setCurrentView('reports'); if (window.innerWidth < 768) setIsCollapsed(true); }}
-                                title="Caja y Reportes"
+                                title="Caja"
                                 className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
                             >
                                 <TrendingUp size={20} />
-                                {!isCollapsed && <span>Caja / Reportes</span>}
+                                {!isCollapsed && <span>Caja</span>}
                             </button>
                         )}
 

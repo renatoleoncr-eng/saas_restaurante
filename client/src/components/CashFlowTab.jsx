@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { Search, Calendar, Filter, ChevronDown, ChevronRight, CheckCircle, FileText, Download, X, DollarSign, TrendingUp, TrendingDown, Receipt, Plus, ArrowUpRight, ArrowDownLeft, Trash2 } from 'lucide-react';
-import AccountDetailsModal from '../components/AccountDetailsModal';
+import AccountDetailsModal from './AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
-export default function ReportesView() {
+export default function CashFlowTab() {
     const { socket, user } = useRestaurant();
     // STATE
     const [report, setReport] = useState(null);

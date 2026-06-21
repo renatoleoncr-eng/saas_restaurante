@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Calendar, FileText, ChevronRight, Edit2, Trash2, CreditCard, CheckCircle, X, Loader2, Camera, Image } from 'lucide-react';
-import TableControl from '../components/TableControl';
+import TableControl from './TableControl';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import AccountDetailsModal from '../components/AccountDetailsModal';
+import AccountDetailsModal from './AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
-import SessionsHistoryTab from '../components/SessionsHistoryTab';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
@@ -14,11 +13,10 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
     </svg>
 );
 
-export default function AccountManagementView() {
+export default function AccountsHistoryTab() {
     const { user, socket } = useRestaurant();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('cuentas'); // 'cuentas' | 'turnos'
 
     // Local timezone aware date string (YYYY-MM-DD) with 7 AM business day logic
     const todayLocal = new Date();
@@ -423,34 +421,9 @@ export default function AccountManagementView() {
                 </div>
             </div>
 
-            {/* TABS */}
-            <div className="flex gap-6 border-b mb-6 px-2">
-                <button 
-                    onClick={() => setActiveTab('cuentas')}
-                    className={`pb-3 font-bold transition-colors relative ${activeTab === 'cuentas' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
-                >
-                    Cuentas
-                    {activeTab === 'cuentas' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
-                </button>
-                <button 
-                    onClick={() => setActiveTab('turnos')}
-                    className={`pb-3 font-bold transition-colors relative flex items-center gap-2 ${activeTab === 'turnos' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
-                >
-                    <FileText size={16} />
-                    Cierres de Turno
-                    {activeTab === 'turnos' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></span>}
-                </button>
-            </div>
-
             {/* CONTENT */}
-            {activeTab === 'turnos' ? (
-                <div className="flex-1 min-h-[400px]">
-                    <SessionsHistoryTab />
-                </div>
-            ) : (
-                /* Table (Cuentas) */
-                <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-                    <div className="flex-1 overflow-x-auto">
+            <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[700px]">
                         <thead className="bg-gray-50 border-b sticky top-0 z-10">
                             <tr>
@@ -957,9 +930,8 @@ export default function AccountManagementView() {
                         )}
                     </div>
                 </div>
-            )}
 
-            {/* TRANSACTION DETAIL MODAL */}
+            {/* MODALS */}
             {viewingHistoryAccount && (
                 <AccountDetailsModal
                     account={viewingHistoryAccount}
