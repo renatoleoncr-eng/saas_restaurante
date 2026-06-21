@@ -470,8 +470,10 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 return (
                                                     <React.Fragment key={m}>
                                                     <tr 
-                                                        onClick={() => setSelectedMethodFilter(prev => prev === m ? 'todos' : m)}
-                                                        className={`cursor-pointer transition-colors ${
+                                                        onClick={() => {
+                                                            if (m === 'efectivo') setSelectedMethodFilter(prev => prev === m ? 'todos' : m)
+                                                        }}
+                                                        className={`${m === 'efectivo' ? 'cursor-pointer' : ''} transition-colors ${
                                                             isSelected 
                                                                 ? 'bg-blue-50 font-bold border-l-4 border-blue-500' 
                                                                 : 'hover:bg-gray-50/30'
@@ -484,7 +486,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                                 m === 'yape' ? 'bg-purple-500' : 'bg-orange-500'
                                                             }`}></span>
                                                             {m === 'transferencia' ? 'Tranf.' : m}
-                                                            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isSelected ? 'rotate-180 text-blue-500' : ''}`} />
+                                                            {m === 'efectivo' && <ChevronDown size={14} className={`text-gray-400 transition-transform ${isSelected ? 'rotate-180 text-blue-500' : ''}`} />}
                                                         </td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono text-gray-600 text-xs whitespace-nowrap">S/ {exp.toFixed(2)}</td>
                                                         <td className="px-3 md:px-5 py-3 text-right font-mono font-bold text-gray-800 text-xs whitespace-nowrap">S/ {cnt.toFixed(2)}</td>
