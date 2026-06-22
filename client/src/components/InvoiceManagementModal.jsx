@@ -461,14 +461,14 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             const qty = item.qty || item.quantity || 1;
                             const total = parseFloat(item.amount || item.subtotal || 0);
                             const pUnit = total / qty;
-                            return \`
+                            return `
                                 <tr>
-                                    <td class="text-center">\${qty}</td>
-                                    <td style="text-transform: uppercase;">\${item.description}</td>
-                                    <td class="text-right">S/ \${pUnit.toFixed(2)}</td>
-                                    <td class="text-right">S/ \${total.toFixed(2)}</td>
+                                    <td class="text-center">${qty}</td>
+                                    <td style="text-transform: uppercase;">${item.description}</td>
+                                    <td class="text-right">S/ ${pUnit.toFixed(2)}</td>
+                                    <td class="text-right">S/ ${total.toFixed(2)}</td>
                                 </tr>
-                            \`;
+                            `;
                         }).join('')}
                     </tbody>
                 </table>
@@ -496,13 +496,13 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 
                 <div class="divider"></div>
                 
-                ${isElectronico ? \`
+                ${isElectronico ? `
                 <div class="text-center" style="margin-top: 3mm; margin-bottom: 3mm;">
                     <div class="sunat-badge">
                         [✓] ACEPTADA POR SUNAT
                     </div>
                 </div>
-                \` : ''}
+                ` : ''}
 
                 <div class="text-center" style="margin-top: 4mm; margin-bottom: 4mm;">
                     <img src="${qrCodeUrl}" style="width: 120px; height: 120px;" alt="Código QR SUNAT" />
