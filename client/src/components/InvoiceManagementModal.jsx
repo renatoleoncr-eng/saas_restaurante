@@ -513,13 +513,6 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     <span>Autorizado mediante Resolución de SUNAT</span><br><br>
                     <b>¡Gracias por su preferencia!</b>
                 </div>
-                
-                <script>
-                    window.onload = function() {
-                        window.print();
-                        setTimeout(function() { window.close(); }, 500);
-                    }
-                </script>
             </body>
             </html>
         `);
