@@ -179,6 +179,13 @@ const BillingConfigModal = ({ onClose }) => {
     }, [activeTab]);
 
     useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchInvoices();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [filters]);
+
+    useEffect(() => {
         if (activeTab === 'new' && config.billingMode === 'reserva') {
             fetchAccounts();
         }
@@ -837,7 +844,7 @@ const BillingConfigModal = ({ onClose }) => {
                                 }}
                                 className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-bold text-[10px] md:text-xs tracking-wider uppercase transition-colors whitespace-nowrap"
                             >
-                                {viewMode === 'comprobantes' ? 'Volver a configuración' : 'Ver comprobantes'}
+                                {viewMode === 'comprobantes' ? 'Volver a config.' : 'Ver comprobantes'}
                             </button>
                         )}
                         <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors shrink-0">
@@ -925,12 +932,6 @@ const BillingConfigModal = ({ onClose }) => {
                                     <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-sm flex flex-col gap-2">
                                         <div className="flex justify-between items-center">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rango de Fecha</label>
-                                            <button 
-                                                onClick={fetchInvoices}
-                                                className="text-[10px] bg-[#1f63fb] text-white px-4 py-1.5 rounded-lg font-bold uppercase tracking-widest hover:bg-blue-700 transition shadow-sm"
-                                            >
-                                                Filtrar
-                                            </button>
                                         </div>
                                         <div className="flex gap-2">
                                             <input 
@@ -957,9 +958,9 @@ const BillingConfigModal = ({ onClose }) => {
                                                 <thead>
                                                     <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-500 uppercase tracking-widest">
                                                         <th className="p-4 pl-6">Documento</th>
-                                                        <th className="p-4">Cuenta</th>
                                                         <th className="p-4">Cliente</th>
                                                         <th className="p-4">Fecha</th>
+                                                        <th className="p-4">Cuenta</th>
                                                         <th className="p-4">Total</th>
                                                         <th className="p-4">Estado</th>
                                                         <th className="p-4 pr-6 text-right">Acciones</th>
@@ -1008,15 +1009,6 @@ const BillingConfigModal = ({ onClose }) => {
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-4 align-middle">
-                                                                    {inv.AccountId ? (
-                                                                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest shadow-sm">
-                                                                            Cuenta #{inv.AccountId}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-[11px] font-bold text-gray-400">-</span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="p-4 align-middle">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[13px] font-bold text-gray-700 truncate max-w-[200px]" title={inv.clienteNombre}>
                                                                             {inv.clienteNombre}
@@ -1026,6 +1018,18 @@ const BillingConfigModal = ({ onClose }) => {
                                                                 </td>
                                                                 <td className="p-4 align-middle">
                                                                     <span className="text-[12px] font-medium text-gray-600">{formatDate(inv.emitidoAt)}</span>
+                                                                </td>
+                                                                <td className="p-4 align-middle">
+                                                                    {inv.AccountId ? (
+                                                                        <button 
+                                                                            onClick={() => setSelectedAccountId(inv.AccountId)}
+                                                                            className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest shadow-sm hover:bg-blue-100 transition-colors cursor-pointer"
+                                                                        >
+                                                                            Cuenta #{inv.AccountId}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-[11px] font-bold text-gray-400">-</span>
+                                                                    )}
                                                                 </td>
                                                                 <td className="p-4 align-middle">
                                                                     <span className="text-[14px] font-black text-[#1d263b]">
@@ -1044,7 +1048,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                                         <button 
                                                                             onClick={() => pdf ? window.open(pdf, '_blank') : handlePrintLocalInvoice(inv)}
                                                                             className="p-2 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
-                                                                            title={pdf ? "Ver PDF Original" : "Imprimir comprobante local"}
+                                                                            title="Ver documento"
                                                                         >
                                                                             <ExternalLink size={16} />
                                                                         </button>

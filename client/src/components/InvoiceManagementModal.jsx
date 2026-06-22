@@ -74,6 +74,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [isExonerado, setIsExonerado] = useState(false);
     const [igvRateInput, setIgvRateInput] = useState(10.5);
     const [errorMsg, setErrorMsg] = useState(null);
+    const [config, setConfig] = useState(null);
 
     // Handle back button for inline success view
     useModalBackHandler(isSuccess, () => setIsSuccess(false));
@@ -122,6 +123,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         try {
             const res = await axios.get('/api/billing/config');
             if (res.data) {
+                setConfig(res.data);
                 setIsExonerado(res.data.operacionesExoneradas === true || res.data.operacionesExoneradas === 'true');
                 setIgvRateInput(parseFloat(res.data.igvTasa || '18'));
             }
@@ -319,6 +321,209 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             try { iframe.contentWindow.print(); } catch (e) { window.open(busterUrl, '_blank'); }
             setTimeout(() => document.body.removeChild(iframe), 5000);
         };
+    };
+
+    const handlePrintLocalInvoice = (invoice) => {
+        if (!invoice) return;
+        const printWindow = window.open('', '_blank', 'width=600,height=800');
+        if (!printWindow) {
+            alert('Por favor habilite las ventanas emergentes (popups) para poder imprimir.');
+            return;
+        }
+
+        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
+        const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
+        const docName = invoice.tipo === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
+        
+        const rucEmpresa = config?.ruc || '20614409593';
+        const nameEmpresa = config?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
+        const addressEmpresa = config?.direccion || 'Av. Larco 123, Miraflores, Lima';
+
+        // Check for Amazonas exoneration (exoneradas or igv === 0)
+        const isExonerated = config?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
+        const totalAmount = parseFloat(invoice.total || 0);
+        const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
+        const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
+        const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
+        const igvLabel = isExonerated ? 'I.G.V. (0%):' : 'I.G.V. (18%):';
+
+        // Generate SUNAT QR Code pipe-delimited string
+        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
+        let tipoDocAdq = '0';
+        if (invoice.clienteDocumento) {
+            if (invoice.clienteDocumento.length === 11) tipoDocAdq = '6'; // RUC
+            else if (invoice.clienteDocumento.length === 8) tipoDocAdq = '1'; // DNI
+        }
+        const nroDocAdq = invoice.clienteDocumento || '00000000';
+        
+        const rawDate = invoice.emitidoAt || invoice.createdAt || new Date();
+        const dateObj = new Date(rawDate);
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+        const qrString = `${rucEmpresa}|${tipoComp}|${invoice.serie}|${invoice.correlativo}|${igvAmount.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdq}|${nroDocAdq}|`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
+
+        // Verify if it is electronic
+        const isElectronico = !!(
+            invoice.sunatResponse && 
+            (() => {
+                try {
+                    const parsed = typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse;
+                    return parsed && !parsed.error && parsed.success !== false;
+                } catch (e) {
+                    return false;
+                }
+            })()
+        );
+
+        const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
+                <style>
+                    @page {
+                        size: 80mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        font-family: 'Courier New', Courier, monospace, sans-serif;
+                        width: 72mm;
+                        margin: 0 auto;
+                        padding: 5mm 2mm;
+                        font-size: 11px;
+                        color: #000;
+                        line-height: 1.3;
+                    }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .bold { font-weight: bold; }
+                    .header { margin-bottom: 5mm; }
+                    .company-name { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+                    .document-title { font-size: 12px; font-weight: bold; border: 1px solid #000; padding: 4px; margin: 4mm 0; text-transform: uppercase; }
+                    .divider { border-top: 1px dashed #000; margin: 3mm 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+                    th { border-bottom: 1px dashed #000; padding: 2px 0; font-size: 10px; text-transform: uppercase; }
+                    td { padding: 3px 0; vertical-align: top; }
+                    .totals { margin-top: 4mm; }
+                    .totals-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+                    .footer { margin-top: 8mm; font-size: 9px; }
+                    .sunat-badge {
+                        background-color: #e6f4ea;
+                        color: #137333;
+                        font-weight: bold;
+                        border: 1px solid #a8dab5;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        display: inline-block;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        margin-bottom: 3mm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="text-center header">
+                    <div class="company-name">${nameEmpresa}</div>
+                    <div>RUC: ${rucEmpresa}</div>
+                    <div>${addressEmpresa.toUpperCase()}</div>
+                    <div class="document-title">
+                        ${docName}<br>
+                        ${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}
+                    </div>
+                </div>
+                
+                <div>
+                    <div><b>FECHA EMISIÓN:</b> ${dateStr}</div>
+                    <div><b>SEÑOR(ES):</b> ${(invoice.clienteNombre || 'CLIENTES VARIOS').toUpperCase()}</div>
+                    <div><b>${invoice.tipo === 'factura' ? 'RUC' : 'DNI'}:</b> ${nroDocAdq}</div>
+                    ${clienteDireccionHtml}
+                    <div><b>MÉTODO PAGO:</b> EFECTIVO</div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 10%;">CANT</th>
+                            <th style="width: 45%;">DESCRIPCIÓN</th>
+                            <th class="text-right" style="width: 20%;">P.UNIT</th>
+                            <th class="text-right" style="width: 25%;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => {
+                            const qty = item.qty || item.quantity || 1;
+                            const total = parseFloat(item.amount || item.subtotal || 0);
+                            const pUnit = total / qty;
+                            return \`
+                                <tr>
+                                    <td class="text-center">\${qty}</td>
+                                    <td style="text-transform: uppercase;">\${item.description}</td>
+                                    <td class="text-right">S/ \${pUnit.toFixed(2)}</td>
+                                    <td class="text-right">S/ \${total.toFixed(2)}</td>
+                                </tr>
+                            \`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="divider"></div>
+                
+                <div class="totals">
+                    <div class="totals-row">
+                        <span>${opLabel}</span>
+                        <span>S/ ${opAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>OP. INAFECTA:</span>
+                        <span>S/ 0.00</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>${igvLabel}</span>
+                        <span>S/ ${igvAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="totals-row bold" style="font-size: 13px;">
+                        <span>TOTAL A PAGAR:</span>
+                        <span>S/ ${totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                ${isElectronico ? \`
+                <div class="text-center" style="margin-top: 3mm; margin-bottom: 3mm;">
+                    <div class="sunat-badge">
+                        [✓] ACEPTADA POR SUNAT
+                    </div>
+                </div>
+                \` : ''}
+
+                <div class="text-center" style="margin-top: 4mm; margin-bottom: 4mm;">
+                    <img src="${qrCodeUrl}" style="width: 120px; height: 120px;" alt="Código QR SUNAT" />
+                </div>
+
+                <div class="text-center footer">
+                    <b>REPRESENTACIÓN IMPRESA DE COMPROBANTE DE PAGO</b><br>
+                    <span>Autorizado mediante Resolución de SUNAT</span><br><br>
+                    <b>¡Gracias por su preferencia!</b>
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                </script>
+            </body>
+            </html>
+        \`);
+        printWindow.document.close();
     };
 
     const handleSearchCustomer = async () => {
@@ -801,16 +1006,21 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-50 mt-auto shrink-0">
                     <div className="space-y-4">
                         <div className="flex gap-3">
-                            <a 
-                                href={billingUrl ? (billingUrl.includes('?') ? `${billingUrl}&v=${Date.now()}` : `${billingUrl}?v=${Date.now()}`) : '#'} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <button 
+                                onClick={(e) => {
+                                    if (billingUrl) {
+                                        window.open(billingUrl.includes('?') ? `${billingUrl}&v=${Date.now()}` : `${billingUrl}?v=${Date.now()}`, '_blank');
+                                    } else {
+                                        e.preventDefault();
+                                        handlePrintLocalInvoice(doc);
+                                    }
+                                }}
                                 className={`flex-1 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm border
                                     ${isAnulado ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 text-slate-600'}
                                 `}
                             >
                                 <FileText size={16} /> VER {doc.tipo === 'factura' ? 'FACTURA' : 'BOLETA'}
-                            </a>
+                            </button>
                             <div className="flex gap-2 shrink-0">
                                 <button 
                                     onClick={() => handleShareWhatsapp(billingUrl)} 
