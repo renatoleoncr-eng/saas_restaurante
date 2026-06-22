@@ -124,6 +124,33 @@ router.get('/billing/invoices', async (req, res) => {
     }
 });
 
+// GET /public/comprobante/:hash
+router.get('/public/comprobante/:hash', async (req, res) => {
+    try {
+        const { hash } = req.params;
+        // The hash is expected to be base64 of "makala_{id}"
+        const decoded = Buffer.from(hash, 'base64').toString('utf-8');
+        if (!decoded.startsWith('makala_')) {
+            return res.status(400).json({ error: 'Enlace inválido' });
+        }
+        
+        const invoiceId = decoded.split('_')[1];
+        const invoice = await Invoice.findByPk(invoiceId, {
+            include: [
+                { model: User, attributes: ['id', 'username'] },
+                { model: Account, include: [Table] }
+            ]
+        });
+        
+        if (!invoice) return res.status(404).json({ error: 'Comprobante no encontrado' });
+        
+        const config = await BillingConfig.findOne();
+        res.json({ invoice, config });
+    } catch (err) {
+        res.status(500).json({ error: 'Error procesando el enlace' });
+    }
+});
+
 // POST /billing/invoices (Emitir via Hub)
 router.post('/billing/invoices', async (req, res) => {
     try {

@@ -646,13 +646,18 @@ const BillingConfigModal = ({ onClose }) => {
     };
 
     const handleShareWhatsapp = (inv, type = 'invoice') => {
-        const { pdf } = getSunatUrls(inv.sunatResponse);
-        const url = type === 'nc' ? inv.notaCreditoUrl : pdf;
-        if (!url) {
-            alert('No hay enlace de PDF disponible para compartir');
-            return;
+        let publicUrl;
+        if (type === 'nc') {
+            publicUrl = inv.notaCreditoUrl;
+            if (!publicUrl) {
+                alert('No hay enlace de PDF disponible para compartir la Nota de Crédito');
+                return;
+            }
+        } else {
+            const hashId = btoa(`makala_${inv.id}`);
+            publicUrl = `${window.location.origin}/c/${hashId}`;
         }
-        const busterUrl = `${url}?v=${Date.now()}`;
+        
         const phone = inv.clienteDocumento?.length === 9 ? inv.clienteDocumento : '';
         const docName = type === 'nc' ? 'Nota de Crédito' : (inv.tipo === 'factura' ? 'Factura' : 'Boleta');
         const docId = type === 'nc' ? inv.notaCredito : `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
@@ -661,7 +666,7 @@ const BillingConfigModal = ({ onClose }) => {
         if (userPhone === null) return; // cancelled
         const cleanPhone = userPhone.replace(/\D/g, '');
         
-        const message = `Hola ${inv.clienteNombre}, le adjuntamos su ${docName} ${docId}: ${busterUrl}`;
+        const message = `Hola ${inv.clienteNombre}, le adjuntamos su ${docName} ${docId}: ${publicUrl}`;
         const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     };

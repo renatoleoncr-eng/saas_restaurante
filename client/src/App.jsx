@@ -4,6 +4,7 @@ import { RestaurantProvider, useRestaurant } from './contexts/RestaurantContext'
 import Dashboard from './views/Dashboard'
 import Login from './views/Login'
 import QrDisplay from './views/QrDisplay'
+import PublicReceipt from './views/PublicReceipt'
 import ErrorBoundary from './components/ErrorBoundary'
 
 // Wrapper to protect routes
@@ -17,6 +18,7 @@ function AppRoutes() {
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/qr-display" element={<QrDisplay />} />
+            <Route path="/c/:hash" element={<PublicReceipt />} />
             <Route path="/" element={
                 <PrivateRoute>
                     <Dashboard />

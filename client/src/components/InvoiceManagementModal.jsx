@@ -70,6 +70,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [lastIssuedUrl, setLastIssuedUrl] = useState(null);
+    const [lastIssuedDoc, setLastIssuedDoc] = useState(null);
     const [successType, setSuccessType] = useState('invoice'); // 'invoice' or 'nc'
     const [isExonerado, setIsExonerado] = useState(false);
     const [igvRateInput, setIgvRateInput] = useState(10.5);
@@ -297,14 +298,28 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     };
 
     // UTILITIES from BillingModal
-    const handleShareWhatsapp = (url, overrideDocName = null) => {
-        if (!url) return;
-        const busterUrl = url.includes('?') ? `${url}&v=${Date.now()}` : `${url}?v=${Date.now()}`;
-        const guestPhone = account?.clientPhone || '';
-        const cleanPhone = guestPhone.replace(/\D/g, '');
+    const handleShareWhatsapp = (inv, type = 'invoice') => {
+        let publicUrl;
+        if (type === 'nc') {
+            publicUrl = inv.notaCreditoUrl || inv.sunatResponse?.url_ticket || '#';
+            if (!publicUrl || publicUrl === '#') {
+                alert('No hay enlace de PDF disponible para compartir la Nota de Crédito');
+                return;
+            }
+        } else {
+            const hashId = btoa(`makala_${inv.id}`);
+            publicUrl = `${window.location.origin}/c/${hashId}`;
+        }
         
-        const docName = overrideDocName || (docType === '01' ? 'Factura' : 'Boleta');
-        const message = `Hola ${customerName}, le adjuntamos su ${docName} de nuestro restaurante: ${busterUrl}`;
+        const guestPhone = account?.clientPhone || inv.clienteDocumento || '';
+        const userPhone = window.prompt('Ingrese el número de WhatsApp del cliente (ej. 999888777):', guestPhone);
+        if (userPhone === null) return; // cancelled
+        
+        const cleanPhone = userPhone.replace(/\D/g, '');
+        
+        const docName = type === 'nc' ? 'Nota de Crédito' : (inv.tipo === 'factura' ? 'Factura' : 'Boleta');
+        const docId = type === 'nc' ? inv.notaCredito : `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+        const message = `Hola ${inv.clienteNombre || customerName}, le adjuntamos su ${docName} ${docId}: ${publicUrl}`;
         
         const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
@@ -641,6 +656,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
             if (res.data.success) {
                 setLastIssuedUrl(ticketUrl || '#');
+                setLastIssuedDoc(res.data.invoice);
                 setSuccessType('invoice');
                 setIsSuccess(true);
                 setSelectedItems([]);
@@ -676,6 +692,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 
                 // Show success modal for NC
                 setLastIssuedUrl(ncUrl);
+                setLastIssuedDoc(res.data.invoice);
                 setSuccessType('nc');
                 setIsSuccess(true);
             }
@@ -1060,7 +1077,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             </button>
                             <div className="flex gap-2 shrink-0">
                                 <button 
-                                    onClick={() => handleShareWhatsapp(billingUrl)} 
+                                    onClick={() => handleShareWhatsapp(doc, 'invoice')} 
                                     className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
                                     title="WhatsApp Comprobante"
                                 >
@@ -1121,7 +1138,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     
                     <div className="p-6 space-y-3">
                         <button
-                            onClick={() => handleShareWhatsapp(lastIssuedUrl, successType === 'nc' ? 'Nota de Crédito' : null)}
+                            onClick={() => handleShareWhatsapp(lastIssuedDoc, successType === 'nc' ? 'nc' : 'invoice')}
                             className="w-full flex items-center justify-center gap-3 py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95"
                         >
                             <WhatsAppIcon size={20} />

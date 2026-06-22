@@ -269,10 +269,11 @@ export default function AccountsHistoryTab() {
     };
 
     const handleShareWhatsappAbono = () => {
-        if (!invoiceResult || !invoiceResult.invoice || !invoiceResult.pdf) return;
+        if (!invoiceResult || !invoiceResult.invoice) return;
         const inv = invoiceResult.invoice;
-        const url = invoiceResult.pdf;
-        const busterUrl = `${url}?v=${Date.now()}`;
+        
+        const hashId = btoa(`makala_${inv.id}`);
+        const publicUrl = `${window.location.origin}/c/${hashId}`;
         
         const docName = inv.tipo === 'factura' ? 'Factura' : 'Boleta';
         const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
@@ -281,7 +282,7 @@ export default function AccountsHistoryTab() {
         if (userPhone === null) return;
         const cleanPhone = userPhone.replace(/\D/g, '');
         
-        const message = `Hola ${invoiceClientName || 'Cliente'}, le adjuntamos su comprobante de abono (${docName} ${docId}): ${busterUrl}`;
+        const message = `Hola ${invoiceClientName || 'Cliente'}, le adjuntamos su comprobante de abono (${docName} ${docId}): ${publicUrl}`;
         const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     };
