@@ -522,7 +522,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 </script>
             </body>
             </html>
-        \`);
+        `);
         printWindow.document.close();
     };
 
