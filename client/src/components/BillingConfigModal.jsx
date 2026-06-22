@@ -364,9 +364,38 @@ const BillingConfigModal = ({ onClose }) => {
                         text-transform: uppercase;
                         margin-bottom: 3mm;
                     }
+                    .close-button {
+                        position: fixed;
+                        top: 15px;
+                        right: 15px;
+                        background-color: #f1f5f9;
+                        color: #475569;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        font-size: 20px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+                        z-index: 1000;
+                        transition: all 0.2s;
+                    }
+                    .close-button:hover {
+                        background-color: #e2e8f0;
+                        color: #0f172a;
+                    }
+                    @media print {
+                        .close-button {
+                            display: none;
+                        }
+                    }
                 </style>
             </head>
             <body>
+                <button class="close-button" onclick="window.close()" title="Cerrar vista">✕</button>
                 <div class="text-center header">
                     <div class="company-name">${nameEmpresa}</div>
                     <div>RUC: ${rucEmpresa}</div>
