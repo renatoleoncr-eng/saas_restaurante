@@ -384,6 +384,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         printWindow.document.write(`
             <html>
             <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
                 <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
                 <style>
                     @page {
@@ -392,12 +393,21 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     }
                     body {
                         font-family: 'Courier New', Courier, monospace, sans-serif;
+                        margin: 0;
+                        padding: 20px 0;
+                        background-color: #e2e8f0;
+                        display: flex;
+                        justify-content: center;
+                        min-height: 100vh;
+                    }
+                    .ticket {
                         width: 72mm;
-                        margin: 0 auto;
+                        background-color: #ffffff;
                         padding: 5mm 2mm;
-                        font-size: 11px;
                         color: #000;
+                        font-size: 11px;
                         line-height: 1.3;
+                        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
                     }
                     .text-center { text-align: center; }
                     .text-right { text-align: right; }
@@ -426,28 +436,31 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     }
                     .close-button {
                         position: fixed;
-                        top: 15px;
-                        right: 15px;
-                        background-color: #f1f5f9;
-                        color: #475569;
-                        border: 1px solid #cbd5e1;
+                        top: 20px;
+                        right: 20px;
+                        background-color: #ffffff;
+                        color: #0f172a;
+                        border: 2px solid #cbd5e1;
                         border-radius: 50%;
-                        width: 40px;
-                        height: 40px;
-                        font-size: 20px;
+                        width: 56px;
+                        height: 56px;
+                        font-size: 28px;
+                        font-weight: bold;
                         cursor: pointer;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+                        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
                         z-index: 1000;
                         transition: all 0.2s;
                     }
                     .close-button:hover {
-                        background-color: #e2e8f0;
-                        color: #0f172a;
+                        background-color: #f8fafc;
+                        transform: scale(1.05);
                     }
                     @media print {
+                        body { background-color: #ffffff; padding: 0; display: block; }
+                        .ticket { box-shadow: none; margin: 0 auto; }
                         .close-button {
                             display: none;
                         }
@@ -456,7 +469,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             </head>
             <body>
                 <button class="close-button" onclick="window.close()" title="Cerrar vista">✕</button>
-                <div class="text-center header">
+                <div class="ticket">
+                    <div class="text-center header">
                     <div class="company-name">${nameEmpresa}</div>
                     <div>RUC: ${rucEmpresa}</div>
                     <div>${addressEmpresa.toUpperCase()}</div>
@@ -541,6 +555,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     <b>REPRESENTACIÓN IMPRESA DE COMPROBANTE DE PAGO</b><br>
                     <span>Autorizado mediante Resolución de SUNAT</span><br><br>
                     <b>¡Gracias por su preferencia!</b>
+                </div>
                 </div>
             </body>
             </html>
