@@ -22,12 +22,23 @@ export default function PublicReceipt() {
                     // Generate QR
                     const rucEmpresa = res.data.config?.ruc || '';
                     const inv = res.data.invoice;
-                    const igvText = parseFloat(inv.igv).toFixed(2);
-                    const totalText = parseFloat(inv.total).toFixed(2);
-                    const docCliente = inv.clienteDocumento || '00000000';
-                    const qrContent = `${rucEmpresa}|03|${inv.serie}|${String(inv.correlativo).padStart(6, '0')}|${igvText}|${totalText}|${new Date(inv.emitidoAt).toLocaleDateString('es-PE')}|1|${docCliente}|`;
-                    const qr = await QRCode.toDataURL(qrContent);
-                    setQrUrl(qr);
+                    
+                    let finalQrUrl = '';
+                    const sunatRes = inv.sunatResponse ? (typeof inv.sunatResponse === 'string' ? JSON.parse(inv.sunatResponse) : inv.sunatResponse) : null;
+                    
+                    if (sunatRes && (sunatRes.qr || sunatRes.url_qr)) {
+                        finalQrUrl = sunatRes.qr || sunatRes.url_qr;
+                    } else {
+                        const igvText = parseFloat(inv.igv).toFixed(2);
+                        const totalText = parseFloat(inv.total).toFixed(2);
+                        const docCliente = inv.clienteDocumento || '-';
+                        const docType = inv.tipo === 'factura' ? '01' : '03';
+                        const clientType = inv.tipo === 'factura' ? '6' : (docCliente.length === 8 ? '1' : '-');
+                        const emitDate = new Date(inv.emitidoAt).toISOString().split('T')[0];
+                        const qrContent = `${rucEmpresa}|${docType}|${inv.serie}|${String(inv.correlativo).padStart(6, '0')}|${igvText}|${totalText}|${emitDate}|${clientType}|${docCliente}|`;
+                        finalQrUrl = await QRCode.toDataURL(qrContent);
+                    }
+                    setQrUrl(finalQrUrl);
                 }
             } catch (err) {
                 setError(err.response?.data?.error || 'Error al cargar el comprobante');
@@ -71,7 +82,7 @@ export default function PublicReceipt() {
     try {
         if (invoice.sunatResponse) {
             const parsed = typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse;
-            pdfUrl = parsed.links?.pdf || parsed.pdf || null;
+            pdfUrl = parsed.url_ticket || parsed.url || parsed.pdf_url || parsed.links?.pdf || parsed.pdf || null;
         }
     } catch (e) {
         // ignore
@@ -133,14 +144,20 @@ export default function PublicReceipt() {
                             </tr>
                         </thead>
                         <tbody>
-                            {itemsParsed.map((it, idx) => (
-                                <tr key={idx}>
-                                    <td className="align-top">{it.cantidad || it.quantity}</td>
-                                    <td className="align-top pr-1">{it.descripcion || it.name}</td>
-                                    <td className="align-top text-right w-12">S/ {parseFloat(it.precioUnitario || it.price).toFixed(2)}</td>
-                                    <td className="align-top text-right w-12">S/ {parseFloat((it.cantidad || it.quantity) * (it.precioUnitario || it.price)).toFixed(2)}</td>
-                                </tr>
-                            ))}
+                            {itemsParsed.map((it, idx) => {
+                                const q = parseFloat(it.qty || it.cantidad || it.quantity || 1);
+                                const t = parseFloat(it.amount || it.subtotal || it.total || 0);
+                                const pu = it.precioUnitario ? parseFloat(it.precioUnitario) : (it.price ? parseFloat(it.price) : t / q);
+                                const desc = it.description || it.descripcion || it.name || '-';
+                                return (
+                                    <tr key={idx}>
+                                        <td className="align-top">{q}</td>
+                                        <td className="align-top pr-1">{desc}</td>
+                                        <td className="align-top text-right w-12">S/ {pu.toFixed(2)}</td>
+                                        <td className="align-top text-right w-12">S/ {t.toFixed(2)}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
