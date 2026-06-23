@@ -3,6 +3,8 @@ const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
 const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters } = require('../utils/printer');
 
+const LATEST_AGENT_VERSION = "1.0.0";
+
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
     try {
@@ -208,11 +210,12 @@ global.connectedAgents = global.connectedAgents || {};
 // POST ping from local print agent
 router.post('/config/printers/agent-ping', (req, res) => {
     try {
-        const { agent, agentId, printers } = req.body;
+        const { agent, agentId, version, printers } = req.body;
         if (agent === 'RestauranteAgentePrint') {
             const id = agentId || 'Agente-Desconocido';
             global.connectedAgents[id] = {
                 lastSeen: Date.now(),
+                version: version || '0.0.0',
                 printers: Array.isArray(printers) ? printers : []
             };
             res.json({ success: true });
@@ -235,6 +238,7 @@ router.get('/config/printers/agent-status', (req, res) => {
             if ((now - global.connectedAgents[id].lastSeen) < 15000) {
                 activeAgents.push({
                     agentId: id,
+                    version: global.connectedAgents[id].version,
                     printers: global.connectedAgents[id].printers
                 });
             } else {
@@ -245,7 +249,8 @@ router.get('/config/printers/agent-status', (req, res) => {
 
         res.json({
             active: activeAgents.length > 0,
-            agents: activeAgents
+            agents: activeAgents,
+            latestVersion: LATEST_AGENT_VERSION
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
