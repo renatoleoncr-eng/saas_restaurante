@@ -63,6 +63,8 @@ const BillingConfigModal = ({ onClose }) => {
     const [testLoading, setTestLoading] = useState({});
     const [windowsPrinters, setWindowsPrinters] = useState([]);
     const [agentStatus, setAgentStatus] = useState('unknown'); // 'active' | 'inactive' | 'unknown'
+    const [agentLatestVersion, setAgentLatestVersion] = useState(null);
+    const [hasOutdatedAgent, setHasOutdatedAgent] = useState(false);
 
     // Derived helpers
     const isFactura = newInvoice.tipo === 'factura';
@@ -109,11 +111,16 @@ const BillingConfigModal = ({ onClose }) => {
             const res = await axios.get('/api/config/printers/agent-status');
             if (res.data?.active) {
                 setAgentStatus('active');
+                if (res.data.latestVersion) setAgentLatestVersion(res.data.latestVersion);
                 
                 // Extraer e identificar las impresoras de todas las PCs conectadas
                 const allPrinters = [];
+                let outdated = false;
                 if (res.data.agents) {
                     res.data.agents.forEach(agent => {
+                        if (res.data.latestVersion && agent.version !== res.data.latestVersion) {
+                            outdated = true;
+                        }
                         if (agent.printers) {
                             agent.printers.forEach(p => {
                                 allPrinters.push(`[${agent.agentId}] ${p}`);
@@ -122,13 +129,16 @@ const BillingConfigModal = ({ onClose }) => {
                     });
                 }
                 setWindowsPrinters(allPrinters);
+                setHasOutdatedAgent(outdated);
             } else {
                 setAgentStatus('inactive');
                 setWindowsPrinters([]);
+                setHasOutdatedAgent(false);
             }
         } catch (err) {
             setAgentStatus('inactive');
             setWindowsPrinters([]);
+            setHasOutdatedAgent(false);
         }
     };
 
@@ -1546,6 +1556,28 @@ const BillingConfigModal = ({ onClose }) => {
 
                     {activeTab === 'printers' && user?.role === 'admin' && (
                         <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
+
+                            {hasOutdatedAgent && (
+                                <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 flex items-start gap-3">
+                                    <AlertCircle className="text-orange-500 shrink-0 mt-0.5" size={20} />
+                                    <div>
+                                        <h4 className="font-bold text-orange-900 text-sm">Actualización de Agente Disponible</h4>
+                                        <p className="text-orange-800 text-xs mt-1">
+                                            Tienes uno o más Agentes de Impresión conectados con una versión antigua.
+                                            Para asegurar la compatibilidad con las últimas funciones del sistema, por favor 
+                                            descarga el nuevo instalador y ejecútalo en las PCs donde el agente esté instalado.
+                                        </p>
+                                        <a
+                                            href="/api/config/printers/agent-setup-exe"
+                                            download="MakalaAgentSetup.exe"
+                                            className="inline-flex items-center gap-2 mt-3 bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-700 transition shadow-sm"
+                                        >
+                                            <Download size={14} />
+                                            Descargar Actualización (.exe)
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* === PANEL: INSTALAR AGENTE EN ESTA PC === */}
                             {/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
