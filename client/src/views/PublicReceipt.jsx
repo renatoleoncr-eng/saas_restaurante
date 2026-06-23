@@ -85,6 +85,10 @@ export default function PublicReceipt() {
             const parsed = typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse;
             pdfUrl = parsed.url_ticket || parsed.url || parsed.pdf_url || parsed.links?.pdf || parsed.pdf || null;
         }
+    } catch (e) {
+        // ignore
+    }
+
     const downloadLocalPdf = async () => {
         const element = document.getElementById('ticket-container');
         if (!element) return;
