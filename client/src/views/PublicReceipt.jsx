@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import QRCode from 'qrcode';
+import html2pdf from 'html2pdf.js';
 
 export default function PublicReceipt() {
     const { hash } = useParams();
@@ -88,18 +89,40 @@ export default function PublicReceipt() {
         // ignore
     }
 
+    const downloadLocalPdf = () => {
+        const element = document.getElementById('ticket-container');
+        if (!element) return;
+        
+        const opt = {
+            margin:       1,
+            filename:     `${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}_${invoice.serie}-${invoice.correlativo}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: [76, 200], orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(element).save();
+    };
+
     return (
         <div className="min-h-screen bg-slate-200 py-10 flex flex-col items-center">
             
-            {pdfUrl && (
-                <div className="mb-4">
-                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
-                        Descargar PDF Original
+            <div className="mb-4 flex flex-col gap-2 w-full max-w-xs px-4">
+                <button 
+                    onClick={downloadLocalPdf}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded shadow text-center w-full"
+                >
+                    Descargar Ticket (PDF)
+                </button>
+                {pdfUrl && (
+                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow text-center w-full">
+                        Descargar PDF SUNAT
                     </a>
-                </div>
-            )}
+                )}
+            </div>
 
             <div 
+                id="ticket-container"
                 className="bg-white text-black"
                 style={{
                     width: '72mm',
