@@ -19,6 +19,7 @@ const os    = require('os');
 const serverUrl  = process.argv[2] || 'https://makala.maksuites.com.pe';
 const scriptPath = path.join(__dirname, 'server', 'utils', 'print_raw.ps1');
 const logFile    = path.join(__dirname, 'print-agent.log');
+const AGENT_VERSION = "1.0.0";
 
 // Backoff settings for when server is unreachable
 const POLL_INTERVAL_OK    = 1000;   // 1s when server OK
@@ -182,6 +183,7 @@ function pingServer() {
     const payload = JSON.stringify({
         agent: 'RestauranteAgentePrint',
         agentId: os.hostname(),
+        version: AGENT_VERSION,
         printers: cachedPrinters
     });
 
