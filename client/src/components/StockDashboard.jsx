@@ -1509,29 +1509,55 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                 </div>
                             )}
 
-                            {activeTab === 'prepared' && !readOnly && (
-                                <div className="flex mb-4 w-full md:w-auto">
+                            {activeTab === 'prepared' && (
+                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => handleCreate()}
-                                        className="w-full md:w-auto px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        onClick={() => setPreparedTab(preparedTab === 'stock' ? 'movements' : 'stock')}
+                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     >
-                                        <Plus size={16} /> <span className="truncate">Producto</span>
+                                        {preparedTab === 'stock' ? (
+                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
+                                        ) : (
+                                            <><Package size={16} /> <span className="truncate">Productos</span></>
+                                        )}
                                     </button>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => handleCreate()}
+                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
-                            {activeTab === 'free' && !readOnly && (
-                                <div className="flex mb-4 w-full md:w-auto">
+                            {activeTab === 'free' && (
+                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
                                     <button
-                                        onClick={() => handleCreate()}
-                                        className="w-full md:w-auto px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        onClick={() => setFreeTab(freeTab === 'stock' ? 'movements' : 'stock')}
+                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     >
-                                        <Plus size={16} /> <span className="truncate">Producto</span>
+                                        {freeTab === 'stock' ? (
+                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
+                                        ) : (
+                                            <><Package size={16} /> <span className="truncate">Productos</span></>
+                                        )}
                                     </button>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => handleCreate()}
+                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
-                            {activeTab === 'finished' && finishedTab === 'movements' ? (
+                            {(activeTab === 'finished' && finishedTab === 'movements') ||
+                             (activeTab === 'prepared' && preparedTab === 'movements') ||
+                             (activeTab === 'free' && freeTab === 'movements') ? (
                                 <div className="bg-white rounded-lg shadow overflow-x-auto animate-in fade-in">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 border-b text-xs uppercase text-gray-500 font-bold">
@@ -1551,7 +1577,12 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                             ) : movements.length === 0 ? (
                                                 <tr><td colSpan="7" className="p-8 text-center text-gray-400 italic">No hay historial de movimientos</td></tr>
                                             ) : (
-                                                movements.map(mov => (
+                                                movements.filter(mov => {
+                                                    if (!searchQuery) return true;
+                                                    const nameMatch = mov.Product?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                                    const reasonMatch = mov.reason?.toLowerCase().includes(searchQuery.toLowerCase());
+                                                    return nameMatch || reasonMatch;
+                                                }).map(mov => (
                                                     <tr key={mov.id} className="hover:bg-gray-50">
                                                         <td className="p-4 text-gray-500 whitespace-nowrap text-xs">
                                                             {new Date(mov.createdAt).toLocaleString()}
@@ -1900,7 +1931,9 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                  Or simply render standard cards.
                             */}
                             {
-                                ((activeTab === 'finished' && finishedTab === 'stock') || activeTab === 'prepared' || activeTab === 'free') && (
+                                ((activeTab === 'finished' && finishedTab === 'stock') || 
+                                 (activeTab === 'prepared' && preparedTab === 'stock') || 
+                                 (activeTab === 'free' && freeTab === 'stock')) && (
                                     <div className="md:hidden grid grid-cols-1 gap-4">
                                         {products.filter(p => {
                                             const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
