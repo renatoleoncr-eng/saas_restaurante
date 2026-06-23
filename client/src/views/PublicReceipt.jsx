@@ -85,23 +85,43 @@ export default function PublicReceipt() {
             const parsed = typeof invoice.sunatResponse === 'string' ? JSON.parse(invoice.sunatResponse) : invoice.sunatResponse;
             pdfUrl = parsed.url_ticket || parsed.url || parsed.pdf_url || parsed.links?.pdf || parsed.pdf || null;
         }
-    } catch (e) {
-        // ignore
-    }
-
-    const downloadLocalPdf = () => {
+    const downloadLocalPdf = async () => {
         const element = document.getElementById('ticket-container');
         if (!element) return;
         
+        const filename = `${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}_${invoice.serie}-${invoice.correlativo}.pdf`;
         const opt = {
             margin:       1,
-            filename:     `${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}_${invoice.serie}-${invoice.correlativo}.pdf`,
+            filename:     filename,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true },
             jsPDF:        { unit: 'mm', format: [76, 200], orientation: 'portrait' }
         };
         
-        html2pdf().set(opt).from(element).save();
+        try {
+            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+            const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Comprobante de Pago',
+                    text: 'Le adjuntamos su comprobante de pago.'
+                });
+            } else {
+                // Fallback a descarga normal si no soporta compartir archivos
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+        }
     };
 
     return (
