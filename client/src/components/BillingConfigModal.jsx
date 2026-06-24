@@ -295,7 +295,7 @@ const BillingConfigModal = ({ onClose }) => {
         const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
         const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
         const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
-        const igvLabel = isExonerated ? 'I.G.V. (0%):' : 'I.G.V. (18%):';
+        const igvLabel = isExonerated ? 'I.G.V. (0%):' : `I.G.V. (${config?.igvTasa || 18}%):`;
 
         // Generate SUNAT QR Code pipe-delimited string
         const tipoComp = invoice.tipo === 'factura' ? '01' : '03';

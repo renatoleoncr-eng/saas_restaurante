@@ -214,7 +214,7 @@ export default function PublicReceipt() {
                         <>
                             <div>OP. GRAVADA: S/ {parseFloat(invoice.subtotal).toFixed(2)}</div>
                             <div>OP. INAFECTA: S/ 0.00</div>
-                            <div>I.G.V. (18%): S/ {parseFloat(invoice.igv).toFixed(2)}</div>
+                            <div>I.G.V. ({config?.igvTasa || 18}%): S/ {parseFloat(invoice.igv).toFixed(2)}</div>
                         </>
                     )}
                     <div className="font-bold text-[12px] mt-1">TOTAL A PAGAR: S/ {parseFloat(invoice.total).toFixed(2)}</div>
