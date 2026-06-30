@@ -1036,7 +1036,29 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
             }, { transaction });
             console.log(`[Stock] Created ProductMovement for Menu ${product.name}`);
         } else {
-            console.log(`[Stock] Product ${product.name} (Type: ${product.type}) has NO Recipes and is NOT StockManaged. No movement recorded.`);
+            console.log(`[Stock] Product ${product.name} (Type: ${product.type}) has NO Recipes and is NOT StockManaged. Recording virtual movement for Libre product.`);
+            
+            let freeReason = isDeduction ? `Venta: ${product.name} x${quantity}` : `Restauración: ${product.name} x${quantity}`;
+            if (isDeduction && accountId) {
+                const { Account } = getModels();
+                const acc = await Account.findByPk(accountId);
+                if (acc && acc.accountType === 'staff') {
+                    freeReason = `Consumo Personal: ${product.name} x${quantity}`;
+                }
+            }
+
+            await ProductMovement.create({
+                ProductId: productId,
+                ProductVariantId: null,
+                type: isDeduction ? 'sale' : 'correction',
+                amount: quantity,
+                reason: freeReason,
+                previousStock: 0,
+                newStock: 0,
+                UserId: userId,
+                AccountId: accountId || null
+            }, { transaction });
+            console.log(`[Stock] Created virtual ProductMovement for Libre product ${product.name}`);
         }
 
     } catch (err) {
