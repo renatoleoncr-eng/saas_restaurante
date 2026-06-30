@@ -208,7 +208,9 @@ const AccountDetailsModal = ({
                             {account.Orders && account.Orders.length > 0 ? (
                                 account.Orders.map((ord, idx) => {
                                     const isCombo = !ord.ProductId && ord.notes;
-                                    const productName = isCombo ? `2x1: ${ord.notes}` : (ord.Product?.name || 'Producto Desconocido');
+                                    const productName = isCombo 
+                                        ? (ord.notes.includes(' + ') ? `2x1: ${ord.notes}` : ord.notes) 
+                                        : (ord.Product?.name || 'Producto Desconocido');
                                     const displayNotes = isCombo ? null : ord.notes;
 
                                     return (

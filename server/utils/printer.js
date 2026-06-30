@@ -409,7 +409,9 @@ async function triggerPreCuentaPrint(account, table, orders, payments, user) {
     const grouped = [];
     orders.forEach(o => {
         const isCombo = !o.ProductId && o.notes;
-        const name = isCombo ? `2x1: ${o.notes}` : (o.Product?.name || 'Producto');
+        const name = isCombo 
+            ? (o.notes.includes(' + ') ? `2x1: ${o.notes}` : o.notes) 
+            : (o.Product?.name || 'Producto');
         const price = parseFloat(o.priceAtOrder || 0);
         const pres = o.presentation;
         const notes = isCombo ? null : o.notes;

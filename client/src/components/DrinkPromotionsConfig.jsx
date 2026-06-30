@@ -72,7 +72,7 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
                         >
                             <option value="">— Prod. Vinculado —</option>
                             {allProducts
-                                .filter(p => !p.requiresPreparation)
+                                .filter(p => p.isStockManaged === true)
                                 .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     )}
@@ -84,7 +84,7 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
                         >
                             <option value="">— Receta Vinculada —</option>
                             {allProducts
-                                .filter(p => p.requiresPreparation)
+                                .filter(p => p.isStockManaged === false && p.requiresPreparation === true)
                                 .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     )}
@@ -167,7 +167,7 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
                         >
                             <option value="">— Prod. Vinculado —</option>
                             {allProducts
-                                .filter(p => !p.requiresPreparation)
+                                .filter(p => p.isStockManaged === true)
                                 .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     )}
@@ -179,7 +179,7 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
                         >
                             <option value="">— Receta Vinculada —</option>
                             {allProducts
-                                .filter(p => p.requiresPreparation)
+                                .filter(p => p.isStockManaged === false && p.requiresPreparation === true)
                                 .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     )}
