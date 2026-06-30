@@ -12,8 +12,8 @@ const TYPE_COLOR = {
 
 /* ────────────────────────────────────────────────────────────── */
 /* Inline row for adding a new item inside a promo section        */
-function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
-    const [form, setForm] = useState({ name: '', individualPrice: '', type: 'free', linkedProductId: '' });
+function NewItemRow({ promoId, onSave, onCancel }) {
+    const [form, setForm] = useState({ name: '', individualPrice: '', type: 'free', stock: '' });
     const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
     const handleSave = async () => {
@@ -22,7 +22,8 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
             name: form.name.trim(),
             individualPrice: parseFloat(form.individualPrice) || 0,
             type: form.type,
-            linkedProductId: form.linkedProductId ? parseInt(form.linkedProductId) : null
+            stock: form.type === 'finished' ? (parseInt(form.stock) || 0) : undefined,
+            linkedProductId: null
         });
     };
 
@@ -65,28 +66,22 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
                         <option value="prepared">Preparado</option>
                     </select>
                     {form.type === 'finished' && (
-                        <select
-                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                            value={form.linkedProductId}
-                            onChange={e => upd('linkedProductId', e.target.value)}
-                        >
-                            <option value="">— Prod. Vinculado —</option>
-                            {allProducts
-                                .filter(p => p.isStockManaged === true)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2 border border-blue-200 rounded-lg px-3 py-2 bg-blue-50">
+                            <span className="text-blue-600 text-xs font-bold whitespace-nowrap">Stock inicial:</span>
+                            <input
+                                type="number" min="0" placeholder="0"
+                                className="w-full outline-none font-bold text-sm bg-transparent"
+                                value={form.stock}
+                                onChange={e => upd('stock', e.target.value)}
+                            />
+                            <span className="text-blue-400 text-xs">und.</span>
+                        </div>
                     )}
                     {form.type === 'prepared' && (
-                        <select
-                            className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                            value={form.linkedProductId}
-                            onChange={e => upd('linkedProductId', e.target.value)}
-                        >
-                            <option value="">— Receta Vinculada —</option>
-                            {allProducts
-                                .filter(p => p.isStockManaged === false && p.requiresPreparation === true)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            <ChefHat size={14} className="text-amber-600 shrink-0" />
+                            <span className="text-amber-700 text-xs font-semibold">Guarda primero para configurar la receta</span>
+                        </div>
                     )}
                 </div>
             </td>
@@ -108,12 +103,12 @@ function NewItemRow({ promoId, allProducts, onSave, onCancel }) {
 
 /* ────────────────────────────────────────────────────────────── */
 /* Inline edit row for an existing item                           */
-function EditItemRow({ item, allProducts, onSave, onCancel }) {
+function EditItemRow({ item, onSave, onCancel, onOpenRecipe }) {
     const [form, setForm] = useState({
         name: item.name,
         individualPrice: item.individualPrice ?? '',
         type: item.type ?? 'free',
-        linkedProductId: item.linkedProductId ?? ''
+        stock: item.stock ?? ''
     });
     const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -121,7 +116,8 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
         name: form.name.trim(),
         individualPrice: parseFloat(form.individualPrice) || 0,
         type: form.type,
-        linkedProductId: form.linkedProductId ? parseInt(form.linkedProductId) : null
+        stock: form.type === 'finished' ? (parseInt(form.stock) || 0) : undefined,
+        linkedProductId: null
     });
 
     return (
@@ -160,28 +156,26 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
                         <option value="prepared">Preparado</option>
                     </select>
                     {form.type === 'finished' && (
-                        <select
-                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                            value={form.linkedProductId}
-                            onChange={e => upd('linkedProductId', e.target.value)}
-                        >
-                            <option value="">— Prod. Vinculado —</option>
-                            {allProducts
-                                .filter(p => p.isStockManaged === true)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2 border border-blue-200 rounded-lg px-3 py-2 bg-blue-50">
+                            <span className="text-blue-600 text-xs font-bold whitespace-nowrap">Stock:</span>
+                            <input
+                                type="number" min="0" placeholder="0"
+                                className="w-full outline-none font-bold text-sm bg-transparent"
+                                value={form.stock}
+                                onChange={e => upd('stock', e.target.value)}
+                            />
+                            <span className="text-blue-400 text-xs">und.</span>
+                        </div>
                     )}
                     {form.type === 'prepared' && (
-                        <select
-                            className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                            value={form.linkedProductId}
-                            onChange={e => upd('linkedProductId', e.target.value)}
+                        <button
+                            type="button"
+                            onClick={() => onOpenRecipe(item)}
+                            className="flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-700 rounded-lg px-3 py-2 text-xs font-bold hover:bg-amber-200 transition-colors"
                         >
-                            <option value="">— Receta Vinculada —</option>
-                            {allProducts
-                                .filter(p => p.isStockManaged === false && p.requiresPreparation === true)
-                                .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                            <ChefHat size={14} />
+                            Configurar Receta
+                        </button>
                     )}
                 </div>
             </td>
@@ -201,12 +195,12 @@ function EditItemRow({ item, allProducts, onSave, onCancel }) {
     );
 }
 
+
 /* ────────────────────────────────────────────────────────────── */
 /* Main Component                                                  */
 export default function DrinkPromotionsConfig() {
     const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [allProducts, setAllProducts] = useState([]);
 
     // Promo being edited (id, name, price)
     const [editingPromo, setEditingPromo] = useState(null);
@@ -219,8 +213,8 @@ export default function DrinkPromotionsConfig() {
     // Item being edited (full item object)
     const [editingItem, setEditingItem] = useState(null);
 
-    // Recipe modal state
-    const [recipeProduct, setRecipeProduct] = useState(null);
+    // Recipe modal state — supports DrinkPromotionItem recipes
+    const [recipeItem, setRecipeItem] = useState(null); // { item: DrinkPromotionItem, isPromoItem: true }
 
     // Collapsed promotions list
     const [collapsedPromoIds, setCollapsedPromoIds] = useState({});
@@ -236,19 +230,15 @@ export default function DrinkPromotionsConfig() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [promoRes, prodRes] = await Promise.all([
-                axios.get('/api/drink-promotions'),
-                axios.get('/api/products')
-            ]);
+            const promoRes = await axios.get('/api/drink-promotions');
             setPromotions(promoRes.data);
-            // Only stock-managed products make sense to link
-            setAllProducts(prodRes.data);
         } catch (err) {
             console.error('Error loading data:', err);
         } finally {
             setLoading(false);
         }
     };
+
 
     // ── PROMO CRUD ──────────────────────────────────────────────
     const createPromo = async () => {
@@ -462,9 +452,9 @@ export default function DrinkPromotionsConfig() {
                                             <EditItemRow
                                                 key={item.id}
                                                 item={editingItem}
-                                                allProducts={allProducts}
                                                 onSave={saveEditItem}
                                                 onCancel={() => setEditingItem(null)}
+                                                onOpenRecipe={(it) => setRecipeItem({ item: it, isPromoItem: true })}
                                             />
                                         ) : (
                                             <tr key={item.id} className="flex flex-col p-4 border-b border-dashed hover:bg-gray-50/50 group transition-colors relative md:table-row md:p-0 md:border-b-0">
@@ -475,14 +465,18 @@ export default function DrinkPromotionsConfig() {
                                                             <span className={`text-[10px] md:text-[9px] px-2 py-0.5 rounded-full font-bold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
                                                                 {TYPE_LABEL[item.type] || item.type}
                                                             </span>
-                                                            {item.type === 'prepared' && item.linkedProductId && (
+                                                            {item.type === 'finished' && (
+                                                                <span className="text-xs text-blue-600 font-bold">
+                                                                    Stock: {item.stock ?? 0}
+                                                                </span>
+                                                            )}
+                                                            {item.type === 'prepared' && (
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                        if (p) setRecipeProduct(p);
+                                                                        setRecipeItem({ item, isPromoItem: true });
                                                                     }}
-                                                                    className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                    className="p-1 bg-amber-100 text-amber-600 rounded hover:bg-amber-200 transition-colors"
                                                                     title="Ver Receta"
                                                                 >
                                                                     <ChefHat size={12} />
@@ -499,14 +493,18 @@ export default function DrinkPromotionsConfig() {
                                                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${TYPE_COLOR[item.type] || TYPE_COLOR.free}`}>
                                                             {TYPE_LABEL[item.type] || item.type}
                                                         </span>
-                                                        {item.type === 'prepared' && item.linkedProductId && (
+                                                        {item.type === 'finished' && (
+                                                            <span className="text-xs text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">
+                                                                Stock: {item.stock ?? 0}
+                                                            </span>
+                                                        )}
+                                                        {item.type === 'prepared' && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    const p = allProducts.find(prod => prod.id === item.linkedProductId);
-                                                                    if (p) setRecipeProduct(p);
+                                                                    setRecipeItem({ item, isPromoItem: true });
                                                                 }}
-                                                                className="p-1.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+                                                                className="p-1.5 bg-amber-100 text-amber-600 rounded hover:bg-amber-200 transition-colors"
                                                                 title="Gestionar Receta"
                                                             >
                                                                 <ChefHat size={14} />
@@ -534,7 +532,6 @@ export default function DrinkPromotionsConfig() {
                                     {addingItemTo === promo.id && (
                                         <NewItemRow
                                             promoId={promo.id}
-                                            allProducts={allProducts}
                                             onSave={createItem}
                                             onCancel={() => setAddingItemTo(null)}
                                         />
@@ -557,12 +554,22 @@ export default function DrinkPromotionsConfig() {
             ))}
             </div>
 
-            {/* Recipe Modal Overlay */}
-            {recipeProduct && (
-                <RecipeModal
-                    product={recipeProduct}
-                    onClose={() => setRecipeProduct(null)}
-                />
+            {/* Recipe Modal Overlay — works for both products and DrinkPromotionItems */}
+            {recipeItem && (
+                recipeItem.isPromoItem ? (
+                    <RecipeModal
+                        product={{ ...recipeItem.item, presentations: '[]', price: recipeItem.item.individualPrice }}
+                        onClose={() => setRecipeItem(null)}
+                        recipeGetPath={`/api/drink-promotions/items/${recipeItem.item.id}/recipes`}
+                        recipePostPath={`/api/drink-promotions/items/${recipeItem.item.id}/recipes`}
+                        recipeDeletePath="/api/drink-promotions/items/recipes"
+                    />
+                ) : (
+                    <RecipeModal
+                        product={recipeItem.item}
+                        onClose={() => setRecipeItem(null)}
+                    />
+                )
             )}
         </div>
     );

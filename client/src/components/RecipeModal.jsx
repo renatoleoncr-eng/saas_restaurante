@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
-export default function RecipeModal({ product, onClose }) {
+export default function RecipeModal({ product, onClose, apiBase = '/api/stock', recipePostPath = null, recipeGetPath = null, recipeDeletePath = null }) {
     useModalBackHandler(true, onClose);
     const [ingredients, setIngredients] = useState([]);
     const [recipes, setRecipes] = useState([]);
@@ -11,6 +11,11 @@ export default function RecipeModal({ product, onClose }) {
 
     // Form states per section (keyed by presentation name or "Base")
     const [forms, setForms] = useState({});
+
+    // Resolve API paths: custom paths override defaults
+    const getRecipesUrl = recipeGetPath || `${apiBase}/recipes/${product.id}`;
+    const postRecipeUrl = recipePostPath || `${apiBase}/recipes`;
+    const deleteRecipeUrl = (id) => recipeDeletePath ? `${recipeDeletePath}/${id}` : `${apiBase}/recipes/${id}`;
 
     useEffect(() => {
         loadData();
@@ -20,7 +25,7 @@ export default function RecipeModal({ product, onClose }) {
         try {
             const [ingRes, recipeRes] = await Promise.all([
                 axios.get('/api/stock/ingredients'),
-                axios.get(`/api/stock/recipes/${product.id}`)
+                axios.get(getRecipesUrl)
             ]);
             setIngredients(ingRes.data);
             setRecipes(recipeRes.data);
@@ -73,7 +78,7 @@ export default function RecipeModal({ product, onClose }) {
         if (!form.ingredientId || !form.quantity) return;
 
         try {
-            await axios.post('/api/stock/recipes', {
+            await axios.post(postRecipeUrl, {
                 productId: product.id,
                 ingredientId: form.ingredientId,
                 quantity: parseFloat(form.quantity),
@@ -91,12 +96,13 @@ export default function RecipeModal({ product, onClose }) {
 
     const removeIngredient = async (id) => {
         try {
-            await axios.delete(`/api/stock/recipes/${id}`);
+            await axios.delete(deleteRecipeUrl(id));
             loadData();
         } catch (err) {
             console.error(err);
         }
     };
+
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

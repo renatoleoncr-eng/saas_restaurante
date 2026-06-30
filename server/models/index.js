@@ -562,12 +562,35 @@ const DrinkPromotionItem = sequelize.define('DrinkPromotionItem', {
     },
     linkedProductId: {
         type: DataTypes.INTEGER,
-        allowNull: true // FK to Product table (optional)
+        allowNull: true // Legacy FK (no longer used actively)
+    },
+    stock: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: true // Only relevant for type='finished'
     }
 });
 
 DrinkPromotion.hasMany(DrinkPromotionItem, { onDelete: 'CASCADE' });
 DrinkPromotionItem.belongsTo(DrinkPromotion);
+
+// Recipes for prepared 2x1 items (mirrors the Recipe model but for DrinkPromotionItem)
+const DrinkItemRecipe = sequelize.define('DrinkItemRecipe', {
+    quantity: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    presentation: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
+});
+
+DrinkPromotionItem.hasMany(DrinkItemRecipe, { onDelete: 'CASCADE' });
+DrinkItemRecipe.belongsTo(DrinkPromotionItem);
+
+Ingredient.hasMany(DrinkItemRecipe);
+DrinkItemRecipe.belongsTo(Ingredient);
 
 // CASH SESSIONS (Shift Management)
 const CashSession = sequelize.define('CashSession', {
@@ -850,6 +873,7 @@ module.exports = {
     Payment,
     DrinkPromotion,
     DrinkPromotionItem,
+    DrinkItemRecipe,
     CashSession,
     BillingConfig,
     Invoice,

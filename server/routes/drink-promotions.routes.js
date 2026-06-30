@@ -106,7 +106,7 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
         const { DrinkPromotion, DrinkPromotionItem } = getModels();
         const promo = await DrinkPromotion.findByPk(req.params.id);
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
-        const { name, individualPrice = 0, type = 'free', linkedProductId = null } = req.body;
+        const { name, individualPrice = 0, type = 'free', linkedProductId = null, stock = 0 } = req.body;
         if (!name) return res.status(400).json({ error: 'Nombre del trago requerido' });
 
         // Simplified uniqueness check
@@ -123,7 +123,8 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
             name,
             individualPrice,
             type,
-            linkedProductId,
+            linkedProductId: type === 'finished' ? null : linkedProductId,
+            stock: type === 'finished' ? (parseInt(stock) || 0) : null,
             DrinkPromotionId: promo.id
         });
         await logAction(req, 'CREATE_PROMO_ITEM', 'DrinkPromotionItem', item.id, { name, promoName: promo.name, DrinkPromotionId: promo.id, userId: req.body.userId || null });
@@ -140,7 +141,7 @@ router.put('/drink-promotions/items/:itemId', async (req, res) => {
         const { DrinkPromotionItem } = getModels();
         const item = await DrinkPromotionItem.findByPk(req.params.itemId);
         if (!item) return res.status(404).json({ error: 'Item no encontrado' });
-        const { name, individualPrice, type, linkedProductId } = req.body;
+        const { name, individualPrice, type, linkedProductId, stock } = req.body;
         if (name !== undefined) {
             if (name.trim().toLowerCase() !== item.name.trim().toLowerCase()) {
                 const existing = await DrinkPromotionItem.findOne({
@@ -155,8 +156,19 @@ router.put('/drink-promotions/items/:itemId', async (req, res) => {
             item.name = name;
         }
         if (individualPrice !== undefined) item.individualPrice = individualPrice;
-        if (type !== undefined) item.type = type;
-        if (linkedProductId !== undefined) item.linkedProductId = linkedProductId;
+        if (type !== undefined) {
+            item.type = type;
+            // Clear stock if switching away from 'finished', clear linkedProductId if switching to 'finished'
+            if (type === 'finished') {
+                item.linkedProductId = null;
+                item.stock = stock !== undefined ? (parseInt(stock) || 0) : (item.stock || 0);
+            } else {
+                item.stock = null;
+            }
+        } else if (stock !== undefined && item.type === 'finished') {
+            item.stock = parseInt(stock) || 0;
+        }
+        if (linkedProductId !== undefined && item.type !== 'finished') item.linkedProductId = linkedProductId;
         await item.save();
         res.json(item);
     } catch (err) {
@@ -180,4 +192,69 @@ router.delete('/drink-promotions/items/:itemId', async (req, res) => {
     }
 });
 
+// ── RECIPES FOR DRINK PROMOTION ITEMS ──────────────────────────────────────
+
+// GET recipes for a DrinkPromotionItem
+router.get('/drink-promotions/items/:itemId/recipes', async (req, res) => {
+    try {
+        const { DrinkItemRecipe, Ingredient } = getModels();
+        const recipes = await DrinkItemRecipe.findAll({
+            where: { DrinkPromotionItemId: req.params.itemId },
+            include: [{ model: Ingredient }]
+        });
+        res.json(recipes);
+    } catch (err) {
+        console.error("[DrinkPromotions] GET recipes error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST add/update ingredient in a DrinkPromotionItem recipe
+router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
+    try {
+        const { DrinkItemRecipe, Ingredient } = getModels();
+        const { ingredientId, quantity, presentation } = req.body;
+        if (!ingredientId || !quantity) return res.status(400).json({ error: 'ingredientId y quantity son requeridos' });
+
+        const whereClause = {
+            DrinkPromotionItemId: req.params.itemId,
+            IngredientId: ingredientId,
+            presentation: presentation || null
+        };
+
+        const existing = await DrinkItemRecipe.findOne({ where: whereClause });
+        if (existing) {
+            existing.quantity = quantity;
+            await existing.save();
+            const withIng = await DrinkItemRecipe.findByPk(existing.id, { include: [{ model: Ingredient }] });
+            return res.json(withIng);
+        }
+
+        const newRecipe = await DrinkItemRecipe.create({
+            DrinkPromotionItemId: req.params.itemId,
+            IngredientId: ingredientId,
+            quantity,
+            presentation: presentation || null
+        });
+        const withIng = await DrinkItemRecipe.findByPk(newRecipe.id, { include: [{ model: Ingredient }] });
+        res.json(withIng);
+    } catch (err) {
+        console.error("[DrinkPromotions] POST recipe error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE a DrinkItemRecipe entry
+router.delete('/drink-promotions/items/recipes/:recipeId', async (req, res) => {
+    try {
+        const { DrinkItemRecipe } = getModels();
+        await DrinkItemRecipe.destroy({ where: { id: req.params.recipeId } });
+        res.json({ success: true });
+    } catch (err) {
+        console.error("[DrinkPromotions] DELETE recipe error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
+
