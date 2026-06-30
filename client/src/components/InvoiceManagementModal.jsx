@@ -165,7 +165,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 let pName = "Producto";
                 let displayNotes = ord.notes;
                 if (!ord.ProductId && ord.notes) {
-                    pName = ord.notes.includes(' + ') ? `2x1: ${ord.notes}` : ord.notes;
+                    const cleanNote = ord.notes.replace(/^2x1:\s*/i, '');
+                    pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
                     displayNotes = null;
                 } else if (ord.Product && ord.Product.name) {
                     pName = ord.Product.name;

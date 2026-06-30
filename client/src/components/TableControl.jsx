@@ -1370,7 +1370,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         let pName = "Producto";
                         let displayNotes = o.notes;
                         if (!o.ProductId && o.notes) {
-                            pName = o.notes.includes(' + ') ? `2x1: ${o.notes}` : o.notes;
+                            const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
+                            pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
                             displayNotes = null;
                         } else if (o.Product && o.Product.name) {
                             pName = o.Product.name;
@@ -1847,7 +1848,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             let originalP = null;
 
                                             if (!o.ProductId && o.notes) {
-                                                pName = o.notes.includes(' + ') ? `2x1: ${o.notes}` : o.notes;
+                                                const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
+                                                pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
                                                 displayNotes = null;
                                             } else if (o.Product && o.Product.name) {
                                                 pName = o.Product.name;
@@ -2996,7 +2998,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
                                     // Combo orders have no ProductId — use notes as name
                                     if (!o.ProductId && o.notes) {
-                                        pName = o.notes.includes(' + ') ? `2x1: ${o.notes}` : o.notes;
+                                        const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
+                                        pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
                                         displayNotes = null; // avoid repeating under name
                                     } else if (o.Product && o.Product.name) {
                                         pName = o.Product.name;
