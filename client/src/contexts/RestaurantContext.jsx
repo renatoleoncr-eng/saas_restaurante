@@ -13,6 +13,11 @@ function detectTenantSlug() {
     const hostname = window.location.hostname;
     const mainDomains = ['maksuites.com.pe', 'localhost', '127.0.0.1'];
 
+    // Special subdomains that are NOT tenants (e.g. the SaaS landing page)
+    if (hostname.startsWith('www.') || hostname.startsWith('sistema.')) {
+        return null;
+    }
+
     for (const domain of mainDomains) {
         if (domain === 'localhost' || domain === '127.0.0.1') continue;
         if (hostname.endsWith('.' + domain)) {
@@ -34,8 +39,8 @@ function detectTenantSlug() {
 function isMainDomain() {
     const hostname = window.location.hostname;
     const mainDomains = ['maksuites.com.pe', 'localhost', '127.0.0.1'];
-    // Check if we're on the main domain (no subdomain)
-    return mainDomains.includes(hostname) || hostname === 'www.maksuites.com.pe';
+    // Check if we're on the main domain or landing subdomains
+    return mainDomains.includes(hostname) || hostname.startsWith('www.') || hostname.startsWith('sistema.');
 }
 
 // =============================================
