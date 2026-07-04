@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [react()],
     server: {
         port: 5174,
-        host: true, // Needed for Docker exposure
+        host: true, // Needed for Docker exposure and subdomain testing
         proxy: {
             '/api': {
                 target: 'http://127.0.0.1:3003',

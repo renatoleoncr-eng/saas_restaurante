@@ -1,5 +1,5 @@
-// Main Server Entry Point
-// Trigger Restart: 8
+// Main Server Entry Point — Multi-SaaS
+// Trigger Restart: 9
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -9,6 +9,13 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const syncDB = require('./sync');
+const { Tenant } = require('./models');
+
+// Middleware
+const { tenantMiddleware, requireTenant } = require('./middleware/tenant.middleware');
+const { authMiddleware, optionalAuth } = require('./middleware/auth.middleware');
+
+// Routes
 const layoutRoutes = require('./routes/layout.routes');
 const configRoutes = require('./routes/config.routes');
 const authRoutes = require('./routes/auth.routes');
@@ -29,6 +36,7 @@ const billingRoutes = require('./routes/billing.routes');
 const qrRoutes = require('./routes/qr.routes');
 const promotionRoutes = require('./routes/promotion.routes');
 const rouletteRoutes = require('./routes/roulette.routes');
+const tenantRoutes = require('./routes/tenant.routes');
 
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
@@ -49,39 +57,84 @@ app.use(express.json());
 // Share io instance
 app.set('io', io);
 
-// Live State for Client Screen (to sync reconnected clients)
-let currentClientScreenMode = 'ads';
+// =============================================
+// GLOBAL MIDDLEWARE: Tenant Resolution
+// =============================================
+// Resolves tenant from subdomain on ALL requests.
+// req.tenant will be null for main domain (landing page).
+app.use(tenantMiddleware(Tenant));
+
+// Live State for Client Screen (per tenant, keyed by tenantId)
+const clientScreenModes = {};
 
 // Log when a client connects
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
-    
-    // Sync current screen mode to the newly connected client immediately
-    socket.emit('update_client_screen_mode', { mode: currentClientScreenMode });
 
-    socket.on('trigger_qr_display', () => {
-        io.emit('show_qr_display');
+    // Join tenant room if tenant info is provided
+    socket.on('join_tenant', (tenantId) => {
+        if (tenantId) {
+            socket.join(`tenant_${tenantId}`);
+            console.log(`Socket ${socket.id} joined tenant_${tenantId}`);
+            // Sync current screen mode
+            const mode = clientScreenModes[tenantId] || 'ads';
+            socket.emit('update_client_screen_mode', { mode });
+        }
+    });
+
+    socket.on('trigger_qr_display', (data) => {
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            io.to(`tenant_${tenantId}`).emit('show_qr_display');
+        } else {
+            io.emit('show_qr_display');
+        }
     });
     socket.on('set_client_screen_mode', (data) => {
         console.log('Setting client screen mode:', data.mode);
-        currentClientScreenMode = data.mode; // Persist state
-        io.emit('update_client_screen_mode', { mode: data.mode });
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            clientScreenModes[tenantId] = data.mode;
+            io.to(`tenant_${tenantId}`).emit('update_client_screen_mode', { mode: data.mode });
+        } else {
+            io.emit('update_client_screen_mode', { mode: data.mode });
+        }
     });
-    socket.on('notify_promotions_updated', () => {
+    socket.on('notify_promotions_updated', (data) => {
         console.log('Promotions updated, broadcasting...');
-        io.emit('promotions_updated');
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            io.to(`tenant_${tenantId}`).emit('promotions_updated');
+        } else {
+            io.emit('promotions_updated');
+        }
     });
     socket.on('start_projection', (data) => {
         console.log('Starting projection:', data.promoId);
-        io.emit('client_start_projection', data);
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            io.to(`tenant_${tenantId}`).emit('client_start_projection', data);
+        } else {
+            io.emit('client_start_projection', data);
+        }
     });
-    socket.on('stop_projection', () => {
+    socket.on('stop_projection', (data) => {
         console.log('Stopping projection');
-        io.emit('client_stop_projection');
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            io.to(`tenant_${tenantId}`).emit('client_stop_projection');
+        } else {
+            io.emit('client_stop_projection');
+        }
     });
     socket.on('report_roulette_winner', (data) => {
         console.log('Roulette winner reported:', data.winnerName);
-        io.emit('roulette_finished_with_winner', data);
+        const tenantId = data?.tenantId;
+        if (tenantId) {
+            io.to(`tenant_${tenantId}`).emit('roulette_finished_with_winner', data);
+        } else {
+            io.emit('roulette_finished_with_winner', data);
+        }
     });
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
@@ -90,43 +143,65 @@ io.on('connection', (socket) => {
 
 // Wire Global Internal Emitter
 const appEmitter = require('./utils/emitter');
-appEmitter.on('qr_config_changed', () => {
-    io.emit('qr_config_changed');
-    io.emit('check_active_qr');
+appEmitter.on('qr_config_changed', (tenantId) => {
+    if (tenantId) {
+        io.to(`tenant_${tenantId}`).emit('qr_config_changed');
+        io.to(`tenant_${tenantId}`).emit('check_active_qr');
+    } else {
+        io.emit('qr_config_changed');
+        io.emit('check_active_qr');
+    }
 });
-appEmitter.on('promotions_config_changed', () => {
-    io.emit('promotions_updated');
+appEmitter.on('promotions_config_changed', (tenantId) => {
+    if (tenantId) {
+        io.to(`tenant_${tenantId}`).emit('promotions_updated');
+    } else {
+        io.emit('promotions_updated');
+    }
 });
-appEmitter.on('check_active_qr', () => {
-    io.emit('check_active_qr');
+appEmitter.on('check_active_qr', (tenantId) => {
+    if (tenantId) {
+        io.to(`tenant_${tenantId}`).emit('check_active_qr');
+    } else {
+        io.emit('check_active_qr');
+    }
 });
 
 // Serve uploads folder publicly
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api', authRoutes);
-app.use('/api', layoutRoutes);
-app.use('/api', configRoutes);
-app.use('/api', billingRoutes);
-app.use('/api', operationRoutes);
-app.use('/api', productRoutes);
-app.use('/api', attendanceRoutes);
-app.use('/api', userRoutes);
-app.use('/api/reservations', reservationRoutes);
-app.use('/api/stock', recipeRoutes); // Use /api/stock base for recipe/ingredient routes
-app.use('/api', auditRoutes);
-app.use('/api', menuRoutes);
-app.use('/api', expenseRoutes);
-app.use('/api', accountRoutes);
-app.use('/api', drinkPromotionRoutes);
-app.use('/api', sessionRoutes);
-app.use('/api', revenueRoutes);
-app.use('/api/qrs', qrRoutes);
-app.use('/api/promotions', promotionRoutes);
-app.use('/api/roulette', rouletteRoutes);
+// =============================================
+// PUBLIC ROUTES (No tenant or auth required)
+// =============================================
+app.use('/api', authRoutes);                          // POST /api/login, POST /api/auth/refresh, GET /api/auth/me
+app.use('/api/tenants', tenantRoutes);                // POST /api/tenants/register, GET /api/tenants/check-slug/:slug
 
+app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante SaaS' }));
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante' }));
+// =============================================
+// TENANT-SCOPED ROUTES (require valid tenant)
+// =============================================
+// All routes below require a valid tenant context (subdomain).
+// Auth is handled per-route or could be added as a second middleware layer.
+app.use('/api', requireTenant, layoutRoutes);
+app.use('/api', requireTenant, configRoutes);
+app.use('/api', requireTenant, billingRoutes);
+app.use('/api', requireTenant, operationRoutes);
+app.use('/api', requireTenant, productRoutes);
+app.use('/api', requireTenant, attendanceRoutes);
+app.use('/api', requireTenant, userRoutes);
+app.use('/api/reservations', requireTenant, reservationRoutes);
+app.use('/api/stock', requireTenant, recipeRoutes);
+app.use('/api', requireTenant, auditRoutes);
+app.use('/api', requireTenant, menuRoutes);
+app.use('/api', requireTenant, expenseRoutes);
+app.use('/api', requireTenant, accountRoutes);
+app.use('/api', requireTenant, drinkPromotionRoutes);
+app.use('/api', requireTenant, sessionRoutes);
+app.use('/api', requireTenant, revenueRoutes);
+app.use('/api/qrs', requireTenant, qrRoutes);
+app.use('/api/promotions', requireTenant, promotionRoutes);
+app.use('/api/roulette', requireTenant, rouletteRoutes);
 
 // Reservation Auto-Release Logic (Run every minute)
 setInterval(async () => {

@@ -7,7 +7,8 @@ module.exports = {
             watch: false,
             env: {
                 NODE_ENV: 'development',
-                PORT: 3003
+                PORT: 3003,
+                MAIN_DOMAIN: 'maksuites.com.pe,localhost'
             }
         },
         {

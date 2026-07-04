@@ -1,4 +1,5 @@
-const { sequelize, RestaurantConfig, DailyMenu, Payment, DrinkPromotion, DrinkPromotionItem, User, Product, CashSession, QrAccount, PromotionGroup, Promotion, Setting } = require('./models');
+const { sequelize, Tenant, RestaurantConfig, DailyMenu, Payment, DrinkPromotion, DrinkPromotionItem, User, Product, CashSession, QrAccount, PromotionGroup, Promotion, Setting, BillingConfig } = require('./models');
+const bcrypt = require('bcryptjs');
 
 async function runAutomaticFix() {
     console.log("--- RUNNING AUTOMATIC SCHEMA FIX ---");
@@ -66,7 +67,38 @@ async function runAutomaticFix() {
         // USERS
         { table: 'Users', column: 'pin', type: 'VARCHAR(4)' },
         { table: 'Users', column: 'requirePinPrompt', type: 'BOOLEAN DEFAULT 0' },
-        { table: 'Users', column: 'active', type: 'BOOLEAN DEFAULT 1' }
+        { table: 'Users', column: 'active', type: 'BOOLEAN DEFAULT 1' },
+        { table: 'Users', column: 'email', type: 'VARCHAR(255)' },
+
+        // MULTI-TENANT: TenantId FK for all tables
+        { table: 'RestaurantConfigs', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Areas', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Tables', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Accounts', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Products', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Users', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Orders', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Attendances', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Reservations', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Ingredients', column: 'TenantId', type: 'INTEGER' },
+        { table: 'IngredientMovements', column: 'TenantId', type: 'INTEGER' },
+        { table: 'ProductMovements', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Recipes', column: 'TenantId', type: 'INTEGER' },
+        { table: 'AuditLogs', column: 'TenantId', type: 'INTEGER' },
+        { table: 'DailyMenus', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Expenses', column: 'TenantId', type: 'INTEGER' },
+        { table: 'ProductVariants', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Payments', column: 'TenantId', type: 'INTEGER' },
+        { table: 'DrinkPromotions', column: 'TenantId', type: 'INTEGER' },
+        { table: 'DrinkPromotionItems', column: 'TenantId', type: 'INTEGER' },
+        { table: 'DrinkItemRecipes', column: 'TenantId', type: 'INTEGER' },
+        { table: 'CashSessions', column: 'TenantId', type: 'INTEGER' },
+        { table: 'BillingConfigs', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Invoices', column: 'TenantId', type: 'INTEGER' },
+        { table: 'QrAccounts', column: 'TenantId', type: 'INTEGER' },
+        { table: 'PromotionGroups', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Promotions', column: 'TenantId', type: 'INTEGER' },
+        { table: 'Settings', column: 'TenantId', type: 'INTEGER' }
     ];
 
     for (const m of migrations) {
@@ -86,12 +118,23 @@ async function runAutomaticFix() {
         console.error(`[Fix] Error populating priceAtOrderAtCreation:`, e);
     }
 
-    // Create unique index for user pin in SQLite
-    try {
-        await sequelize.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_pin ON Users (pin);`);
-        console.log(`[Fix] Created unique index users_pin on Users (pin)`);
-    } catch (e) {
-        // Ignore
+    // Tenant-scoped compound indexes (replace global unique indexes)
+    const compoundIndexes = [
+        { name: 'idx_users_tenant_username', table: 'Users', columns: 'TenantId, username' },
+        { name: 'idx_users_tenant_pin', table: 'Users', columns: 'TenantId, pin' },
+        { name: 'idx_areas_tenant', table: 'Areas', columns: 'TenantId' },
+        { name: 'idx_products_tenant', table: 'Products', columns: 'TenantId' },
+        { name: 'idx_accounts_tenant', table: 'Accounts', columns: 'TenantId' },
+        { name: 'idx_orders_tenant', table: 'Orders', columns: 'TenantId' },
+    ];
+
+    for (const idx of compoundIndexes) {
+        try {
+            await sequelize.query(`CREATE INDEX IF NOT EXISTS \`${idx.name}\` ON \`${idx.table}\` (${idx.columns});`);
+            console.log(`[Fix] Created compound index ${idx.name}`);
+        } catch (e) {
+            // Ignore if exists
+        }
     }
 }
 
@@ -178,41 +221,111 @@ const syncDB = async () => {
         await createDbIndexes();
         console.log("Database indexes verified/created.");
 
-        // Init Config if not exists
+        // =============================================
+        // MULTI-TENANT: Create default tenant for legacy data
+        // =============================================
+        const tenantCount = await Tenant.count();
+        if (tenantCount === 0) {
+            // Check if there's existing data without a tenant
+            const existingUsers = await User.count();
+            if (existingUsers > 0) {
+                // Migration mode: create tenant for existing Makala restaurant
+                // Read name from existing config if available
+                let existingName = 'El Makala';
+                try {
+                    const existingConfig = await RestaurantConfig.findOne();
+                    if (existingConfig && existingConfig.name) existingName = existingConfig.name;
+                } catch (e) { /* ignore */ }
+
+                console.log(`[Multi-Tenant] Migrating existing data to tenant "${existingName}" (makala.maksuites.com.pe)...`);
+                const defaultTenant = await Tenant.create({
+                    name: existingName,
+                    slug: 'makala',
+                    ownerEmail: 'admin@maksuites.com.pe',
+                    plan: 'pago',
+                    status: 'active'
+                });
+
+                // Assign all existing rows to the default tenant
+                const tablesToMigrate = [
+                    'RestaurantConfigs', 'Areas', 'Tables', 'Accounts', 'Products',
+                    'Users', 'Orders', 'Attendances', 'Reservations', 'Ingredients',
+                    'IngredientMovements', 'ProductMovements', 'Recipes', 'AuditLogs',
+                    'DailyMenus', 'Expenses', 'ProductVariants', 'Payments',
+                    'DrinkPromotions', 'DrinkPromotionItems', 'DrinkItemRecipes',
+                    'CashSessions', 'BillingConfigs', 'Invoices', 'QrAccounts',
+                    'PromotionGroups', 'Promotions', 'Settings'
+                ];
+
+                for (const table of tablesToMigrate) {
+                    try {
+                        await sequelize.query(
+                            `UPDATE \`${table}\` SET TenantId = ${defaultTenant.id} WHERE TenantId IS NULL;`
+                        );
+                    } catch (e) {
+                        // Table might not exist yet
+                    }
+                }
+                console.log(`[Multi-Tenant] Migrated existing data to tenant "${defaultTenant.name}" (ID: ${defaultTenant.id})`);
+            }
+        }
+
+        // Init Config if not exists (for default tenant)
         const config = await RestaurantConfig.findOne();
         if (!config) {
-            await RestaurantConfig.create({ name: 'Nuevo Restaurante' });
+            // Get or create a default tenant
+            let defaultTenant = await Tenant.findOne({ where: { slug: 'makala' } });
+            if (!defaultTenant) {
+                defaultTenant = await Tenant.create({
+                    name: 'Nuevo Restaurante',
+                    slug: 'makala',
+                    ownerEmail: 'admin@maksuites.com.pe',
+                    plan: 'demo',
+                    status: 'active'
+                });
+            }
+            await RestaurantConfig.create({ name: 'Nuevo Restaurante', TenantId: defaultTenant.id });
             console.log('Default config created.');
         }
 
         // Init Users if none exist
-        const { User } = require('./models');
-        const usersCount = await User.count();
+        const { User: UserModel } = require('./models');
+        const usersCount = await UserModel.count();
         if (usersCount === 0) {
-            // Note: In prod use bcrypt, here plain for prototype speed as requested "simple login"
-            // Or I can add bcrypt now. Let's add bcrypt in the route, but seed plain for now or use hooks.
-            // Actually, for simplicity in prototype, I will store plain or simple hash.
-            // Let's assume the Auth Route handles comparison.
-            await User.bulkCreate([
-                { username: 'admin', password: '123', role: 'admin', displayName: 'Administrador' },
-                { username: 'mesero', password: '123', role: 'waiter', displayName: 'Mesero 1' },
-                { username: 'cocina', password: '123', role: 'kitchen', displayName: 'Jefe Cocina' },
-                { username: 'caja', password: '123', role: 'cashier', displayName: 'Cajero Principal' }
+            let defaultTenant = await Tenant.findOne({ where: { slug: 'makala' } });
+            if (!defaultTenant) {
+                defaultTenant = await Tenant.create({
+                    name: 'Nuevo Restaurante',
+                    slug: 'makala',
+                    ownerEmail: 'admin@maksuites.com.pe',
+                    plan: 'demo',
+                    status: 'active'
+                });
+            }
+            const hashedPass = await bcrypt.hash('123', 10);
+            await UserModel.bulkCreate([
+                { username: 'admin', password: hashedPass, role: 'admin', displayName: 'Administrador', TenantId: defaultTenant.id },
+                { username: 'mesero', password: hashedPass, role: 'waiter', displayName: 'Mesero 1', TenantId: defaultTenant.id },
+                { username: 'cocina', password: hashedPass, role: 'kitchen', displayName: 'Jefe Cocina', TenantId: defaultTenant.id },
+                { username: 'caja', password: hashedPass, role: 'cashier', displayName: 'Cajero Principal', TenantId: defaultTenant.id }
             ]);
-            console.log('Default users created (admin/123, mesero/123, cocina/123).');
+            console.log('Default users created with bcrypt hashed passwords (admin/123, mesero/123, cocina/123, caja/123).');
         }
 
         // Init Products if none
-        const { Product } = require('./models');
-        const count = await Product.count();
+        const { Product: ProductModel } = require('./models');
+        const count = await ProductModel.count();
         if (count === 0) {
-            await Product.bulkCreate([
-                { name: 'Coca Cola', price: 5.00, type: 'drink', stock: 100 },
-                { name: 'Lomo Saltado', price: 35.00, type: 'dish', isStockManaged: false },
-                { name: 'Ceviche', price: 40.00, type: 'dish', isStockManaged: false },
-                { name: 'Cerveza', price: 8.00, type: 'drink', stock: 50 }
-            ]);
-            console.log('Default products seeded.');
+            const defaultTenant = await Tenant.findOne({ where: { slug: 'makala' } });
+            if (defaultTenant) {
+                await ProductModel.bulkCreate([
+                    { name: 'Coca Cola', price: 5.00, type: 'drink', stock: 100, TenantId: defaultTenant.id },
+                    { name: 'Lomo Saltado', price: 35.00, type: 'dish', isStockManaged: false, TenantId: defaultTenant.id },
+                    { name: 'Ceviche', price: 40.00, type: 'dish', isStockManaged: false, TenantId: defaultTenant.id },
+                    { name: 'Cerveza', price: 8.00, type: 'drink', stock: 50, TenantId: defaultTenant.id }
+                ]);
+                console.log('Default products seeded.');
+            }
         }
 
     } catch (error) {

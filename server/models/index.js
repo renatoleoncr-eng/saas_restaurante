@@ -1,6 +1,41 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
+// =============================================
+// TENANT MODEL (Multi-SaaS Foundation)
+// =============================================
+const Tenant = sequelize.define('Tenant', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false // Restaurant business name
+    },
+    slug: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true // Used as subdomain: slug.maksuites.com.pe
+    },
+    ownerEmail: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    plan: {
+        type: DataTypes.ENUM('demo', 'pago'),
+        defaultValue: 'demo'
+    },
+    status: {
+        type: DataTypes.ENUM('active', 'suspended'),
+        defaultValue: 'active'
+    },
+    settings: {
+        type: DataTypes.TEXT, // JSON string for flexible tenant-level settings
+        defaultValue: '{}'
+    },
+    logoUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
+});
+
 const RestaurantConfig = sequelize.define('RestaurantConfig', {
     name: {
         type: DataTypes.STRING,
@@ -148,8 +183,12 @@ const Product = sequelize.define('Product', {
 const User = sequelize.define('User', {
     username: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+        allowNull: false
+        // unique per tenant — enforced via compound index in sync.js
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true // Optional for staff, required for owners
     },
     password: {
         type: DataTypes.STRING,
@@ -165,8 +204,8 @@ const User = sequelize.define('User', {
     },
     pin: {
         type: DataTypes.STRING(4),
-        allowNull: true,
-        unique: true
+        allowNull: true
+        // unique per tenant — enforced via compound index in sync.js
     },
     requirePinPrompt: {
         type: DataTypes.BOOLEAN,
@@ -787,6 +826,26 @@ const Setting = sequelize.define('Setting', {
 QrAccount.hasMany(Payment, { foreignKey: 'qr_id', as: 'Payments' });
 Payment.belongsTo(QrAccount, { foreignKey: 'qr_id', as: 'QrAccount' });
 
+// =============================================
+// TENANT ASSOCIATIONS (Multi-SaaS)
+// =============================================
+// Every tenant-scoped model gets a TenantId foreign key.
+// This enables row-level data isolation between restaurants.
+
+const tenantScopedModels = [
+    RestaurantConfig, Area, Table, Account, Product, User, Order,
+    Attendance, Reservation, Ingredient, IngredientMovement,
+    ProductMovement, Recipe, AuditLog, DailyMenu, Expense,
+    ProductVariant, Payment, DrinkPromotion, DrinkPromotionItem,
+    DrinkItemRecipe, CashSession, BillingConfig, Invoice,
+    QrAccount, PromotionGroup, Promotion, Setting
+];
+
+tenantScopedModels.forEach(Model => {
+    Tenant.hasMany(Model, { foreignKey: 'TenantId' });
+    Model.belongsTo(Tenant, { foreignKey: 'TenantId' });
+});
+
 PromotionGroup.hasMany(Promotion, { foreignKey: 'groupId', as: 'Images', onDelete: 'CASCADE' });
 Promotion.belongsTo(PromotionGroup, { foreignKey: 'groupId', as: 'Group' });
 
@@ -853,6 +912,7 @@ Payment.afterDestroy(async (payment, options) => {
 
 module.exports = {
     sequelize,
+    Tenant,
     RestaurantConfig,
     Area,
     Table,

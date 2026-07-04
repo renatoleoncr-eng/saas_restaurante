@@ -19,7 +19,7 @@ services:
       - DB_NAME=gestion_restaurante
       - JWT_SECRET=secret_restaurante_prod
       - SAAS_API_KEY=mak_secure_auth_k3y_928374
-
+      - MAIN_DOMAIN=maksuites.com.pe
       - TZ=America/Lima
     depends_on:
       - db
