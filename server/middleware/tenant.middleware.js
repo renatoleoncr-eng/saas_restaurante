@@ -15,6 +15,11 @@ function extractSlugFromHost(host) {
     // Remove port if present
     const hostname = host.split(':')[0];
 
+    // Ignore special subdomains reserved for the landing page
+    if (hostname.startsWith('www.') || hostname.startsWith('sistema.')) {
+        return null;
+    }
+
     // Check if it's a subdomain of any main domain
     for (const mainDomain of MAIN_DOMAINS) {
         if (mainDomain === 'localhost' || mainDomain === '127.0.0.1') {
