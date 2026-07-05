@@ -9,6 +9,7 @@ export default function Register() {
     const [step, setStep] = useState(1); // 1: restaurant info, 2: account info, 3: success
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isSlugEdited, setIsSlugEdited] = useState(false);
 
     // Form data
     const [name, setName] = useState('');
@@ -26,7 +27,7 @@ export default function Register() {
 
     // Auto-generate slug from name
     useEffect(() => {
-        if (name && !slug) {
+        if (name && !isSlugEdited) {
             const auto = name
                 .toLowerCase()
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
@@ -36,8 +37,10 @@ export default function Register() {
                 .substring(0, 30)
                 .replace(/^-|-$/g, '');
             setSlug(auto);
+        } else if (!name && !isSlugEdited) {
+            setSlug('');
         }
-    }, [name]);
+    }, [name, isSlugEdited]);
 
     // Check slug availability (debounced)
     const checkSlug = useCallback(async (slugValue) => {
@@ -73,6 +76,7 @@ export default function Register() {
     }, [slug, checkSlug]);
 
     const handleSlugChange = (e) => {
+        setIsSlugEdited(true);
         const val = e.target.value
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, '')
@@ -122,7 +126,7 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+        <div className="h-full w-full overflow-y-auto bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
             {/* Background effects */}
             <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
