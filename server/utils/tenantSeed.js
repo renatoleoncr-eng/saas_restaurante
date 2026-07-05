@@ -12,7 +12,7 @@
 
 const bcrypt = require('bcryptjs');
 
-async function seedTenantData(tenantId, tenantName, models) {
+async function seedTenantData(tenantId, tenantName, models, t) {
     const {
         RestaurantConfig,
         BillingConfig,
@@ -26,7 +26,7 @@ async function seedTenantData(tenantId, tenantName, models) {
         name: tenantName,
         address: '',
         TenantId: tenantId
-    });
+    }, { transaction: t });
 
     // 2. Billing Config (defaults for Peru)
     await BillingConfig.create({
@@ -40,14 +40,14 @@ async function seedTenantData(tenantId, tenantName, models) {
         serieBoleta: 'B001',
         billingMode: 'libre',
         TenantId: tenantId
-    });
+    }, { transaction: t });
 
     // 3. Default Area with 5 tables
     const area = await Area.create({
         name: 'Salón Principal',
         sortOrder: 0,
         TenantId: tenantId
-    });
+    }, { transaction: t });
 
     const tables = [];
     for (let i = 1; i <= 5; i++) {
@@ -60,7 +60,7 @@ async function seedTenantData(tenantId, tenantName, models) {
             TenantId: tenantId
         });
     }
-    await Table.bulkCreate(tables);
+    await Table.bulkCreate(tables, { transaction: t });
 
     // 4. Default Settings
     const defaultSettings = [
@@ -70,7 +70,7 @@ async function seedTenantData(tenantId, tenantName, models) {
 
     for (const setting of defaultSettings) {
         try {
-            await Setting.create(setting);
+            await Setting.create(setting, { transaction: t });
         } catch (e) {
             // Ignore if already exists
         }

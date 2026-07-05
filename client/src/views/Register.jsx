@@ -8,6 +8,13 @@ export default function Register() {
 
     const [step, setStep] = useState(1); // 1: restaurant info, 2: account info, 3: success
     const [loading, setLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState(0);
+    const loadingMessages = [
+        "Preparando tu espacio...",
+        "Creando base de datos...",
+        "Configurando catálogos...",
+        "Creando administrador..."
+    ];
     const [error, setError] = useState('');
     const [isSlugEdited, setIsSlugEdited] = useState(false);
 
@@ -88,19 +95,31 @@ export default function Register() {
         e.preventDefault();
         setError('');
         setLoading(true);
+        setLoadingStep(0);
+
+        // Progressively update loading message
+        const interval = setInterval(() => {
+            setLoadingStep(prev => prev < loadingMessages.length - 1 ? prev + 1 : prev);
+        }, 800);
 
         try {
-            const res = await axios.post('/api/tenants/register', {
-                name: name.trim(),
-                slug,
-                email: email.trim(),
-                password,
-                ownerName: ownerName.trim()
-            });
+            // Wait for both the API call AND a minimum 3.2s delay for the progressive UX
+            const [res] = await Promise.all([
+                axios.post('/api/tenants/register', {
+                    name: name.trim(),
+                    slug,
+                    email: email.trim(),
+                    password,
+                    ownerName: ownerName.trim()
+                }),
+                new Promise(resolve => setTimeout(resolve, 3200))
+            ]);
 
+            clearInterval(interval);
             setSuccessData(res.data);
             setStep(3);
         } catch (err) {
+            clearInterval(interval);
             setError(err.response?.data?.error || 'Error creando el restaurante. Intente nuevamente.');
         } finally {
             setLoading(false);
@@ -291,10 +310,19 @@ export default function Register() {
                                     className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     {loading ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <Loader2 size={18} className="animate-spin" />
-                                            Creando restaurante...
-                                        </span>
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 size={18} className="animate-spin" />
+                                                <span>{loadingMessages[loadingStep]}</span>
+                                            </div>
+                                            {/* Progress bar */}
+                                            <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
+                                                <div 
+                                                    className="h-full bg-white rounded-full transition-all duration-300 ease-out"
+                                                    style={{ width: `${((loadingStep + 1) / loadingMessages.length) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
                                     ) : 'Crear Restaurante'}
                                 </button>
                             </div>

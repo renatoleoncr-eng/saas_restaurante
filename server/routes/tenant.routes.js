@@ -148,7 +148,7 @@ router.post('/register', async (req, res) => {
         }, { transaction: t });
 
         // 3. Seed initial data for the tenant
-        await seedTenantData(tenant.id, tenant.name, models);
+        await seedTenantData(tenant.id, tenant.name, models, t);
 
         await t.commit();
 
