@@ -277,14 +277,14 @@ const syncDB = async () => {
             let defaultTenant = await Tenant.findOne({ where: { slug: 'makala' } });
             if (!defaultTenant) {
                 defaultTenant = await Tenant.create({
-                    name: 'Nuevo Restaurante',
+                    name: 'El Makala',
                     slug: 'makala',
                     ownerEmail: 'admin@maksuites.com.pe',
                     plan: 'demo',
                     status: 'active'
                 });
             }
-            await RestaurantConfig.create({ name: 'Nuevo Restaurante', TenantId: defaultTenant.id });
+            await RestaurantConfig.create({ name: 'El Makala', TenantId: defaultTenant.id });
             console.log('Default config created.');
         }
 
@@ -295,7 +295,7 @@ const syncDB = async () => {
             let defaultTenant = await Tenant.findOne({ where: { slug: 'makala' } });
             if (!defaultTenant) {
                 defaultTenant = await Tenant.create({
-                    name: 'Nuevo Restaurante',
+                    name: 'El Makala',
                     slug: 'makala',
                     ownerEmail: 'admin@maksuites.com.pe',
                     plan: 'demo',

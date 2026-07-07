@@ -37,6 +37,7 @@ const qrRoutes = require('./routes/qr.routes');
 const promotionRoutes = require('./routes/promotion.routes');
 const rouletteRoutes = require('./routes/roulette.routes');
 const tenantRoutes = require('./routes/tenant.routes');
+const superadminRoutes = require('./routes/superadmin.routes');
 
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
@@ -175,6 +176,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // =============================================
 app.use('/api', authRoutes);                          // POST /api/login, POST /api/auth/refresh, GET /api/auth/me
 app.use('/api/tenants', tenantRoutes);                // POST /api/tenants/register, GET /api/tenants/check-slug/:slug
+app.use('/api/superadmin', superadminRoutes);         // POST /api/superadmin/login, tenant management (no requireTenant)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante SaaS' }));
 

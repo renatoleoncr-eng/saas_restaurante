@@ -8,16 +8,39 @@ import Register from './views/Register'
 import QrDisplay from './views/QrDisplay'
 import PublicReceipt from './views/PublicReceipt'
 import ErrorBoundary from './components/ErrorBoundary'
+import SuperAdminLogin from './views/SuperAdminLogin'
+import SuperAdminDashboard from './views/SuperAdminDashboard'
 
-// Wrapper to protect routes
+// Wrapper to protect restaurant routes
 const PrivateRoute = ({ children }) => {
     const { user } = useRestaurant();
     return user ? children : <Navigate to="/login" />;
 };
 
-// Main app — routes based on whether we're on landing or tenant subdomain
+// Wrapper to protect super admin routes
+const SuperAdminRoute = ({ children }) => {
+    const token = localStorage.getItem('saas_admin_token');
+    return token ? children : <Navigate to="/login" />;
+};
+
+// Main app — routes based on whether we're on landing, admin, or tenant subdomain
 function AppRoutes() {
     const { isLanding, tenantSlug, tenantInfo } = useRestaurant();
+
+    // Super admin panel: admin.maksuites.com.pe
+    if (tenantSlug === 'admin') {
+        return (
+            <Routes>
+                <Route path="/login" element={<SuperAdminLogin />} />
+                <Route path="/" element={
+                    <SuperAdminRoute>
+                        <SuperAdminDashboard />
+                    </SuperAdminRoute>
+                } />
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        );
+    }
 
     // Main domain (maksuites.com.pe) — show landing page
     if (isLanding) {

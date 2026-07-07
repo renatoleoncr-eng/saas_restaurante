@@ -33,6 +33,14 @@ const Tenant = sequelize.define('Tenant', {
     logoUrl: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    storageLimitMb: {
+        type: DataTypes.INTEGER,
+        defaultValue: 50 // 50 MB for demo, 500 MB for paid plans
+    },
+    internalNotes: {
+        type: DataTypes.TEXT,
+        allowNull: true // Private notes visible only to super admin
     }
 });
 
