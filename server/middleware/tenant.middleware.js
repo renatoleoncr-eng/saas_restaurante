@@ -15,8 +15,8 @@ function extractSlugFromHost(host) {
     // Remove port if present
     const hostname = host.split(':')[0];
 
-    // Ignore special subdomains reserved for the landing page
-    if (hostname.startsWith('www.') || hostname.startsWith('sistema.')) {
+    // Ignore special subdomains reserved for the landing page or admin panel
+    if (hostname.startsWith('www.') || hostname.startsWith('sistema.') || hostname.startsWith('admin.')) {
         return null;
     }
 
