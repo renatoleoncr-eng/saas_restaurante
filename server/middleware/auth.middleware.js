@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret_restaurante_prod';
  * Attaches decoded user to req.user.
  * Also verifies user belongs to the current tenant (req.tenant).
  */
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -19,6 +19,14 @@ function authMiddleware(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Verify user still exists in DB and is active
+        const { User } = require('../models');
+        const user = await User.findByPk(decoded.id);
+        
+        if (!user || !user.active) {
+            return res.status(401).json({ error: 'Sesión inválida o expirada', code: 'TOKEN_EXPIRED' });
+        }
 
         // Verify user belongs to current tenant
         if (req.tenant && decoded.tenantId !== req.tenant.id) {
