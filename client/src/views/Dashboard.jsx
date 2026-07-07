@@ -141,7 +141,7 @@ export default function Dashboard() {
 
         switch (user.role) {
             case 'admin':
-                return <AdminDashboard />;
+                return <AdminDashboard onGoToSection={setCurrentView} />;
             case 'waiter':
             case 'cashier':
                 return <WaiterMap onGoToSection={setCurrentView} />;

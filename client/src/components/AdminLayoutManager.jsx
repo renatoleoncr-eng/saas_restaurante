@@ -141,7 +141,24 @@ export default function AdminLayoutManager({ onGoToSection }) {
             </div>
 
             {/* Main Content Area */}
-            {!activeSession ? (
+            {!activeSession && !tenantInfo?.onboardingCompleted ? (
+                // NEW RESTAURANT — show onboarding guide
+                <>
+                    <OnboardingWelcome
+                        tenantInfo={tenantInfo}
+                        areas={areas}
+                        products={products || []}
+                        onGoToSection={onGoToSection}
+                        onOpenSession={() => setShowSessionModal(true)}
+                    />
+                    {showSessionModal && (
+                        <SessionManagerModal
+                            activeSession={activeSession}
+                            onClose={() => { setShowSessionModal(false); checkActiveSession(); }}
+                        />
+                    )}
+                </>
+            ) : !activeSession ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-6 mx-4">
                     <Lock size={48} className="text-gray-400 mb-4" />
                     <h3 className="text-xl font-bold text-gray-700 mb-2">Turno Cerrado</h3>
