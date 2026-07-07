@@ -398,15 +398,14 @@ export default function Register() {
                             <label className="flex items-start gap-3 cursor-pointer group mb-5 select-none">
                                 <div className={`w-5 h-5 mt-0.5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
                                     dataConsent ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-white/20 group-hover:border-blue-400/40'
-                                }`}
-                                    onClick={() => setDataConsent(v => !v)}
-                                >
+                                }`}>
                                     {dataConsent && <Check size={12} className="text-white" strokeWidth={3} />}
                                 </div>
-                                <input type="checkbox" checked={dataConsent} onChange={() => setDataConsent(v => !v)} className="sr-only" />
+                                <input type="checkbox" checked={dataConsent} onChange={(e) => setDataConsent(e.target.checked)} className="sr-only" />
                                 <span className="text-slate-400 text-xs leading-relaxed">
                                     Acepto el tratamiento de mis datos personales conforme a la{' '}
                                     <a href="https://maksuites.com.pe/privacidad" target="_blank" rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
                                         className="text-blue-400 hover:text-blue-300 underline">
                                         Política de Privacidad
                                     </a>{' '}
