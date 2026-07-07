@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, ArrowRight, ChefHat, LayoutGrid, Package } from 'lucide-react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import OnboardingSalonModal from './OnboardingSalonModal';
 
 /**
  * OnboardingWelcome
@@ -15,6 +16,8 @@ import { useRestaurant } from '../contexts/RestaurantContext';
  */
 export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToSection, onOpenSession }) {
     const { refreshData } = useRestaurant();
+    const [showSalonModal, setShowSalonModal] = useState(false);
+    
     const hasSalon = areas && areas.length > 0;
     const hasProducts = products && products.length > 0;
 
@@ -35,18 +38,7 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
                 ? `${areas.length} ${areas.length === 1 ? 'área configurada' : 'áreas configuradas'}.`
                 : 'Crea tus áreas y mesas para empezar a tomar pedidos.',
             icon: <LayoutGrid size={20} />,
-            action: hasSalon ? null : async () => {
-                const name = window.prompt("Ingresa el nombre de tu primera área (ej. Salón Principal, Terraza):");
-                if (name && name.trim()) {
-                    try {
-                        await axios.post('/api/areas', { name: name.trim(), sortOrder: 0 });
-                        if (refreshData) refreshData();
-                    } catch (e) {
-                        alert("Error al crear el área. Inténtalo de nuevo.");
-                        console.error(e);
-                    }
-                }
-            },
+            action: hasSalon ? null : () => setShowSalonModal(true),
             actionLabel: 'Crear Área',
         },
         {
@@ -161,6 +153,16 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
             <p className="text-xs text-gray-400 mt-6 text-center">
                 Esta guía desaparecerá cuando abras tu primer turno.
             </p>
+
+            {showSalonModal && (
+                <OnboardingSalonModal 
+                    onClose={() => setShowSalonModal(false)} 
+                    onComplete={() => {
+                        setShowSalonModal(false);
+                        if (refreshData) refreshData();
+                    }} 
+                />
+            )}
         </div>
     );
 }
