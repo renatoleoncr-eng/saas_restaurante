@@ -361,6 +361,12 @@ router.post('/sessions/open', async (req, res) => {
             }
         })();
 
+        // Mark tenant onboarding as completed on first shift open
+        if (!req.tenant.onboardingCompleted) {
+            const { Tenant } = require('../models');
+            await Tenant.update({ onboardingCompleted: true }, { where: { id: req.tenant.id } });
+        }
+
         res.json(newSession);
     } catch (error) {
         console.error("Error opening session:", error);

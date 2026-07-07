@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChefHat, ArrowLeft, Check, X, Loader2, ExternalLink } from 'lucide-react';
+import { ChefHat, ArrowLeft, Check, X, Loader2, ExternalLink, User, Phone } from 'lucide-react';
+
+// Username validation: lowercase letters, numbers, underscores, 3-20 chars
+const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 export default function Register() {
     const navigate = useNavigate();
@@ -18,12 +21,20 @@ export default function Register() {
     const [error, setError] = useState('');
     const [isSlugEdited, setIsSlugEdited] = useState(false);
 
-    // Form data
+    // Form data — Step 1
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+
+    // Form data — Step 2
     const [ownerName, setOwnerName] = useState('');
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [dataConsent, setDataConsent] = useState(false);
+
+    // Username validation state
+    const [usernameError, setUsernameError] = useState('');
 
     // Slug validation
     const [slugStatus, setSlugStatus] = useState(null); // null, 'checking', 'available', 'taken', 'invalid'
@@ -91,6 +102,25 @@ export default function Register() {
         setSlug(val);
     };
 
+    const handleUsernameChange = (e) => {
+        const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').substring(0, 20);
+        setUsername(val);
+        if (val.length === 0) {
+            setUsernameError('');
+        } else if (val.length < 3) {
+            setUsernameError('Mínimo 3 caracteres');
+        } else if (!USERNAME_REGEX.test(val)) {
+            setUsernameError('Solo letras minúsculas, números y guión bajo');
+        } else {
+            setUsernameError('');
+        }
+    };
+
+    const handlePhoneChange = (e) => {
+        const val = e.target.value.replace(/\D/g, '').substring(0, 9);
+        setPhone(val);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -110,7 +140,9 @@ export default function Register() {
                     slug,
                     email: email.trim(),
                     password,
-                    ownerName: ownerName.trim()
+                    ownerName: ownerName.trim(),
+                    username: username.trim(),
+                    phone: phone.trim()
                 }),
                 new Promise(resolve => setTimeout(resolve, 3200))
             ]);
@@ -128,7 +160,15 @@ export default function Register() {
 
     const canProceed = step === 1
         ? (name.trim().length >= 2 && slug.length >= 3 && slugStatus === 'available')
-        : (email.trim().includes('@') && password.length >= 6 && ownerName.trim().length >= 2);
+        : (
+            ownerName.trim().length >= 2 &&
+            USERNAME_REGEX.test(username) &&
+            usernameError === '' &&
+            password.length >= 6 &&
+            email.trim().includes('@') &&
+            phone.replace(/\D/g, '').length >= 9 &&
+            dataConsent
+        );
 
     const slugStatusIcon = {
         checking: <Loader2 size={16} className="animate-spin text-blue-400" />,
@@ -244,88 +284,163 @@ export default function Register() {
                                 <p className="text-slate-400 text-sm mt-1">Paso 2: Datos del administrador</p>
                             </div>
 
-                            <div className="space-y-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                        Tu Nombre
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={ownerName}
-                                        onChange={(e) => setOwnerName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        placeholder="Tu nombre completo"
-                                        autoFocus
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                        Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        placeholder="tu@email.com"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                        Contraseña
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        placeholder="Mínimo 6 caracteres"
-                                        required
-                                        minLength={6}
-                                    />
-                                    {password && password.length < 6 && (
-                                        <p className="text-amber-400 text-xs mt-1">Mínimo 6 caracteres</p>
-                                    )}
-                                </div>
-
-                                {error && (
-                                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-                                        <p className="text-red-300 text-sm text-center">{error}</p>
+                            {/* Section: Tu Perfil */}
+                            <div className="mb-5">
+                                <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wider mb-3">Tu Perfil</p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
+                                            Nombre Completo
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={ownerName}
+                                            onChange={(e) => setOwnerName(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            placeholder="Tu nombre completo"
+                                            autoFocus
+                                            required
+                                        />
                                     </div>
-                                )}
 
-                                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-                                    <p className="text-slate-400 text-xs">
-                                        Al crear tu restaurante, tu usuario administrador será <strong className="text-white">admin</strong> con la contraseña que definas aquí.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={!canProceed || loading}
-                                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? (
-                                        <div className="flex flex-col items-center justify-center gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <Loader2 size={18} className="animate-spin" />
-                                                <span>{loadingMessages[loadingStep]}</span>
-                                            </div>
-                                            {/* Progress bar */}
-                                            <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
-                                                <div 
-                                                    className="h-full bg-white rounded-full transition-all duration-300 ease-out"
-                                                    style={{ width: `${((loadingStep + 1) / loadingMessages.length) * 100}%` }}
-                                                ></div>
-                                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
+                                            Usuario
+                                        </label>
+                                        <div className="relative">
+                                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                            <input
+                                                type="text"
+                                                value={username}
+                                                onChange={handleUsernameChange}
+                                                className={`w-full pl-10 pr-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 transition-all ${
+                                                    usernameError ? 'border-red-500/40 focus:border-red-500/50 focus:ring-red-500/20' :
+                                                    (username.length >= 3 && !usernameError) ? 'border-green-500/40 focus:border-green-500/50 focus:ring-green-500/20' :
+                                                    'border-white/10 focus:border-blue-500/50 focus:ring-blue-500/20'
+                                                }`}
+                                                placeholder="ej: juan_garcia"
+                                                required
+                                            />
+                                            {username.length >= 3 && !usernameError && (
+                                                <Check size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-400" />
+                                            )}
                                         </div>
-                                    ) : 'Crear Restaurante'}
-                                </button>
+                                        {usernameError ? (
+                                            <p className="text-red-400 text-xs mt-1.5">{usernameError}</p>
+                                        ) : username.length > 0 && (
+                                            <p className="text-slate-500 text-xs mt-1.5">Solo letras minúsculas, números y guión bajo</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
+                                            Contraseña
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            placeholder="Mínimo 6 caracteres"
+                                            required
+                                            minLength={6}
+                                        />
+                                        {password && password.length < 6 && (
+                                            <p className="text-amber-400 text-xs mt-1.5">Mínimo 6 caracteres</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
+
+                            {/* Divider */}
+                            <div className="border-t border-white/5 mb-5" />
+
+                            {/* Section: Datos de Contacto */}
+                            <div className="mb-5">
+                                <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wider mb-3">Datos de Contacto</p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            placeholder="tu@email.com"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
+                                            Celular
+                                        </label>
+                                        <div className="flex items-stretch">
+                                            <div className="px-4 py-3 bg-white/[0.03] border border-r-0 border-white/10 rounded-l-xl text-slate-500 text-sm flex items-center">
+                                                <Phone size={14} className="mr-1.5" />+51
+                                            </div>
+                                            <input
+                                                type="tel"
+                                                value={phone}
+                                                onChange={handlePhoneChange}
+                                                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-r-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                placeholder="999 999 999"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Data consent checkbox */}
+                            <label className="flex items-start gap-3 cursor-pointer group mb-5 select-none">
+                                <div className={`w-5 h-5 mt-0.5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
+                                    dataConsent ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-white/20 group-hover:border-blue-400/40'
+                                }`}
+                                    onClick={() => setDataConsent(v => !v)}
+                                >
+                                    {dataConsent && <Check size={12} className="text-white" strokeWidth={3} />}
+                                </div>
+                                <input type="checkbox" checked={dataConsent} onChange={() => setDataConsent(v => !v)} className="sr-only" />
+                                <span className="text-slate-400 text-xs leading-relaxed">
+                                    Acepto el tratamiento de mis datos personales conforme a la{' '}
+                                    <a href="https://maksuites.com.pe/privacidad" target="_blank" rel="noopener noreferrer"
+                                        className="text-blue-400 hover:text-blue-300 underline">
+                                        Política de Privacidad
+                                    </a>{' '}
+                                    de Mak Suites. (Ley 29733)
+                                </span>
+                            </label>
+
+                            {error && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl mb-4">
+                                    <p className="text-red-300 text-sm text-center">{error}</p>
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={!canProceed || loading}
+                                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (
+                                    <div className="flex flex-col items-center justify-center gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 size={18} className="animate-spin" />
+                                            <span>{loadingMessages[loadingStep]}</span>
+                                        </div>
+                                        {/* Progress bar */}
+                                        <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
+                                            <div
+                                                className="h-full bg-white rounded-full transition-all duration-300 ease-out"
+                                                style={{ width: `${((loadingStep + 1) / loadingMessages.length) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                ) : 'Crear Restaurante'}
+                            </button>
                         </form>
                     )}
 
@@ -350,7 +465,7 @@ export default function Register() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400 text-sm">Usuario</span>
-                                    <span className="text-white text-sm font-mono">admin</span>
+                                    <span className="text-white text-sm font-mono">{successData.user?.username || username}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400 text-sm">Plan</span>

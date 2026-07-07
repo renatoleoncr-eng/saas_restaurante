@@ -108,6 +108,7 @@ async function refreshAndRetry(originalRequest) {
 export const RestaurantProvider = ({ children }) => {
     const [config, setConfig] = useState(null);
     const [areas, setAreas] = useState([]);
+    const [products, setProducts] = useState([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [socket, setSocket] = useState(null);
     const [tenantSlug] = useState(() => detectTenantSlug());
@@ -251,6 +252,15 @@ export const RestaurantProvider = ({ children }) => {
         }
     }, [refreshTrigger, user, isLanding, tenantSlug]);
 
+    // Initial Products Load (lightweight — just ids and names for onboarding check)
+    useEffect(() => {
+        if (user && !isLanding && tenantSlug) {
+            axios.get('/api/products')
+                .then(res => setProducts(res.data || []))
+                .catch(err => console.error("Error loading products:", err));
+        }
+    }, [refreshTrigger, user, isLanding, tenantSlug]);
+
     const updateConfig = async (newConfig) => {
         await axios.put('/api/config', newConfig);
         refreshData();
@@ -270,11 +280,18 @@ export const RestaurantProvider = ({ children }) => {
 
     // ...
 
+    const refreshTenantInfo = () => {
+        if (!tenantSlug) return;
+        axios.get('/api/tenants/info')
+            .then(res => setTenantInfo(res.data))
+            .catch(() => {});
+    };
+
     return (
         <RestaurantContext.Provider value={{
-            config, areas, refreshData, refreshTrigger, updateConfig,
+            config, areas, products, refreshData, refreshTrigger, updateConfig,
             user, login, logout, socket, reservations,
-            tenantSlug, tenantInfo, isLanding
+            tenantSlug, tenantInfo, isLanding, refreshTenantInfo
         }}>
             {children}
         </RestaurantContext.Provider>

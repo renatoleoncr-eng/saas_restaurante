@@ -70,13 +70,32 @@ router.post('/register', async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-        const { name, slug, email, password, ownerName } = req.body;
+        const { name, slug, email, password, ownerName, username, phone } = req.body;
 
         // Validate required fields
-        if (!name || !slug || !email || !password) {
+        if (!name || !slug || !email || !password || !username || !phone) {
             await t.rollback();
             return res.status(400).json({
-                error: 'Todos los campos son requeridos: nombre del restaurante, subdominio, email y contraseña'
+                error: 'Todos los campos son requeridos: nombre del restaurante, subdominio, nombre, usuario, contraseña, email y celular'
+            });
+        }
+
+        // Validate username format
+        const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
+        const normalizedUsername = username.toLowerCase().trim();
+        if (!USERNAME_REGEX.test(normalizedUsername)) {
+            await t.rollback();
+            return res.status(400).json({
+                error: 'Usuario inválido. Use solo letras minúsculas, números y guiones bajos (3-20 caracteres).'
+            });
+        }
+
+        // Validate phone (Peru: 9 digits starting with 9)
+        const cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length < 9) {
+            await t.rollback();
+            return res.status(400).json({
+                error: 'Ingresa un número de celular válido (mínimo 9 dígitos)'
             });
         }
 
@@ -131,14 +150,16 @@ router.post('/register', async (req, res) => {
             name: name.trim(),
             slug: normalizedSlug,
             ownerEmail: email.toLowerCase().trim(),
+            ownerPhone: cleanPhone,
             plan: 'demo',
-            status: 'active'
+            status: 'active',
+            onboardingCompleted: false
         }, { transaction: t });
 
-        // 2. Create owner user (admin role)
+        // 2. Create owner user (admin role) with custom username
         const hashedPassword = await bcrypt.hash(password, 10);
         const adminUser = await User.create({
-            username: 'admin',
+            username: normalizedUsername,
             email: email.toLowerCase().trim(),
             password: hashedPassword,
             role: 'admin',
@@ -165,7 +186,8 @@ router.post('/register', async (req, res) => {
                 name: tenant.name,
                 slug: tenant.slug,
                 plan: tenant.plan,
-                url: `https://${tenant.slug}.maksuites.com.pe`
+                url: `https://${tenant.slug}.maksuites.com.pe`,
+                onboardingCompleted: false
             },
             token,
             refreshToken,
@@ -199,7 +221,8 @@ router.get('/info', async (req, res) => {
             slug: req.tenant.slug,
             plan: req.tenant.plan,
             status: req.tenant.status,
-            logoUrl: req.tenant.logoUrl
+            logoUrl: req.tenant.logoUrl,
+            onboardingCompleted: req.tenant.onboardingCompleted || false
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

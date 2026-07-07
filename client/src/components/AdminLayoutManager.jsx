@@ -5,9 +5,10 @@ import { Plus, Trash, Edit, Calendar, Calculator, Lock } from 'lucide-react';
 import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import SessionManagerModal from './SessionManagerModal';
+import OnboardingWelcome from './OnboardingWelcome';
 
-export default function AdminLayoutManager() {
-    const { areas, refreshData, reservations } = useRestaurant();
+export default function AdminLayoutManager({ onGoToSection }) {
+    const { areas, refreshData, reservations, tenantInfo, products } = useRestaurant();
     const [newAreaName, setNewAreaName] = useState('');
     const [selectedTable, setSelectedTable] = useState(null);
     const [reservationTable, setReservationTable] = useState(null);

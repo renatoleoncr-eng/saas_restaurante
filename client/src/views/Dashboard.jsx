@@ -144,7 +144,7 @@ export default function Dashboard() {
                 return <AdminDashboard />;
             case 'waiter':
             case 'cashier':
-                return <WaiterMap />;
+                return <WaiterMap onGoToSection={setCurrentView} />;
             case 'kitchen':
                 return <div className="p-8 text-center text-gray-500">Vista de Cocina Deshabilitada</div>;
             default:

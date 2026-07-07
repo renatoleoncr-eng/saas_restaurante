@@ -41,6 +41,14 @@ const Tenant = sequelize.define('Tenant', {
     internalNotes: {
         type: DataTypes.TEXT,
         allowNull: true // Private notes visible only to super admin
+    },
+    ownerPhone: {
+        type: DataTypes.STRING,
+        allowNull: true // Owner's phone number collected at registration
+    },
+    onboardingCompleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false // True once the tenant opens their first cash session
     }
 });
 

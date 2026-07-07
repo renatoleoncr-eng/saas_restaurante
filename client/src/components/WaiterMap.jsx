@@ -8,9 +8,10 @@ import { formatTableName } from '../utils/tableUtils';
 import axios from 'axios';
 import { Calendar, Lock, Calculator } from 'lucide-react';
 import SessionManagerModal from './SessionManagerModal';
+import OnboardingWelcome from './OnboardingWelcome';
 
-export default function WaiterMap() {
-    const { areas, refreshData, reservations, refreshTrigger } = useRestaurant();
+export default function WaiterMap({ onGoToSection }) {
+    const { areas, refreshData, reservations, refreshTrigger, tenantInfo, products } = useRestaurant();
     const [selectedTable, setSelectedTable] = useState(null);
     const [reservationTable, setReservationTable] = useState(null);
     const [readyOrders, setReadyOrders] = useState([]); // Kept as empty to avoid undefined errors if referenced elsewhere (though logic removed) or just remove entirely if safe.
@@ -74,7 +75,24 @@ export default function WaiterMap() {
             
             {loadingSession ? (
                 <div className="text-center py-10 text-gray-500 animate-pulse">Cargando estado del turno...</div>
-            ) : !activeSession ? (
+            ) : !activeSession && !tenantInfo?.onboardingCompleted ? (
+            // NEW RESTAURANT — show onboarding guide instead of "Turno Cerrado"
+            <>
+                <OnboardingWelcome
+                    tenantInfo={tenantInfo}
+                    areas={areas}
+                    products={products || []}
+                    onGoToSection={onGoToSection}
+                    onOpenSession={() => setShowSessionModal(true)}
+                />
+                {showSessionModal && (
+                    <SessionManagerModal
+                        activeSession={activeSession}
+                        onClose={() => { setShowSessionModal(false); checkActiveSession(); }}
+                    />
+                )}
+            </>
+        ) : !activeSession ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-6 mx-4">
                     <Lock size={48} className="text-gray-400 mb-4" />
                     <h3 className="text-xl font-bold text-gray-700 mb-2">Turno Cerrado</h3>

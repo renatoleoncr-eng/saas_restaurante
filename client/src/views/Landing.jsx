@@ -56,7 +56,7 @@ export default function Landing() {
                     {/* Social Proof & Curiosity Badge */}
                     <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-full text-amber-700 text-sm font-bold mb-8 shadow-sm hover:shadow-md transition-shadow cursor-default">
                         <Star size={16} className="text-amber-500 fill-amber-500" />
-                        <span>La forma más inteligente de gestionar tu negocio. ¡100% Gratis!</span>
+                        <span>La forma más inteligente de gestionar tu restaurante. ¡100% Gratis!</span>
                     </div>
 
                     {/* Anchoring & Loss Aversion Headline */}
@@ -172,7 +172,7 @@ export default function Landing() {
                         </div>
 
                         {[
-                            { num: 1, title: 'Regístrate Gratis', desc: 'Ingresa los datos de tu negocio en segundos.' },
+                            { num: 1, title: 'Regístrate Gratis', desc: 'Ingresa los datos de tu restaurante en segundos.' },
                             { num: 2, title: 'Crea tu Menú', desc: 'Añade tus platos, mesas y zonas rápidamente.' },
                             { num: 3, title: 'Empieza a Vender', desc: 'Atiende clientes y mira cómo crecen tus ganancias.' }
                         ].map((step, i) => (
