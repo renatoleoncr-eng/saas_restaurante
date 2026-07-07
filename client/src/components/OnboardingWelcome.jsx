@@ -20,20 +20,20 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
             id: 'created',
             done: true,
             label: 'Restaurante creado',
-            description: `${tenantInfo?.name || 'Tu restaurante'} est· registrado y activo.`,
+            description: `${tenantInfo?.name || 'Tu restaurante'} est√° registrado y activo.`,
             icon: <ChefHat size={20} />,
             action: null,
         },
         {
             id: 'salon',
             done: hasSalon,
-            label: 'Configura tu salÛn',
+            label: 'Configura tu sal√≥n',
             description: hasSalon
-                ? `${areas.length} ${areas.length === 1 ? '·rea configurada' : '·reas configuradas'}.`
-                : 'Crea tus ·reas y mesas para empezar a tomar pedidos.',
+                ? `${areas.length} ${areas.length === 1 ? '√°rea configurada' : '√°reas configuradas'}.`
+                : 'Crea tus √°reas y mesas para empezar a tomar pedidos.',
             icon: <LayoutGrid size={20} />,
             action: hasSalon ? null : () => onGoToSection('main'),
-            actionLabel: 'Ir al SalÛn',
+            actionLabel: 'Ir al Sal√≥n',
         },
         {
             id: 'products',
@@ -50,7 +50,7 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
             id: 'shift',
             done: false,
             label: 'Abre tu primer turno y opera',
-            description: 'Una vez configurado el salÛn, abre un turno para empezar a atender mesas.',
+            description: 'Una vez configurado el sal√≥n, abre un turno para empezar a atender mesas.',
             icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8m-4-4v4" />
@@ -73,7 +73,7 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
                     <ChefHat size={28} className="text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                    °Bienvenido, {tenantInfo?.name || 'Restaurante'}!
+                    ¬°Bienvenido, {tenantInfo?.name || 'Restaurante'}!
                 </h2>
                 <p className="text-gray-500 text-sm">
                     Sigue estos pasos para configurar tu sistema y empezar a operar.
@@ -145,7 +145,7 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
             </div>
 
             <p className="text-xs text-gray-400 mt-6 text-center">
-                Esta guia desaparecera cuando abras tu primer turno.
+                Esta gu√≠a desaparecer√° cuando abras tu primer turno.
             </p>
         </div>
     );

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-    const { user, logout, config } = useRestaurant();
+    const { user, logout, config, tenantInfo } = useRestaurant();
     const navigate = useNavigate();
     const [currentView, setCurrentView] = useState(() => {
         return localStorage.getItem('lastView') || 'main';
@@ -498,8 +498,30 @@ export default function Dashboard() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain">
-                    {renderContent()}
+                <main className="flex-1 overflow-y-auto relative bg-gray-50 overflow-x-hidden overscroll-contain flex flex-col">
+                    {/* Global Onboarding Banner */}
+                    {user?.role === 'admin' && tenantInfo && !tenantInfo.onboardingCompleted && currentView !== 'main' && (
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 sm:px-6 sm:py-3 flex items-center justify-between shadow-md z-10 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                    <Utensils size={18} className="text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold">¡Estás configurando tu restaurante!</h4>
+                                    <p className="text-xs text-blue-100 hidden sm:block">Aún te faltan pasos para poder abrir tu primer turno.</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setCurrentView('main')}
+                                className="text-xs bg-white text-blue-700 px-4 py-2 rounded-xl font-bold hover:bg-blue-50 transition-all shadow-sm active:scale-95 flex items-center shrink-0"
+                            >
+                                Volver a la Guía
+                            </button>
+                        </div>
+                    )}
+                    <div className="flex-1 relative">
+                        {renderContent()}
+                    </div>
                 </main>
             </div>
 

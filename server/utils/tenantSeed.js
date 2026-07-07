@@ -42,25 +42,8 @@ async function seedTenantData(tenantId, tenantName, models, t) {
         TenantId: tenantId
     }, { transaction: t });
 
-    // 3. Default Area with 5 tables
-    const area = await Area.create({
-        name: 'Salón Principal',
-        sortOrder: 0,
-        TenantId: tenantId
-    }, { transaction: t });
+    // 3. (Removed) Default Area and Tables - user must create them during onboarding.
 
-    const tables = [];
-    for (let i = 1; i <= 5; i++) {
-        tables.push({
-            number: `${i}`,
-            status: 'free',
-            x: (i - 1) * 120,
-            y: 0,
-            AreaId: area.id,
-            TenantId: tenantId
-        });
-    }
-    await Table.bulkCreate(tables, { transaction: t });
 
     // 4. Default Settings
     const defaultSettings = [
