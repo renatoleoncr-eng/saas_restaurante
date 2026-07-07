@@ -63,13 +63,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         loadIngredients();
     }, [refreshTrigger]);
 
-    // Show onboarding help automatically the first time they create a product
+    // Show onboarding help automatically when they arrive to the dashboard
     useEffect(() => {
-        if (creatingSection && !creatingSection.startsWith('expand-') && !tenantInfo?.onboardingCompleted && !hasSeenProductHelp) {
+        if (!tenantInfo?.onboardingCompleted && !hasSeenProductHelp) {
             setShowProductHelpModal(true);
             setHasSeenProductHelp(true);
         }
-    }, [creatingSection, tenantInfo, hasSeenProductHelp]);
+    }, [tenantInfo, hasSeenProductHelp]);
 
     // Save active tabs to localStorage
     useEffect(() => {
