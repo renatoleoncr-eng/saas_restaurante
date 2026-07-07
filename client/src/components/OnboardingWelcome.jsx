@@ -1,5 +1,7 @@
 import React from 'react';
 import { CheckCircle2, ArrowRight, ChefHat, LayoutGrid, Package } from 'lucide-react';
+import axios from 'axios';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 /**
  * OnboardingWelcome
@@ -12,6 +14,7 @@ import { CheckCircle2, ArrowRight, ChefHat, LayoutGrid, Package } from 'lucide-r
  *   onOpenSession - function() to open SessionManagerModal
  */
 export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToSection, onOpenSession }) {
+    const { refreshData } = useRestaurant();
     const hasSalon = areas && areas.length > 0;
     const hasProducts = products && products.length > 0;
 
@@ -32,8 +35,19 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
                 ? `${areas.length} ${areas.length === 1 ? 'área configurada' : 'áreas configuradas'}.`
                 : 'Crea tus áreas y mesas para empezar a tomar pedidos.',
             icon: <LayoutGrid size={20} />,
-            action: hasSalon ? null : () => onGoToSection('main'),
-            actionLabel: 'Ir al Salón',
+            action: hasSalon ? null : async () => {
+                const name = window.prompt("Ingresa el nombre de tu primera área (ej. Salón Principal, Terraza):");
+                if (name && name.trim()) {
+                    try {
+                        await axios.post('/api/areas', { name: name.trim(), sortOrder: 0 });
+                        if (refreshData) refreshData();
+                    } catch (e) {
+                        alert("Error al crear el área. Inténtalo de nuevo.");
+                        console.error(e);
+                    }
+                }
+            },
+            actionLabel: 'Crear Área',
         },
         {
             id: 'products',
