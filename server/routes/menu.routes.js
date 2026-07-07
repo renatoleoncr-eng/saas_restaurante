@@ -23,7 +23,7 @@ router.get('/menu/daily', async (req, res) => {
         }
 
         const menu = await DailyMenu.findOne({
-            where: { date: queryDate }
+            where: { date: queryDate, TenantId: req.tenant.id }
         });
 
         if (!menu) {
@@ -56,7 +56,7 @@ router.get('/menu/daily', async (req, res) => {
 
         if (groupNames.length > 0) {
             const products = await Product.findAll({
-                where: { name: groupNames },
+                where: { name: groupNames, TenantId: req.tenant.id },
                 attributes: ['id', 'name', 'price']
             });
             products.forEach(p => {
@@ -86,13 +86,14 @@ router.post('/menu/daily', async (req, res) => {
 
         const { Product } = require('../models');
 
-        // Upsert logic
+        // Upsert logic — scoped to tenant
         const [menu, created] = await DailyMenu.findOrCreate({
-            where: { date },
+            where: { date, TenantId: req.tenant.id },
             defaults: {
                 price: price || 0,
                 entries: JSON.stringify(entries || []),
-                mains: JSON.stringify(mains || [])
+                mains: JSON.stringify(mains || []),
+                TenantId: req.tenant.id
             }
         });
 
@@ -123,16 +124,17 @@ router.post('/menu/daily', async (req, res) => {
         for (const gName in uniqueGroups) {
             const gData = uniqueGroups[gName];
 
-            // Find or Create the "Menu" Product
+            // Find or Create the "Menu" Product — scoped to tenant
             const [prod, wasCreated] = await Product.findOrCreate({
-                where: { name: gName },
+                where: { name: gName, TenantId: req.tenant.id },
                 defaults: {
                     name: gName,
                     price: gData.price,
                     type: 'menu',
-                    stock: 999, // Virtual stock
+                    stock: 999,
                     isStockManaged: false,
-                    description: 'Generado automáticamente desde Configuración de Menú'
+                    description: 'Generado automáticamente desde Configuración de Menú',
+                    TenantId: req.tenant.id
                 }
             });
 
@@ -158,14 +160,15 @@ router.get('/menu/sales', async (req, res) => {
     try {
         const { Order, Product, User } = require('../models');
 
-        // Fetch last 100 Menu Orders
+        // Fetch last 100 Menu Orders scoped to tenant
         const orders = await Order.findAll({
+            where: { TenantId: req.tenant.id },
             limit: 100,
             order: [['createdAt', 'DESC']],
             include: [
                 {
                     model: Product,
-                    where: { type: 'menu' },
+                    where: { type: 'menu', TenantId: req.tenant.id },
                     attributes: ['name', 'price']
                 },
                 {

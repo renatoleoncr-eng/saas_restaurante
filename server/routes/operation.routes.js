@@ -13,11 +13,11 @@ router.post('/accounts/open', async (req, res) => {
         const { Account, Table } = getModels();
         const { tableId, customerName, clientDni, clientAddress, userId, accountType } = req.body;
 
-        // Check if table is occupied
-        const table = await Table.findByPk(tableId);
+        // Check if table is occupied (within this tenant)
+        const table = await Table.findOne({ where: { id: tableId, TenantId: req.tenant.id } });
         
         // Ensure there isn't already an open account for this table
-        const existingAccount = await Account.findOne({ where: { TableId: tableId, status: 'open' } });
+        const existingAccount = await Account.findOne({ where: { TableId: tableId, status: 'open', TenantId: req.tenant.id } });
         if (existingAccount) {
             // Self-heal table status if it was erroneously set to free
             if (table.status !== 'occupied') {
@@ -40,7 +40,8 @@ router.post('/accounts/open', async (req, res) => {
             clientAddress: clientAddress || null,
             status: 'open',
             accountType: accountType || 'standard',
-            total: accountType === 'staff' && req.body.staffTotal !== undefined ? parseFloat(req.body.staffTotal) : 0
+            total: accountType === 'staff' && req.body.staffTotal !== undefined ? parseFloat(req.body.staffTotal) : 0,
+            TenantId: req.tenant.id
         });
 
         // Update Table Status
@@ -68,7 +69,7 @@ router.put('/accounts/:id', async (req, res) => {
     try {
         const { Account } = getModels();
         const { customerName, clientDni, clientAddress, accountType, staffTotal } = req.body;
-        const account = await Account.findByPk(req.params.id);
+        const account = await Account.findOne({ where: { id: req.params.id, TenantId: req.tenant.id } });
 
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
@@ -160,8 +161,8 @@ router.post('/accounts/transfer', async (req, res) => {
             return res.status(404).json({ error: 'Mesa de destino no encontrada' });
         }
         
-        // Safety check: ensure target table does not have an active account
-        const existingAccountTarget = await Account.findOne({ where: { TableId: newTableId, status: 'open' }, transaction: t });
+        // Safety check: ensure target table does not have an active account (within this tenant)
+        const existingAccountTarget = await Account.findOne({ where: { TableId: newTableId, status: 'open', TenantId: req.tenant.id }, transaction: t });
         if (existingAccountTarget) {
             await t.rollback();
             // Optional: Auto-heal the destination table status if it was free
@@ -179,9 +180,9 @@ router.post('/accounts/transfer', async (req, res) => {
             return res.status(400).json({ error: 'La mesa de destino ya está ocupada' });
         }
 
-        // 2. Find Active Account on Current Table
+        // 2. Find Active Account on Current Table (scoped to tenant)
         const account = await Account.findOne({
-            where: { TableId: currentTableId, status: 'open' },
+            where: { TableId: currentTableId, status: 'open', TenantId: req.tenant.id },
             transaction: t
         });
 
@@ -224,7 +225,7 @@ router.get('/accounts/table/:tableId', async (req, res) => {
         const { Account, Order, Product, Payment, Invoice } = getModels();
         const { tableId } = req.params;
         const account = await Account.findOne({
-            where: { TableId: tableId, status: 'open' },
+            where: { TableId: tableId, status: 'open', TenantId: req.tenant.id },
             include: [
                 { model: Order, include: [Product] },
                 { model: Payment },
@@ -310,10 +311,10 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
         const { id } = req.params;
         const { paymentMethod } = req.body;
 
-        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         const CashSessionId = activeSession ? activeSession.id : null;
 
-        const account = await Account.findByPk(id);
+        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         if (paymentMethod) {
@@ -344,7 +345,8 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
                 method: paymentMethod || 'efectivo',
                 evidence: account.paymentEvidence,
                 UserId: req.body.userId || null,
-                CashSessionId
+                CashSessionId,
+                TenantId: req.tenant.id
             });
         }
 
@@ -375,14 +377,14 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
         const { id } = req.params;
         const { amount, paymentMethod, userId } = req.body;
 
-        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         const CashSessionId = activeSession ? activeSession.id : null;
 
         if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: 'Monto inválido' });
         }
 
-        const account = await Account.findByPk(id, { include: [Payment] });
+        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id }, include: [Payment] });
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         const totalPaidBefore = (account.Payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
@@ -416,7 +418,8 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
             method: paymentMethod || 'efectivo',
             evidence: evidencePath,
             UserId: userId || null,
-            CashSessionId
+            CashSessionId,
+            TenantId: req.tenant.id
         });
 
         // Re-calculate total paid
@@ -466,7 +469,8 @@ router.post('/accounts/:id/cancel', async (req, res) => {
         const { id } = req.params;
         const { checkEmpty } = req.body;
         
-        const account = await Account.findByPk(id, {
+        const account = await Account.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [Order]
         });
 
@@ -1102,7 +1106,7 @@ router.post('/orders', async (req, res) => {
         }
 
         if (authorPin) {
-            const pinUser = await User.findOne({ where: { pin: authorPin } });
+            const pinUser = await User.findOne({ where: { pin: authorPin, TenantId: req.tenant.id } });
             if (!pinUser || pinUser.active === false) {
                 await t.rollback();
                 return res.status(400).json({ error: 'PIN incorrecto o usuario inactivo' });
@@ -1122,7 +1126,7 @@ router.post('/orders', async (req, res) => {
             });
         }
 
-        const account = await Account.findByPk(accountId, { transaction: t });
+        const account = await Account.findOne({ where: { id: accountId, TenantId: req.tenant.id }, transaction: t });
         if (!account || account.status !== 'open') {
             await t.rollback();
             return res.status(400).json({ error: 'Cuenta no activa' });
@@ -1150,8 +1154,8 @@ router.post('/orders', async (req, res) => {
                     priceAtOrder: finalComboPrice,
                     priceAtOrderAtCreation: originalComboPrice,
                     subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
-                    UserId: userId
-
+                    UserId: userId,
+                    TenantId: req.tenant.id
                 }, { transaction: t });
 
                 // Deduct stock for sub-items (linked products)
@@ -1239,8 +1243,8 @@ router.post('/orders', async (req, res) => {
                 priceAtOrder: finalPrice,
                 priceAtOrderAtCreation: originalResolvedPrice,
                 subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
-                UserId: userId // Track who placed the order
-
+                UserId: userId,
+                TenantId: req.tenant.id
             }, { transaction: t });
 
             // 1. Deduct Stock for Main Product
@@ -1377,18 +1381,19 @@ router.delete('/orders/:id', async (req, res) => {
         const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
         const { Order, Product, Account, User } = getModels();
 
-        const user = await User.findByPk(cancelOrderUserId);
+        const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ error: 'Solo los administradores pueden eliminar pedidos enviados.' });
         }
 
-        const order = await Order.findByPk(id, {
+        const order = await Order.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [Product]
         });
 
         if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
-        const account = await Account.findByPk(order.AccountId);
+        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id } });
 
         // Calculate data first before deleting order to ensure consistency
         const orderPrice = parseFloat(order.priceAtOrder || 0);
@@ -1437,18 +1442,19 @@ router.put('/orders/:id/decrement', async (req, res) => {
         const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
         const { Order, Product, Account, User } = getModels();
 
-        const user = await User.findByPk(cancelOrderUserId);
+        const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ error: 'Solo los administradores pueden reducir pedidos enviados.' });
         }
 
-        const order = await Order.findByPk(id, {
+        const order = await Order.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [Product]
         });
 
         if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
-        const account = await Account.findByPk(order.AccountId);
+        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id } });
         if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         const orderPrice = parseFloat(order.priceAtOrder || 0);
@@ -1539,7 +1545,7 @@ router.get('/orders/pending', async (req, res) => {
         const { Account, Order, Product, Table, Area, Op } = getModels();
 
         const accounts = await Account.findAll({
-            where: { status: 'open' },
+            where: { status: 'open', TenantId: req.tenant.id },
             include: [
                 {
                     model: Order,
@@ -1570,7 +1576,7 @@ router.put('/orders/:id/status', async (req, res) => {
         const { status } = req.body;
         const { Order } = getModels();
 
-        const order = await Order.findByPk(id);
+        const order = await Order.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
         order.status = status;
@@ -1604,7 +1610,8 @@ router.get('/reports/daily', async (req, res) => {
             where: {
                 createdAt: {
                     [Op.between]: [start, end]
-                }
+                },
+                TenantId: req.tenant.id
             },
             include: [
                 { model: getModels().User, attributes: ['username', 'displayName'] },
@@ -1630,7 +1637,7 @@ router.get('/reports/daily', async (req, res) => {
 
         // To keep the 'closedCount' stat roughly correct, we can independently fetch closed accounts
         const closedCount = await Account.count({
-            where: { status: 'closed', closedAt: { [Op.between]: [start, end] } }
+            where: { status: 'closed', closedAt: { [Op.between]: [start, end] }, TenantId: req.tenant.id }
         });
 
         // 2. Expenses (Outcome)
@@ -1639,7 +1646,8 @@ router.get('/reports/daily', async (req, res) => {
             where: {
                 date: {
                     [Op.between]: [start, end]
-                }
+                },
+                TenantId: req.tenant.id
             },
             include: [{ model: User, attributes: ['username', 'displayName'] }]
         });
@@ -1649,7 +1657,7 @@ router.get('/reports/daily', async (req, res) => {
         // 3. Open Accounts (Pending) - Snapshot (not time bound usually, just current)
         // If viewing past dates, "Pending" doesn't make much sense, but we can keep current pending as reference.
         const openAccounts = await Account.findAll({
-            where: { status: 'open' },
+            where: { status: 'open', TenantId: req.tenant.id },
             include: [
                 { model: Order, include: [Product] },
                 { model: getModels().Table, include: [getModels().Area] }
@@ -1702,6 +1710,7 @@ router.get('/products/sales', async (req, res) => {
 
         // First, get orders with Product and Account (no nested Table)
         const orders = await Order.findAll({
+            where: { TenantId: req.tenant.id },
             include: [
                 {
                     model: Product,
@@ -1768,12 +1777,12 @@ router.delete('/payments/:id', async (req, res) => {
         const { userId } = req.query; // Expecting admin userId
         const { Payment, User, Account, Table } = getModels();
 
-        const user = await User.findByPk(userId);
+        const user = await User.findOne({ where: { id: userId, TenantId: req.tenant.id } });
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ error: 'Solo los administradores pueden eliminar movimientos.' });
         }
 
-        const payment = await Payment.findByPk(id);
+        const payment = await Payment.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!payment) return res.status(404).json({ error: 'Pago no encontrado' });
 
         const accountId = payment.AccountId;
@@ -1833,7 +1842,8 @@ router.post('/accounts/:id/print-pre-cuenta', async (req, res) => {
         const { userId } = req.body;
         const { Account, Table, Order, Product, Payment, User } = getModels();
 
-        const account = await Account.findByPk(id, {
+        const account = await Account.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [
                 { model: Table },
                 {

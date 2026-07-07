@@ -9,6 +9,7 @@ router.get('/drink-promotions', async (req, res) => {
     try {
         const { DrinkPromotion, DrinkPromotionItem } = getModels();
         const promos = await DrinkPromotion.findAll({
+            where: { TenantId: req.tenant.id },
             include: [{
                 model: DrinkPromotionItem
             }],
@@ -32,14 +33,14 @@ router.post('/drink-promotions', async (req, res) => {
 
         if (!name || price === undefined) return res.status(400).json({ error: 'Nombre y precio son requeridos' });
 
-        // Simplified uniqueness check (MySQL is case-insensitive by default)
+        // Simplified uniqueness check scoped to tenant
         const existing = await DrinkPromotion.findOne({
-            where: { name: name.trim() }
+            where: { name: name.trim(), TenantId: req.tenant.id }
         });
 
         if (existing) return res.status(400).json({ error: `Ya existe una promoción con el nombre "${name}".` });
 
-        const promo = await DrinkPromotion.create({ name, price, active });
+        const promo = await DrinkPromotion.create({ name, price, active, TenantId: req.tenant.id });
         console.log("[DrinkPromotions] Promo created:", promo.id);
         await logAction(req, 'CREATE_PROMO_CATEGORY', 'DrinkPromotion', promo.id, { name, price, userId: req.body.userId || null });
         res.status(201).json(promo);
@@ -53,7 +54,7 @@ router.post('/drink-promotions', async (req, res) => {
 router.put('/drink-promotions/:id', async (req, res) => {
     try {
         const { DrinkPromotion } = getModels();
-        const promo = await DrinkPromotion.findByPk(req.params.id);
+        const promo = await DrinkPromotion.findOne({ where: { id: req.params.id, TenantId: req.tenant.id } });
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
         const { name, price, active } = req.body;
         if (name !== undefined) {
@@ -61,6 +62,7 @@ router.put('/drink-promotions/:id', async (req, res) => {
                 const existing = await DrinkPromotion.findOne({
                     where: {
                         name: name.trim(),
+                        TenantId: req.tenant.id,
                         id: { [require('sequelize').Op.ne]: req.params.id }
                     }
                 });
@@ -82,7 +84,8 @@ router.put('/drink-promotions/:id', async (req, res) => {
 router.delete('/drink-promotions/:id', async (req, res) => {
     try {
         const { DrinkPromotion, DrinkPromotionItem } = getModels();
-        const promo = await DrinkPromotion.findByPk(req.params.id, {
+        const promo = await DrinkPromotion.findOne({
+            where: { id: req.params.id, TenantId: req.tenant.id },
             include: [{ model: DrinkPromotionItem }]
         });
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
@@ -104,7 +107,7 @@ router.delete('/drink-promotions/:id', async (req, res) => {
 router.post('/drink-promotions/:id/items', async (req, res) => {
     try {
         const { DrinkPromotion, DrinkPromotionItem } = getModels();
-        const promo = await DrinkPromotion.findByPk(req.params.id);
+        const promo = await DrinkPromotion.findOne({ where: { id: req.params.id, TenantId: req.tenant.id } });
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
         const { name, individualPrice = 0, type = 'free', linkedProductId = null, stock = 0 } = req.body;
         if (!name) return res.status(400).json({ error: 'Nombre del trago requerido' });
@@ -125,7 +128,8 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
             type,
             linkedProductId: type === 'finished' ? null : linkedProductId,
             stock: type === 'finished' ? (parseInt(stock) || 0) : null,
-            DrinkPromotionId: promo.id
+            DrinkPromotionId: promo.id,
+            TenantId: req.tenant.id
         });
         await logAction(req, 'CREATE_PROMO_ITEM', 'DrinkPromotionItem', item.id, { name, promoName: promo.name, DrinkPromotionId: promo.id, userId: req.body.userId || null });
         res.status(201).json(item);
@@ -139,7 +143,7 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
 router.put('/drink-promotions/items/:itemId', async (req, res) => {
     try {
         const { DrinkPromotionItem } = getModels();
-        const item = await DrinkPromotionItem.findByPk(req.params.itemId);
+        const item = await DrinkPromotionItem.findOne({ where: { id: req.params.itemId, TenantId: req.tenant.id } });
         if (!item) return res.status(404).json({ error: 'Item no encontrado' });
         const { name, individualPrice, type, linkedProductId, stock } = req.body;
         if (name !== undefined) {
@@ -181,7 +185,7 @@ router.put('/drink-promotions/items/:itemId', async (req, res) => {
 router.delete('/drink-promotions/items/:itemId', async (req, res) => {
     try {
         const { DrinkPromotionItem } = getModels();
-        const item = await DrinkPromotionItem.findByPk(req.params.itemId);
+        const item = await DrinkPromotionItem.findOne({ where: { id: req.params.itemId, TenantId: req.tenant.id } });
         if (!item) return res.status(404).json({ error: 'Item no encontrado' });
         await item.destroy();
         await logAction(req, 'DELETE_PROMO_ITEM', 'DrinkPromotionItem', req.params.itemId, { name: item.name, DrinkPromotionId: item.DrinkPromotionId, userId: req.body.userId || req.query.userId || null });
@@ -199,7 +203,7 @@ router.get('/drink-promotions/items/:itemId/recipes', async (req, res) => {
     try {
         const { DrinkItemRecipe, Ingredient } = getModels();
         const recipes = await DrinkItemRecipe.findAll({
-            where: { DrinkPromotionItemId: req.params.itemId },
+            where: { DrinkPromotionItemId: req.params.itemId, TenantId: req.tenant.id },
             include: [{ model: Ingredient }]
         });
         res.json(recipes);
@@ -234,7 +238,8 @@ router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
             DrinkPromotionItemId: req.params.itemId,
             IngredientId: ingredientId,
             quantity,
-            presentation: presentation || null
+            presentation: presentation || null,
+            TenantId: req.tenant.id
         });
         const withIng = await DrinkItemRecipe.findByPk(newRecipe.id, { include: [{ model: Ingredient }] });
         res.json(withIng);
@@ -248,7 +253,7 @@ router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
 router.delete('/drink-promotions/items/recipes/:recipeId', async (req, res) => {
     try {
         const { DrinkItemRecipe } = getModels();
-        await DrinkItemRecipe.destroy({ where: { id: req.params.recipeId } });
+        await DrinkItemRecipe.destroy({ where: { id: req.params.recipeId, TenantId: req.tenant.id } });
         res.json({ success: true });
     } catch (err) {
         console.error("[DrinkPromotions] DELETE recipe error:", err);

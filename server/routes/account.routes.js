@@ -54,7 +54,7 @@ router.get('/accounts/all', async (req, res) => {
             FROM Accounts a
             LEFT JOIN Tables t ON t.id = a.TableId
             LEFT JOIN Areas ar ON ar.id = t.AreaId
-            WHERE 1=1 ${dateFilter} ${statusFilter} ${searchFilter}
+            WHERE 1=1 AND a.TenantId = ${req.tenant.id} ${dateFilter} ${statusFilter} ${searchFilter}
             ORDER BY a.createdAt DESC
         `;
 
@@ -101,7 +101,8 @@ router.delete('/accounts/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const account = await Account.findByPk(id, {
+        const account = await Account.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [{ model: Order }],
             transaction: t
         });
@@ -159,7 +160,8 @@ router.get('/accounts/specific/:id', async (req, res) => {
         const { Account, Order, Product, Invoice } = getModels();
         const { id } = req.params;
 
-        const account = await Account.findByPk(id, {
+        const account = await Account.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [
                 { model: Order, include: [Product] },
                 { model: getModels().Payment },

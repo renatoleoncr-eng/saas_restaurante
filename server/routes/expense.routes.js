@@ -7,7 +7,7 @@ const { getHotelDayRange } = require('../utils/dateUtils');
 router.get('/expenses', async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const where = {};
+        const where = { TenantId: req.tenant.id };
 
         // Use Hotel Day Logic (7 AM to 6:59:59 AM next day)
         const [start, end] = getHotelDayRange(startDate, endDate);
@@ -32,7 +32,7 @@ router.post('/expenses', async (req, res) => {
         const paymentMethod = 'efectivo'; // Always force cash
         const { Payment, Expense, CashSession } = require('../models');
 
-        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         const CashSessionId = activeSession ? activeSession.id : null;
 
         // Validation: Prevent negative cash
@@ -46,7 +46,8 @@ router.post('/expenses', async (req, res) => {
             const sessionPayments = await Payment.findAll({
                 where: { 
                     method: 'efectivo',
-                    CashSessionId: activeSession.id
+                    CashSessionId: activeSession.id,
+                    TenantId: req.tenant.id
                 },
                 attributes: ['amount']
             });
@@ -55,7 +56,8 @@ router.post('/expenses', async (req, res) => {
             const sessionExpenses = await Expense.findAll({
                 where: { 
                     paymentMethod: 'efectivo',
-                    CashSessionId: activeSession.id
+                    CashSessionId: activeSession.id,
+                    TenantId: req.tenant.id
                 },
                 attributes: ['amount']
             });
@@ -77,7 +79,8 @@ router.post('/expenses', async (req, res) => {
             paymentMethod,
             UserId: userId,
             date: date || new Date(),
-            CashSessionId
+            CashSessionId,
+            TenantId: req.tenant.id
         });
 
         res.json(expense);
@@ -93,12 +96,12 @@ router.delete('/expenses/:id', async (req, res) => {
         const { userId } = req.query; // Expecting admin userId for validation or check role in session
         const { Expense, User } = require('../models');
 
-        const user = await User.findByPk(userId);
+        const user = await User.findOne({ where: { id: userId, TenantId: req.tenant.id } });
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ error: 'Solo los administradores pueden eliminar movimientos.' });
         }
 
-        const expense = await Expense.findByPk(id);
+        const expense = await Expense.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!expense) return res.status(404).json({ error: 'Egreso no encontrado' });
 
         await expense.destroy();

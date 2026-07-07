@@ -6,7 +6,7 @@ const { Reservation, Table, Op } = require('../models');
 router.get('/', async (req, res) => {
     try {
         const { date, status } = req.query;
-        const where = {};
+        const where = { TenantId: req.tenant.id };
 
         if (status) where.status = status;
 
@@ -40,10 +40,11 @@ router.post('/', async (req, res) => {
         const newReservation = await Reservation.create({
             customerName,
             contactInfo,
-            reservationTime, // Frontend should send ISO string
+            reservationTime,
             TableId: tableId,
             notes,
-            status: 'confirmed'
+            status: 'confirmed',
+            TenantId: req.tenant.id
         });
 
         res.json(newReservation);
@@ -56,7 +57,7 @@ router.post('/', async (req, res) => {
 router.put('/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
-        const reservation = await Reservation.findByPk(req.params.id);
+        const reservation = await Reservation.findOne({ where: { id: req.params.id, TenantId: req.tenant.id } });
         if (!reservation) return res.status(404).json({ error: 'Reserva no encontrada' });
 
         reservation.status = status;
@@ -74,9 +75,9 @@ router.get('/customer-history', async (req, res) => {
         const { name } = req.query;
         if (!name) return res.json({ count: 0 });
 
-        // Count in Reservations
+        // Count in Reservations (scoped to tenant)
         const reservationCount = await Reservation.count({
-            where: { customerName: { [require('sequelize').Op.like]: `%${name}%` } }
+            where: { customerName: { [require('sequelize').Op.like]: `%${name}%` }, TenantId: req.tenant.id }
         });
 
         // Count in Closed Accounts (if we tracked names there too, which we do)
@@ -85,7 +86,8 @@ router.get('/customer-history', async (req, res) => {
         const accountCount = await Account.count({
             where: {
                 customerName: { [require('sequelize').Op.like]: `%${name}%` },
-                status: 'closed'
+                status: 'closed',
+                TenantId: req.tenant.id
             }
         });
 

@@ -4,32 +4,37 @@ const { Ingredient, Recipe, Product, sequelize } = require('../models');
 
 // === INGREDIENTS ===
 
-// Get all ingredients
+// Get all ingredients — scoped to tenant
 router.get('/ingredients', async (req, res) => {
     try {
-        const ingredients = await Ingredient.findAll();
+        const ingredients = await Ingredient.findAll({ where: { TenantId: req.tenant.id } });
         res.json(ingredients);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Create/Update Ingredient
+// Create/Update Ingredient — scoped to tenant
 router.post('/ingredients', async (req, res) => {
     const { Op } = require('sequelize');
     try {
         const { name, unit, stock, id } = req.body;
         const trimmedName = name ? name.trim().toLowerCase() : '';
+        const tenantId = req.tenant.id;
 
-        // Check for duplicates (Case-insensitive, within Ingredients only)
+        // Check for duplicates within this tenant
         if (name) {
             const existingIngredient = await Ingredient.findOne({
                 where: id ? {
+                    TenantId: tenantId,
                     [Op.and]: [
                         sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmedName),
                         { id: { [Op.ne]: id } }
                     ]
-                } : sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmedName)
+                } : {
+                    TenantId: tenantId,
+                    [Op.and]: [sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmedName)]
+                }
             });
 
             if (existingIngredient) {
@@ -38,10 +43,10 @@ router.post('/ingredients', async (req, res) => {
         }
 
         if (id) {
-            await Ingredient.update({ name, unit, stock }, { where: { id } });
+            await Ingredient.update({ name, unit, stock }, { where: { id, TenantId: tenantId } });
             res.json({ success: true });
         } else {
-            const newItem = await Ingredient.create({ name, unit, stock });
+            const newItem = await Ingredient.create({ name, unit, stock, TenantId: tenantId });
             res.json(newItem);
         }
     } catch (err) {
@@ -49,10 +54,10 @@ router.post('/ingredients', async (req, res) => {
     }
 });
 
-// Delete Ingredient
+// Delete Ingredient — scoped to tenant
 router.delete('/ingredients/:id', async (req, res) => {
     try {
-        await Ingredient.destroy({ where: { id: req.params.id } });
+        await Ingredient.destroy({ where: { id: req.params.id, TenantId: req.tenant.id } });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -66,9 +71,10 @@ router.post('/ingredients/:id/movement', async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-        const { type, amount, reason, userId } = req.body; // type: 'add' or 'remove'
+        const { type, amount, reason, userId } = req.body;
+        const tenantId = req.tenant.id;
 
-        const ingredient = await Ingredient.findByPk(id, { transaction: t });
+        const ingredient = await Ingredient.findOne({ where: { id, TenantId: tenantId }, transaction: t });
         if (!ingredient) {
             await t.rollback();
             return res.status(404).json({ error: 'Ingrediente no encontrado' });
@@ -98,7 +104,8 @@ router.post('/ingredients/:id/movement', async (req, res) => {
             reason: reason,
             previousStock: previousStock,
             newStock: newStock,
-            UserId: userId || null // Should come from auth if available
+            UserId: userId || null,
+            TenantId: tenantId
         }, { transaction: t });
 
         await t.commit();
@@ -109,12 +116,12 @@ router.post('/ingredients/:id/movement', async (req, res) => {
     }
 });
 
-// Get Movements for an Ingredient
+// Get Movements for an Ingredient — scoped to tenant
 router.get('/ingredients/:id/movements', async (req, res) => {
     try {
         const { IngredientMovement, User } = require('../models');
         const movements = await IngredientMovement.findAll({
-            where: { IngredientId: req.params.id },
+            where: { IngredientId: req.params.id, TenantId: req.tenant.id },
             include: [{ model: User, attributes: ['username', 'displayName'] }],
             order: [['createdAt', 'DESC']],
             limit: 50
@@ -125,11 +132,12 @@ router.get('/ingredients/:id/movements', async (req, res) => {
     }
 });
 
-// Get All Movements (Global History)
+// Get All Movements (Global History) — scoped to tenant
 router.get('/ingredients/movements/all', async (req, res) => {
     try {
         const { IngredientMovement, Ingredient, User } = require('../models');
         const movements = await IngredientMovement.findAll({
+            where: { TenantId: req.tenant.id },
             include: [
                 { model: Ingredient, attributes: ['name', 'unit'] },
                 { model: User, attributes: ['username', 'displayName'] },
@@ -146,11 +154,11 @@ router.get('/ingredients/movements/all', async (req, res) => {
 
 // === RECIPES ===
 
-// Get Recipe for a Product
+// Get Recipe for a Product — scoped to tenant
 router.get('/recipes/:productId', async (req, res) => {
     try {
         const recipes = await Recipe.findAll({
-            where: { ProductId: req.params.productId },
+            where: { ProductId: req.params.productId, TenantId: req.tenant.id },
             include: [Ingredient]
         });
         res.json(recipes);
@@ -159,15 +167,17 @@ router.get('/recipes/:productId', async (req, res) => {
     }
 });
 
-// Add Ingredient to Recipe
+// Add Ingredient to Recipe — scoped to tenant
 router.post('/recipes', async (req, res) => {
     try {
         const { productId, ingredientId, quantity, presentation } = req.body;
+        const tenantId = req.tenant.id;
 
         const whereClause = {
             ProductId: productId,
             IngredientId: ingredientId,
-            presentation: presentation || null
+            presentation: presentation || null,
+            TenantId: tenantId
         };
 
         // Check if exists
@@ -182,7 +192,8 @@ router.post('/recipes', async (req, res) => {
                 ProductId: productId,
                 IngredientId: ingredientId,
                 quantity,
-                presentation: presentation || null
+                presentation: presentation || null,
+                TenantId: tenantId
             });
             res.json(newRecipe);
         }
@@ -191,10 +202,10 @@ router.post('/recipes', async (req, res) => {
     }
 });
 
-// Remove Ingredient from Recipe
+// Remove Ingredient from Recipe — scoped to tenant
 router.delete('/recipes/:id', async (req, res) => {
     try {
-        await Recipe.destroy({ where: { id: req.params.id } });
+        await Recipe.destroy({ where: { id: req.params.id, TenantId: req.tenant.id } });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -11,6 +11,7 @@ router.get('/products', async (req, res) => {
     try {
         const { Product, ProductVariant, Recipe, Ingredient } = getModels();
         const products = await Product.findAll({
+            where: { TenantId: req.tenant.id },
             include: [
                 { model: Recipe, include: [Ingredient] },
                 { model: ProductVariant }
@@ -45,11 +46,12 @@ router.post('/products', async (req, res) => {
             return res.status(400).json({ error: `El precio para Entradas/Segundos debe ser mayor a 0.` });
         }
 
-        // Check for duplicates (Case-insensitive, scoped by category: Menu Options vs Preparados/Terminados)
+        // Check for duplicates (Case-insensitive, scoped by category and tenant)
         const { Op } = require('sequelize');
         const isMenuOption = type === 'daily_entry' || type === 'daily_main';
         const existingProduct = await Product.findOne({
             where: {
+                TenantId: req.tenant.id,
                 [Op.and]: [
                     sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), name.trim().toLowerCase()),
                     isMenuOption ? { type } : { 
@@ -86,7 +88,8 @@ router.post('/products', async (req, res) => {
             happyHourPrice: happyHourPrice || null,
             happyHourStart: happyHourStart || null,
             happyHourEnd: happyHourEnd || null,
-            presentations: '[]' // OBSOLETE: We strictly use the ProductVariants relational table now
+            presentations: '[]',
+            TenantId: req.tenant.id
         }, { transaction: t });
         console.timeEnd('PRODUCT_CREATE_ENDPOINT');
 
@@ -99,7 +102,8 @@ router.post('/products', async (req, res) => {
                     stock: Math.max(0, p.stock || 0),
                     happyHourPrice: p.happyHourPrice || null,
                     happyHourStart: p.happyHourStart || null,
-                    happyHourEnd: p.happyHourEnd || null
+                    happyHourEnd: p.happyHourEnd || null,
+                    TenantId: req.tenant.id
                 }, { transaction: t });
             }
         }
@@ -110,7 +114,8 @@ router.post('/products', async (req, res) => {
                     ProductId: product.id,
                     IngredientId: r.IngredientId,
                     quantity: r.quantity,
-                    presentation: r.presentation || null
+                    presentation: r.presentation || null,
+                    TenantId: req.tenant.id
                 }, { transaction: t });
             }
         }
@@ -144,7 +149,7 @@ router.put('/products/:id', async (req, res) => {
         // *** FIX: requiresPreparation was missing from destructuring — this was the bug ***
         const { name, price, type, stock, isStockManaged, category, linkedProductId, presentationsList, recipes, requiresPreparation, happyHourPrice, happyHourStart, happyHourEnd } = req.body;
 
-        const product = await Product.findByPk(id, { transaction: t });
+        const product = await Product.findOne({ where: { id, TenantId: req.tenant.id }, transaction: t });
         if (!product) {
             await t.rollback();
             return res.status(404).json({ error: 'Product not found' });
@@ -194,6 +199,7 @@ router.put('/products/:id', async (req, res) => {
 
             const existingProduct = await Product.findOne({
                 where: {
+                    TenantId: req.tenant.id,
                     [Op.and]: [
                         sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmedName),
                         isMenuOption ? { type: finalType } : { 
@@ -265,7 +271,8 @@ router.put('/products/:id', async (req, res) => {
                         stock: Math.max(0, p.stock || 0),
                         happyHourPrice: p.happyHourPrice || null,
                         happyHourStart: p.happyHourStart || null,
-                        happyHourEnd: p.happyHourEnd || null
+                        happyHourEnd: p.happyHourEnd || null,
+                        TenantId: req.tenant.id
                     }, { transaction: t });
                 }
             }
@@ -278,7 +285,8 @@ router.put('/products/:id', async (req, res) => {
                     ProductId: id,
                     IngredientId: r.IngredientId,
                     quantity: r.quantity,
-                    presentation: r.presentation || null
+                    presentation: r.presentation || null,
+                    TenantId: req.tenant.id
                 }, { transaction: t });
             }
         }
@@ -310,13 +318,12 @@ router.delete('/products/:id', async (req, res) => {
             return res.status(500).json({ error: 'Internal Server Error: Order model missing' });
         }
 
-        // NEW GUARD: Only block deletion if the product is in an ACTIVE (OPEN) account.
-        // This allows deleting products with historical sales while preserving reports via soft-delete.
+        // Only block deletion if the product is in an ACTIVE (OPEN) account.
         const activeSalesCount = await Order.count({
-            where: { ProductId: id },
+            where: { ProductId: id, TenantId: req.tenant.id },
             include: [{
                 model: Account,
-                where: { status: 'open' }
+                where: { status: 'open', TenantId: req.tenant.id }
             }]
         });
         console.log(`[DEBUG] Product ID ${id} has ${activeSalesCount} orders in ACTIVE accounts`);
@@ -325,10 +332,10 @@ router.delete('/products/:id', async (req, res) => {
             return res.status(400).json({ error: 'No se puede eliminar el producto porque tiene ventas en mesas ABIERTAS. Cierre las mesas primero.' });
         }
 
-        await Recipe.destroy({ where: { ProductId: id } });
-        await ProductVariant.destroy({ where: { ProductId: id } });
+        await Recipe.destroy({ where: { ProductId: id, TenantId: req.tenant.id } });
+        await ProductVariant.destroy({ where: { ProductId: id, TenantId: req.tenant.id } });
 
-        const deletedCount = await Product.destroy({ where: { id } });
+        const deletedCount = await Product.destroy({ where: { id, TenantId: req.tenant.id } });
         console.log(`[DEBUG] Product ID ${id} deleted count: ${deletedCount}`);
 
         await logAction(req, 'DELETE_PRODUCT', 'Product', id, null);
@@ -354,7 +361,7 @@ router.post('/products/:id/movement', async (req, res) => {
         let variantName = null;
 
         if (variantId) {
-            const variant = await ProductVariant.findByPk(variantId, { transaction: t });
+            const variant = await ProductVariant.findOne({ where: { id: variantId, TenantId: req.tenant.id }, transaction: t });
             if (!variant) throw new Error("Variante no encontrada");
 
             previousStock = parseFloat(variant.stock);
@@ -367,7 +374,7 @@ router.post('/products/:id/movement', async (req, res) => {
             variantName = variant.name;
 
         } else {
-            const product = await Product.findByPk(id, { transaction: t });
+            const product = await Product.findOne({ where: { id, TenantId: req.tenant.id }, transaction: t });
             if (!product) {
                 await t.rollback();
                 return res.status(404).json({ error: 'Producto no encontrado' });
@@ -390,7 +397,8 @@ router.post('/products/:id/movement', async (req, res) => {
             reason: reason + (variantName ? ` [${variantName}]` : ''),
             previousStock: previousStock,
             newStock: newStock,
-            UserId: userId || null
+            UserId: userId || null,
+            TenantId: req.tenant.id
         }, { transaction: t });
 
         await t.commit();
@@ -407,7 +415,7 @@ router.get('/products/:id/movements', async (req, res) => {
         const { id } = req.params;
         const { ProductMovement, ProductVariant, User } = getModels();
         const movements = await ProductMovement.findAll({
-            where: { ProductId: id },
+            where: { ProductId: id, TenantId: req.tenant.id },
             include: [{ model: User, attributes: ['displayName', 'username'] }, { model: ProductVariant }],
             order: [['createdAt', 'DESC']]
         });
@@ -440,11 +448,12 @@ router.get('/products/movements/all', async (req, res) => {
         }
 
         const movements = await ProductMovement.findAll({
+            where: { TenantId: req.tenant.id },
             include: [
                 {
                     model: Product,
                     attributes: ['name', 'type', 'isStockManaged', 'requiresPreparation'],
-                    where: Object.keys(productWhere).length > 0 ? productWhere : undefined,
+                    where: Object.keys(productWhere).length > 0 ? { ...productWhere, TenantId: req.tenant.id } : { TenantId: req.tenant.id },
                     paranoid: false
                 },
                 { model: User, attributes: ['username', 'displayName'] },

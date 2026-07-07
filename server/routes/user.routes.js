@@ -3,14 +3,12 @@ const router = express.Router();
 const { User } = require('../models');
 const { logAction } = require('../utils/audit');
 
-// Middleware to check if user is admin is ideal, but for now we trust frontend hiding + prototype speed.
-// In production, add middleware: const isAdmin = (req, res, next) => ...
-
-// GET ALL USERS (Admin)
+// GET ALL USERS (Admin) — scoped to tenant
 router.get('/users', async (req, res) => {
     try {
         const users = await User.findAll({
-            attributes: ['id', 'username', 'displayName', 'role', 'pin', 'requirePinPrompt', 'active'] // Exclude password
+            where: { TenantId: req.tenant.id },
+            attributes: ['id', 'username', 'displayName', 'role', 'pin', 'requirePinPrompt', 'active']
         });
         res.json(users);
     } catch (err) {
@@ -18,28 +16,30 @@ router.get('/users', async (req, res) => {
     }
 });
 
-// CREATE USER (Admin)
+// CREATE USER (Admin) — scoped to tenant
 router.post('/users', async (req, res) => {
     try {
         const { username, password, displayName, role, pin, requirePinPrompt } = req.body;
+        const tenantId = req.tenant.id;
 
-        // Check duplicate
-        const existing = await User.findOne({ where: { username } });
+        // Check duplicate username within this tenant
+        const existing = await User.findOne({ where: { username, TenantId: tenantId } });
         if (existing) return res.status(400).json({ error: 'El usuario ya existe' });
 
-        // Check duplicate PIN if provided
+        // Check duplicate PIN within this tenant
         if (pin) {
-            const existingPin = await User.findOne({ where: { pin } });
+            const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
             if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
         }
 
         const newUser = await User.create({
             username,
-            password, // Store plain/hashed as per current logic
+            password,
             displayName,
             role,
             pin: pin || null,
-            requirePinPrompt: requirePinPrompt || false
+            requirePinPrompt: requirePinPrompt || false,
+            TenantId: tenantId
         });
 
         await logAction(req, 'CREATE_USER', 'User', newUser.id, { username, role });
@@ -50,16 +50,17 @@ router.post('/users', async (req, res) => {
     }
 });
 
-// UPDATE USER (Admin)
+// UPDATE USER (Admin) — scoped to tenant
 router.put('/users/:id', async (req, res) => {
     try {
         const { displayName, role, pin, requirePinPrompt } = req.body;
-        const user = await User.findByPk(req.params.id);
+        const tenantId = req.tenant.id;
+        const user = await User.findOne({ where: { id: req.params.id, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        // Check duplicate PIN if provided and changed
+        // Check duplicate PIN within this tenant
         if (pin && pin !== user.pin) {
-            const existingPin = await User.findOne({ where: { pin } });
+            const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
             if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
         }
 
@@ -76,10 +77,11 @@ router.put('/users/:id', async (req, res) => {
     }
 });
 
-// DELETE USER (Admin)
+// DELETE USER (deactivate) — scoped to tenant
 router.delete('/users/:id', async (req, res) => {
     try {
-        const user = await User.findByPk(req.params.id);
+        const tenantId = req.tenant.id;
+        const user = await User.findOne({ where: { id: req.params.id, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
         await user.update({ active: false });
@@ -90,10 +92,11 @@ router.delete('/users/:id', async (req, res) => {
     }
 });
 
-// REACTIVATE USER (Admin)
+// REACTIVATE USER (Admin) — scoped to tenant
 router.put('/users/:id/reactivate', async (req, res) => {
     try {
-        const user = await User.findByPk(req.params.id);
+        const tenantId = req.tenant.id;
+        const user = await User.findOne({ where: { id: req.params.id, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
         await user.update({ active: true });
@@ -104,18 +107,15 @@ router.put('/users/:id/reactivate', async (req, res) => {
     }
 });
 
-// CHANGE PASSWORD & PIN (Admin or Self)
+// CHANGE PASSWORD & PIN (Admin or Self) — scoped to tenant
 router.put('/users/:id/password', async (req, res) => {
     try {
         const { currentPassword, newPassword, newPin, requesterRole, requesterId } = req.body;
         const targetUserId = parseInt(req.params.id);
+        const tenantId = req.tenant.id;
 
-        const user = await User.findByPk(targetUserId);
+        const user = await User.findOne({ where: { id: targetUserId, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-        // Logic:
-        // 1. If requester is Admin: Can force change without current password.
-        // 2. If requester is Self: Must provide valid current password.
 
         const isAdmin = requesterRole === 'admin';
         const isSelf = requesterId === targetUserId;
@@ -125,15 +125,14 @@ router.put('/users/:id/password', async (req, res) => {
         }
 
         if (isSelf && !isAdmin) {
-            // For self-update, verify current password
             if (user.password !== currentPassword) {
                 return res.status(400).json({ error: 'Contraseña actual incorrecta' });
             }
         }
 
-        // Check duplicate PIN if provided and changed
+        // Check duplicate PIN within this tenant
         if (newPin && newPin !== user.pin) {
-            const existingPin = await User.findOne({ where: { pin: newPin } });
+            const existingPin = await User.findOne({ where: { pin: newPin, TenantId: tenantId } });
             if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
         }
 

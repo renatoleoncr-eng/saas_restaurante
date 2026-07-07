@@ -17,7 +17,7 @@ router.get('/audit-logs', async (req, res) => {
             offset = 0
         } = req.query;
 
-        const where = {};
+        const where = { TenantId: req.tenant.id };
 
         // Filter by userId
         if (userId) {
@@ -67,12 +67,17 @@ router.get('/audit-logs', async (req, res) => {
 // GET distinct actions for filter dropdown
 router.get('/audit-logs/meta', async (req, res) => {
     try {
+        const tenantId = req.tenant.id;
         const actions = await AuditLog.findAll({
+            where: { TenantId: tenantId },
             attributes: [[require('sequelize').fn('DISTINCT', require('sequelize').col('action')), 'action']],
             raw: true
         });
         const { User: UserModel } = require('../models');
-        const users = await UserModel.findAll({ attributes: ['id', 'username', 'displayName'] });
+        const users = await UserModel.findAll({
+            where: { TenantId: tenantId },
+            attributes: ['id', 'username', 'displayName']
+        });
         res.json({ actions: actions.map(a => a.action), users });
     } catch (err) {
         res.status(500).json({ error: err.message });

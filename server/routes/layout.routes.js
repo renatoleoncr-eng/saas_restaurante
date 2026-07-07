@@ -13,13 +13,15 @@ console.log('Layout Routes Loaded.');
 router.get('/areas', async (req, res) => {
     try {
         const { Area, Table, Account } = getModels();
+        const tenantId = req.tenant.id;
 
-        // Fetch all open accounts
-        const openAccounts = await Account.findAll({ where: { status: 'open' } });
+        // Fetch all open accounts scoped to this tenant
+        const openAccounts = await Account.findAll({ where: { status: 'open', TenantId: tenantId } });
         const openTableIds = openAccounts.map(a => a.TableId);
 
         const areas = await Area.findAll({
-            include: [{ model: Table }],
+            where: { TenantId: tenantId },
+            include: [{ model: Table, where: { TenantId: tenantId }, required: false }],
             order: [['sortOrder', 'ASC']]
         });
 
@@ -61,14 +63,12 @@ router.get('/areas', async (req, res) => {
     }
 });
 
-// ... (other handlers)
-
 // Create Area
 router.post('/areas', async (req, res) => {
     try {
         const { Area } = getModels();
         const { name, sortOrder } = req.body;
-        const area = await Area.create({ name, sortOrder });
+        const area = await Area.create({ name, sortOrder, TenantId: req.tenant.id });
         await logAction(req, 'CREATE_AREA', 'Area', area.id, { name, userId: req.body.userId || null });
         res.json(area);
     } catch (err) {
@@ -83,7 +83,7 @@ router.put('/areas/:id', async (req, res) => {
         const { Area } = getModels();
         const { id } = req.params;
         const { name, sortOrder } = req.body;
-        await Area.update({ name, sortOrder }, { where: { id } });
+        await Area.update({ name, sortOrder }, { where: { id, TenantId: req.tenant.id } });
         res.json({ success: true });
     } catch (err) {
         console.error("Error in PUT /areas:", err);
@@ -96,8 +96,8 @@ router.delete('/areas/:id', async (req, res) => {
     try {
         const { Area } = getModels();
         const { id } = req.params;
-        const area = await Area.findByPk(id);
-        await Area.destroy({ where: { id } });
+        const area = await Area.findOne({ where: { id, TenantId: req.tenant.id } });
+        await Area.destroy({ where: { id, TenantId: req.tenant.id } });
         await logAction(req, 'DELETE_AREA', 'Area', id, { name: area?.name, userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
@@ -113,7 +113,7 @@ router.get('/tables', async (req, res) => {
     try {
         const { Table } = getModels();
         const { areaId } = req.query;
-        const where = {};
+        const where = { TenantId: req.tenant.id };
         if (areaId) {
             where.AreaId = areaId;
         }
@@ -141,14 +141,15 @@ router.post('/tables', async (req, res) => {
     try {
         const { Table } = getModels();
         const { number, AreaId, x, y } = req.body;
+        const tenantId = req.tenant.id;
 
-        // Validation for uniqueness per area
-        const existing = await Table.findOne({ where: { number: String(number), AreaId } });
+        // Validation for uniqueness per area scoped to tenant
+        const existing = await Table.findOne({ where: { number: String(number), AreaId, TenantId: tenantId } });
         if (existing) {
             return res.status(400).json({ error: `Ya existe una mesa con el número '${number}' en esta categoría/área.` });
         }
 
-        const table = await Table.create({ number: String(number), AreaId, x, y });
+        const table = await Table.create({ number: String(number), AreaId, x, y, TenantId: tenantId });
         await logAction(req, 'CREATE_TABLE', 'Table', table.id, { number: String(number), AreaId, userId: req.body.userId || null });
         res.json(table);
     } catch (err) {
@@ -163,13 +164,14 @@ router.put('/tables/:id', async (req, res) => {
         const { Table } = getModels();
         const { id } = req.params;
         const { number, x, y, status } = req.body;
+        const tenantId = req.tenant.id;
 
-        const currentTable = await Table.findByPk(id);
+        const currentTable = await Table.findOne({ where: { id, TenantId: tenantId } });
         if (!currentTable) return res.status(404).json({ error: "Mesa no encontrada" });
 
         // Uniqueness validation if number is changing
         if (number !== undefined && String(number) !== currentTable.number) {
-            const existing = await Table.findOne({ where: { number: String(number), AreaId: currentTable.AreaId } });
+            const existing = await Table.findOne({ where: { number: String(number), AreaId: currentTable.AreaId, TenantId: tenantId } });
             if (existing) {
                 return res.status(400).json({ error: `Ya existe una mesa con el número '${number}' en esta categoría/área.` });
             }
@@ -177,7 +179,7 @@ router.put('/tables/:id', async (req, res) => {
 
         await Table.update(
             { number: number !== undefined ? String(number) : currentTable.number, x, y, status },
-            { where: { id } }
+            { where: { id, TenantId: tenantId } }
         );
         const io = req.app.get('io');
         if (io && status !== undefined) {
@@ -195,12 +197,14 @@ router.delete('/tables/:id', async (req, res) => {
     try {
         const { Table, Account } = getModels();
         const { id } = req.params;
+        const tenantId = req.tenant.id;
 
-        // Check if table has an open account
+        // Check if table has an open account (scoped to tenant)
         const openAccount = await Account.findOne({
             where: {
                 TableId: id,
-                status: 'open'
+                status: 'open',
+                TenantId: tenantId
             }
         });
 
@@ -210,7 +214,7 @@ router.delete('/tables/:id', async (req, res) => {
             });
         }
 
-        await Table.destroy({ where: { id } });
+        await Table.destroy({ where: { id, TenantId: tenantId } });
         await logAction(req, 'DELETE_TABLE', 'Table', id, { userId: req.body.userId || req.query.userId || null });
         res.json({ success: true });
     } catch (err) {
@@ -222,14 +226,15 @@ router.delete('/tables/:id', async (req, res) => {
 // Get Table Details (inc current account)
 router.get('/tables/:id', async (req, res) => {
     try {
-        const { Table, Account } = getModels();
+        const { Table, Account, Area } = getModels();
         const { id } = req.params;
-        const { Area } = getModels();
-        const table = await Table.findByPk(id, {
+        const tenantId = req.tenant.id;
+        const table = await Table.findOne({
+            where: { id, TenantId: tenantId },
             include: [
                 {
                     model: Account,
-                    where: { status: 'open' },
+                    where: { status: 'open', TenantId: tenantId },
                     required: false
                 },
                 { model: Area }

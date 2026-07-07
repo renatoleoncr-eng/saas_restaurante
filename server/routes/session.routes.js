@@ -8,7 +8,7 @@ const { logAction } = require('../utils/audit');
 router.get('/sessions/current', async (req, res) => {
     try {
         const activeSession = await CashSession.findOne({
-            where: { status: 'open' },
+            where: { status: 'open', TenantId: req.tenant.id },
             include: [
                 { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] }
             ]
@@ -20,7 +20,7 @@ router.get('/sessions/current', async (req, res) => {
 
         // Calculate expected totals
         const payments = await Payment.findAll({
-            where: { CashSessionId: activeSession.id },
+            where: { CashSessionId: activeSession.id, TenantId: req.tenant.id },
             include: [
                 {
                     model: Account,
@@ -35,7 +35,7 @@ router.get('/sessions/current', async (req, res) => {
         });
 
         const expenses = await Expense.findAll({
-            where: { CashSessionId: activeSession.id },
+            where: { CashSessionId: activeSession.id, TenantId: req.tenant.id },
             include: [
                 {
                     model: User,
@@ -98,7 +98,8 @@ router.get('/sessions/current', async (req, res) => {
             const orders = await Order.findAll({
                 where: {
                     AccountId: { [Op.in]: accountIds },
-                    status: { [Op.notIn]: ['cancelled'] }
+                    status: { [Op.notIn]: ['cancelled'] },
+                    TenantId: req.tenant.id
                 },
                 include: [{ model: Product }]
             });
@@ -168,7 +169,8 @@ router.get('/sessions/current', async (req, res) => {
 // GET /api/sessions/:id/details - Get details for any session (current or historic)
 router.get('/sessions/:id/details', async (req, res) => {
     try {
-        const session = await CashSession.findByPk(req.params.id, {
+        const session = await CashSession.findOne({
+            where: { id: req.params.id, TenantId: req.tenant.id },
             include: [
                 { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] },
                 { model: User, as: 'Closer', attributes: ['id', 'username', 'displayName'] }
@@ -181,7 +183,7 @@ router.get('/sessions/:id/details', async (req, res) => {
 
         // Calculate expected totals
         const payments = await Payment.findAll({
-            where: { CashSessionId: session.id },
+            where: { CashSessionId: session.id, TenantId: req.tenant.id },
             include: [
                 {
                     model: Account,
@@ -196,7 +198,7 @@ router.get('/sessions/:id/details', async (req, res) => {
         });
 
         const expenses = await Expense.findAll({
-            where: { CashSessionId: session.id },
+            where: { CashSessionId: session.id, TenantId: req.tenant.id },
             include: [
                 {
                     model: User,
@@ -258,7 +260,8 @@ router.get('/sessions/:id/details', async (req, res) => {
             const orders = await Order.findAll({
                 where: {
                     AccountId: { [Op.in]: accountIds },
-                    status: { [Op.notIn]: ['cancelled'] }
+                    status: { [Op.notIn]: ['cancelled'] },
+                    TenantId: req.tenant.id
                 },
                 include: [{ model: Product }]
             });
@@ -330,8 +333,8 @@ router.post('/sessions/open', async (req, res) => {
     try {
         const { openingCash, userId } = req.body;
 
-        // Check if there's already an open session
-        const activeSession = await CashSession.findOne({ where: { status: 'open' } });
+        // Check if there's already an open session for this tenant
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         if (activeSession) {
             return res.status(400).json({ error: 'Ya existe una sesión abierta' });
         }
@@ -340,7 +343,8 @@ router.post('/sessions/open', async (req, res) => {
             openingCash: openingCash || 0,
             openedBy: userId,
             status: 'open',
-            openedAt: new Date()
+            openedAt: new Date(),
+            TenantId: req.tenant.id
         });
 
         // Audit log
@@ -369,7 +373,7 @@ router.get('/sessions/history', async (req, res) => {
     try {
         const { limit = 50, offset = 0 } = req.query;
         const sessions = await CashSession.findAll({
-            where: { status: 'closed' },
+            where: { status: 'closed', TenantId: req.tenant.id },
             order: [['closedAt', 'DESC']],
             limit: parseInt(limit),
             offset: parseInt(offset),
@@ -394,13 +398,13 @@ router.post('/sessions/close', async (req, res) => {
             return res.status(400).json({ error: 'Es obligatorio ingresar las notas de cierre' });
         }
 
-        const session = await CashSession.findByPk(sessionId);
+        const session = await CashSession.findOne({ where: { id: sessionId, TenantId: req.tenant.id } });
         if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
         if (session.status === 'closed') return res.status(400).json({ error: 'La sesión ya está cerrada' });
 
         // Prevent closure if there are open accounts/tables
         const openAccountsCount = await Account.count({
-            where: { status: 'open' }
+            where: { status: 'open', TenantId: req.tenant.id }
         });
         if (openAccountsCount > 0) {
             return res.status(400).json({ 
@@ -509,7 +513,8 @@ router.post('/sessions/:id/print', async (req, res) => {
         const { id } = req.params;
         const { userId, type } = req.body;
 
-        const session = await CashSession.findByPk(id, {
+        const session = await CashSession.findOne({
+            where: { id, TenantId: req.tenant.id },
             include: [
                 { model: User, as: 'Opener', attributes: ['id', 'username', 'displayName'] },
                 { model: User, as: 'Closer', attributes: ['id', 'username', 'displayName'] }

@@ -16,7 +16,7 @@ function numToText(n) {
 // GET /billing/config
 router.get('/billing/config', async (req, res) => {
     try {
-        let config = await BillingConfig.findOne();
+        let config = await BillingConfig.findOne({ where: { TenantId: req.tenant.id } });
         if (!config) {
             config = {
                 ruc: '',
@@ -46,11 +46,11 @@ router.put('/billing/config', async (req, res) => {
             if (req.body[f] !== undefined) data[f] = req.body[f];
         });
 
-        let config = await BillingConfig.findOne();
+        let config = await BillingConfig.findOne({ where: { TenantId: req.tenant.id } });
         if (config) {
             await config.update(data);
         } else {
-            config = await BillingConfig.create(data);
+            config = await BillingConfig.create({ ...data, TenantId: req.tenant.id });
         }
         res.json({ success: true, config });
     } catch (err) {
@@ -110,7 +110,7 @@ router.get('/billing/invoices', async (req, res) => {
         }
 
         const invoices = await Invoice.findAll({
-            where,
+            where: { ...where, TenantId: req.tenant.id },
             include: [
                 { model: User, attributes: ['id', 'username'] },
                 { model: Account, include: [Table] }
@@ -254,7 +254,7 @@ router.post('/billing/invoices', async (req, res) => {
         // Validar que el usuario exista para evitar errores de llave foránea (FK)
         let validatedUserId = null;
         if (userId) {
-            const userExists = await User.findByPk(userId);
+            const userExists = await User.findOne({ where: { id: userId, TenantId: req.tenant.id } });
             if (userExists) {
                 validatedUserId = userId;
             }
@@ -266,7 +266,8 @@ router.post('/billing/invoices', async (req, res) => {
             subtotal: finalTotalBase, igv: finalTotalIgv, total: finalTotalPay,
             items: JSON.stringify(items),
             UserId: validatedUserId,
-            AccountId: accountId || null
+            AccountId: accountId || null,
+            TenantId: req.tenant.id
         });
 
         // Enviar al Hub si está activo

@@ -8,8 +8,9 @@ const LATEST_AGENT_VERSION = "1.0.0";
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
     try {
+        const tenantId = req.tenant.id;
         const envName = process.env.RESTAURANT_NAME;
-        const config = await RestaurantConfig.findOne();
+        const config = await RestaurantConfig.findOne({ where: { TenantId: tenantId } });
 
         const responseData = config ? config.toJSON() : { name: 'Restaurante', address: '' };
         if (envName) responseData.name = envName;
@@ -24,13 +25,14 @@ router.get('/config', async (req, res) => {
 router.put('/config', async (req, res) => {
     try {
         const { name, address } = req.body;
-        const config = await RestaurantConfig.findOne();
+        const tenantId = req.tenant.id;
+        const config = await RestaurantConfig.findOne({ where: { TenantId: tenantId } });
         if (config) {
             config.name = name;
             config.address = address;
             await config.save();
         } else {
-            await RestaurantConfig.create({ name, address });
+            await RestaurantConfig.create({ name, address, TenantId: tenantId });
         }
         res.json({ success: true });
     } catch (err) {
@@ -41,7 +43,8 @@ router.put('/config', async (req, res) => {
 // GET printer settings
 router.get('/config/printers', async (req, res) => {
     try {
-        const setting = await Setting.findByPk('printer_config');
+        const printerKey = `printer_config_${req.tenant.id}`;
+        const setting = await Setting.findByPk(printerKey);
         if (setting) {
             return res.json(JSON.parse(setting.value));
         }
@@ -62,9 +65,10 @@ router.get('/config/printers', async (req, res) => {
 router.post('/config/printers', async (req, res) => {
     try {
         const config = req.body;
+        const printerKey = `printer_config_${req.tenant.id}`;
         
         await Setting.upsert({
-            key: 'printer_config',
+            key: printerKey,
             value: JSON.stringify(config),
             description: 'Thermal printer configuration (Caja, Cocina, Barra)'
         });

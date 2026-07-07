@@ -9,16 +9,19 @@ const { Op } = require('sequelize');
 router.post('/attendance/check-in', async (req, res) => {
     try {
         const { userId } = req.body;
+        const tenantId = req.tenant.id;
 
-        // Check if already checked in today (optional, but good practice)
         const now = new Date();
         now.setHours(now.getHours() - 5);
         const today = now.toISOString().split('T')[0];
+
+        // Check if already checked in today (scoped to tenant)
         const existing = await Attendance.findOne({
             where: {
                 UserId: userId,
                 date: today,
-                checkOut: null
+                checkOut: null,
+                TenantId: tenantId
             }
         });
 
@@ -29,7 +32,8 @@ router.post('/attendance/check-in', async (req, res) => {
         const attendance = await Attendance.create({
             UserId: userId,
             checkIn: new Date(),
-            date: today
+            date: today,
+            TenantId: tenantId
         });
 
         res.json(attendance);
@@ -42,16 +46,17 @@ router.post('/attendance/check-in', async (req, res) => {
 router.post('/attendance/check-out', async (req, res) => {
     try {
         const { userId } = req.body;
+        const tenantId = req.tenant.id;
         const now = new Date();
         now.setHours(now.getHours() - 5);
         const today = now.toISOString().split('T')[0];
 
-        // Find open session
+        // Find open session scoped to tenant
         const attendance = await Attendance.findOne({
             where: {
                 UserId: userId,
-                // date: today, // Allow closing previous days if forgotten? Let's stick to simple "Open session" logic first.
-                checkOut: null
+                checkOut: null,
+                TenantId: tenantId
             },
             order: [['checkIn', 'DESC']]
         });
@@ -73,10 +78,12 @@ router.post('/attendance/check-out', async (req, res) => {
 router.get('/attendance/status/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const tenantId = req.tenant.id;
         const active = await Attendance.findOne({
             where: {
                 UserId: userId,
-                checkOut: null
+                checkOut: null,
+                TenantId: tenantId
             },
             order: [['checkIn', 'DESC']]
         });
@@ -91,16 +98,16 @@ router.get('/attendance/status/:userId', async (req, res) => {
 router.get('/attendance/list', async (req, res) => {
     try {
         const { userId, role } = req.query;
+        const tenantId = req.tenant.id;
 
-        let where = {};
+        let where = { TenantId: tenantId };
         if (role !== 'admin' && userId) {
             where.UserId = userId;
         }
 
-        // Default last 7 days? Or all? Let's get "recent" for now.
         const logs = await Attendance.findAll({
             where,
-            include: [User],
+            include: [{ model: User, where: { TenantId: tenantId }, required: false }],
             order: [['date', 'DESC'], ['checkIn', 'DESC']],
             limit: 50
         });
