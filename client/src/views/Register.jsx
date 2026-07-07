@@ -32,6 +32,7 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [dataConsent, setDataConsent] = useState(false);
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
     // Username validation state
     const [usernameError, setUsernameError] = useState('');
@@ -404,11 +405,16 @@ export default function Register() {
                                 <input type="checkbox" checked={dataConsent} onChange={(e) => setDataConsent(e.target.checked)} className="sr-only" />
                                 <span className="text-slate-400 text-xs leading-relaxed">
                                     Acepto el tratamiento de mis datos personales conforme a la{' '}
-                                    <a href="https://maksuites.com.pe/privacidad" target="_blank" rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="text-blue-400 hover:text-blue-300 underline">
+                                    <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setShowPrivacyModal(true);
+                                        }}
+                                        className="text-blue-400 hover:text-blue-300 underline font-medium">
                                         Política de Privacidad
-                                    </a>{' '}
+                                    </button>{' '}
                                     de Mak Suites. (Ley 29733)
                                 </span>
                             </label>
@@ -487,6 +493,49 @@ export default function Register() {
                     )}
                 </div>
             </div>
+
+            {/* Privacy Policy Modal */}
+            {showPrivacyModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-white">Política de Privacidad</h3>
+                            <button 
+                                onClick={() => setShowPrivacyModal(false)}
+                                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="text-slate-300 text-sm space-y-4 mb-6 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                            <p>
+                                <strong>1. Uso de Datos Personales:</strong> Recopilamos información básica (nombre, correo, teléfono) 
+                                exclusivamente para la creación y gestión de tu cuenta en nuestra plataforma SaaS.
+                            </p>
+                            <p>
+                                <strong>2. Protección de Datos:</strong> Sus datos están protegidos bajo los estándares de seguridad 
+                                del sistema Mak Suites, conforme a la Ley de Protección de Datos Personales (Ley 29733).
+                            </p>
+                            <p>
+                                <strong>3. No compartimos información:</strong> No vendemos ni compartimos su información con terceros 
+                                para fines de marketing o publicidad.
+                            </p>
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDataConsent(true);
+                                    setShowPrivacyModal(false);
+                                }}
+                                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all"
+                            >
+                                Entendido y Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

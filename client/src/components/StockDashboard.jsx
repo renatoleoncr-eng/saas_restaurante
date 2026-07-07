@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
@@ -9,7 +9,7 @@ import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function StockDashboard({ readOnly = false, mode = 'full' }) {
-    const { user, refreshTrigger, socket } = useRestaurant(); // Get socket
+    const { user, refreshTrigger, socket, tenantInfo } = useRestaurant(); // Get socket and tenantInfo
     const isWaiter = user?.role === 'waiter';
     const [activeTab, setActiveTab] = useState(() => {
         if (mode === 'menu_only') return 'menu_options';
@@ -50,6 +50,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     const [adjustmentItem, setAdjustmentItem] = useState(null); // { id, name, type: 'add'|'remove' }
     const [adjustmentForm, setAdjustmentForm] = useState({ amount: '', reason: '' });
 
+    // Onboarding help modal
+    const [showProductHelpModal, setShowProductHelpModal] = useState(false);
+    const [hasSeenProductHelp, setHasSeenProductHelp] = useState(false);
+
     useModalBackHandler(!!adjustmentItem, () => setAdjustmentItem(null));
     useModalBackHandler(!!creatingSection && !creatingSection.startsWith('expand-'), () => setCreatingSection(null));
 
@@ -58,6 +62,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         loadProducts();
         loadIngredients();
     }, [refreshTrigger]);
+
+    // Show onboarding help automatically the first time they create a product
+    useEffect(() => {
+        if (creatingSection && !creatingSection.startsWith('expand-') && !tenantInfo?.onboardingCompleted && !hasSeenProductHelp) {
+            setShowProductHelpModal(true);
+            setHasSeenProductHelp(true);
+        }
+    }, [creatingSection, tenantInfo, hasSeenProductHelp]);
 
     // Save active tabs to localStorage
     useEffect(() => {
@@ -1237,8 +1249,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-t border-dashed border-purple-200/50 pt-2">
-                                                <div className="flex flex-wrap gap-1.5">
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-t border-dashed border-purple-200/50 pt-2 relative">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-semibold text-gray-500 uppercase">Tipo:</span>
+                                                    <button type="button" onClick={() => setShowProductHelpModal(true)} className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 p-1 rounded-full transition-colors" title="Ver diferencias">
+                                                        <Info size={14} />
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5 mt-1 sm:mt-0">
                                                     <label className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-[11px] font-semibold transition-all ${editForm.isStockManaged ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-250 text-gray-600'}`}>
                                                         <input type="radio"
                                                             checked={editForm.isStockManaged}
@@ -2133,6 +2151,44 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         />
                     )}
                 </>
+            )}
+
+            {/* Product Help Modal */}
+            {showProductHelpModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                    <Info size={20} />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800">Tipos de Productos</h3>
+                            </div>
+                            <button onClick={() => setShowProductHelpModal(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-full transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-4 text-sm text-gray-600">
+                            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                                <div className="font-bold text-blue-800 mb-1 flex items-center gap-1.5"><Package size={14}/> Terminados</div>
+                                <p className="leading-relaxed">Productos que se compran y se venden listos, con <strong>stock directo</strong> (Ej. Gaseosas en botella).</p>
+                            </div>
+                            <div className="p-3 bg-green-50 border border-green-100 rounded-xl">
+                                <div className="font-bold text-green-800 mb-1 flex items-center gap-1.5"><ChefHat size={14}/> Preparados</div>
+                                <p className="leading-relaxed">Tienen una <strong>receta</strong>. (Aquí también se configurarán los insumos, que serán los productos base que se vincularán a las recetas de tus platos).</p>
+                            </div>
+                            <div className="p-3 bg-orange-50 border border-orange-100 rounded-xl">
+                                <div className="font-bold text-orange-800 mb-1 flex items-center gap-1.5"><Zap size={14}/> Libres</div>
+                                <p className="leading-relaxed">Servicios o productos que <strong>no dependen de stock</strong> (Ej. Descorche).</p>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end">
+                            <button onClick={() => setShowProductHelpModal(false)} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
