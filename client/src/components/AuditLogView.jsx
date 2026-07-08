@@ -101,7 +101,7 @@ const DETAIL_KEY_LABELS = {
     requirePinPrompt: 'Requiere PIN',
     active: 'Activo',
     name: 'Nombre',
-    price: 'Precio'
+    price: 'Precio',
     customerName: 'Cliente',
     clientDni: 'DNI / RUC',
     clientAddress: 'Dirección',
