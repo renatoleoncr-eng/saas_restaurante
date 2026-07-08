@@ -183,6 +183,7 @@ export default function SessionsHistoryTab() {
 // Inner Component: SessionDetailsModal
 function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     useModalBackHandler(isOpen, onClose);
+    const { printingEnabled } = useRestaurant();
     const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
     const [expandedCategory, setExpandedCategory] = useState(null);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
