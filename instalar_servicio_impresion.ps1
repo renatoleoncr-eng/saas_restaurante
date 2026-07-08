@@ -168,6 +168,15 @@ $existing = schtasks /Query /TN $TaskName 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "[INFO] Eliminando instalacion anterior..." -ForegroundColor Yellow
+    
+    # Detener el proceso del agente si esta corriendo
+    Write-Host "[INFO] Deteniendo agente en segundo plano..." -ForegroundColor Yellow
+    try {
+        Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -match "print-agent.js" } | ForEach-Object {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
+
     schtasks /Delete /TN $TaskName /F | Out-Null
     Write-Host "[OK] Tarea anterior eliminada." -ForegroundColor Green
 }
