@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ArrowRight, ChefHat, LayoutGrid, Package } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ChefHat, LayoutGrid, Package, LogOut } from 'lucide-react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import OnboardingSalonModal from './OnboardingSalonModal';
@@ -15,7 +15,7 @@ import OnboardingSalonModal from './OnboardingSalonModal';
  *   onOpenSession - function() to open SessionManagerModal
  */
 export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToSection, onOpenSession }) {
-    const { refreshData } = useRestaurant();
+    const { refreshData, logout } = useRestaurant();
     const [showSalonModal, setShowSalonModal] = useState(false);
     
     const hasSalon = areas && areas.length > 0;
@@ -72,7 +72,16 @@ export default function OnboardingWelcome({ tenantInfo, areas, products, onGoToS
     const progress = (completedCount / steps.length) * 100;
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 max-w-lg mx-auto">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 max-w-lg mx-auto relative mt-8">
+            {/* Logout button */}
+            <button
+                onClick={logout}
+                className="absolute -top-6 right-0 text-gray-400 hover:text-red-500 flex items-center gap-1.5 text-sm font-medium transition-colors p-2 rounded-lg hover:bg-red-50"
+                title="Cerrar sesión"
+            >
+                <LogOut size={16} /> Cerrar Sesión
+            </button>
+
             {/* Header */}
             <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
