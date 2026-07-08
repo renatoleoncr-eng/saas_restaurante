@@ -1141,6 +1141,7 @@ router.post('/orders', async (req, res) => {
 
             // COMBO ITEMS (2x1 drink promotions have no productId)
             if (item.isCombo || !item.productId) {
+                item.productName = item.comboName || item.name || 'Promoción/Combo';
                 const originalComboPrice = parseFloat(item.price) || 0;
                 const finalComboPrice = originalComboPrice;
 
@@ -1181,6 +1182,8 @@ router.post('/orders', async (req, res) => {
                 console.warn(`[Orders] Product ID ${item.productId} NOT FOUND. Skipping.`);
                 continue;
             }
+            
+            item.productName = product.name;
             console.log(`[Orders] Found Product: ${product.name} | Price: ${product.price} | Type: ${product.type}`);
 
             // Determine status: ALWAYS 'served' now
