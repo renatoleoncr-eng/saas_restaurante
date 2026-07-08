@@ -6,7 +6,7 @@ import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
-    const { printingEnabled } = useRestaurant();
+    const { printingEnabled, refreshTenantInfo } = useRestaurant();
     const [loading, setLoading] = useState(true);
     const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals, payments, salesSummary }
     const [openingCash, setOpeningCash] = useState('');
@@ -105,6 +105,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                 userId: user?.id
             });
             setJustOpened(true);
+            refreshTenantInfo(); // Refresh to update onboardingCompleted state
             fetchCurrentSession();
         } catch (err) {
             alert(err.response?.data?.error || "Error al abrir sesión");
