@@ -50,6 +50,8 @@ router.get('/tenants', requireSuperAdmin, async (req, res) => {
             order: [['createdAt', 'DESC']]
         });
 
+        const VALID_MODULES = ['moduloPromocionesHabilitado', 'moduloMenuHabilitado', 'moduloFacturacionHabilitado'];
+
         // Fetch stats for each tenant in parallel
         const tenantsWithStats = await Promise.all(tenants.map(async (tenant) => {
             const [orderCount, userCount, productCount, config] = await Promise.all([
@@ -58,6 +60,14 @@ router.get('/tenants', requireSuperAdmin, async (req, res) => {
                 Product.count({ where: { TenantId: tenant.id } }),
                 RestaurantConfig.findOne({ where: { TenantId: tenant.id } })
             ]);
+
+            // Parse settings to extract module flags
+            let settings = {};
+            try { settings = JSON.parse(tenant.settings || '{}'); } catch (e) { settings = {}; }
+            const modules = VALID_MODULES.reduce((acc, key) => {
+                acc[key] = settings[key] !== false;
+                return acc;
+            }, {});
 
             return {
                 id: tenant.id,
@@ -72,6 +82,7 @@ router.get('/tenants', requireSuperAdmin, async (req, res) => {
                 restaurantName: config?.name || tenant.name,
                 createdAt: tenant.createdAt,
                 updatedAt: tenant.updatedAt,
+                modules,
                 stats: {
                     orders: orderCount,
                     users: userCount,
@@ -86,6 +97,7 @@ router.get('/tenants', requireSuperAdmin, async (req, res) => {
         res.status(500).json({ error: 'Error obteniendo restaurantes' });
     }
 });
+
 
 // =============================================
 // PUT /api/superadmin/tenants/:id/status
@@ -324,6 +336,60 @@ router.delete('/tenants/:id', requireSuperAdmin, async (req, res) => {
         await t.rollback();
         console.error('[SuperAdmin] Error deleting tenant:', err);
         res.status(500).json({ error: 'Error eliminando restaurante: ' + err.message });
+    }
+});
+
+// =============================================
+// PUT /api/superadmin/tenants/:id/modules
+// =============================================
+// Enable/disable feature modules for a tenant (stored in tenant.settings JSON)
+// All modules default to true (enabled) if not set.
+router.put('/tenants/:id/modules', requireSuperAdmin, async (req, res) => {
+    try {
+        const { modules } = req.body;
+
+        // Validate: modules must be an object with boolean values
+        if (!modules || typeof modules !== 'object') {
+            return res.status(400).json({ error: 'Se requiere un objeto de módulos' });
+        }
+
+        const VALID_MODULES = ['moduloPromocionesHabilitado', 'moduloMenuHabilitado', 'moduloFacturacionHabilitado'];
+        const invalidKeys = Object.keys(modules).filter(k => !VALID_MODULES.includes(k));
+        if (invalidKeys.length > 0) {
+            return res.status(400).json({ error: `Módulos inválidos: ${invalidKeys.join(', ')}` });
+        }
+
+        const tenant = await Tenant.findByPk(req.params.id);
+        if (!tenant) return res.status(404).json({ error: 'Restaurante no encontrado' });
+
+        // Merge with existing settings
+        let currentSettings = {};
+        try {
+            currentSettings = JSON.parse(tenant.settings || '{}');
+        } catch (e) {
+            currentSettings = {};
+        }
+
+        const updatedSettings = {
+            ...currentSettings,
+            ...modules
+        };
+
+        await tenant.update({ settings: JSON.stringify(updatedSettings) });
+
+        // Return only the module-related keys for clarity
+        const returnedModules = VALID_MODULES.reduce((acc, key) => {
+            acc[key] = updatedSettings[key] !== false; // default true
+            return acc;
+        }, {});
+
+        res.json({
+            message: 'Módulos actualizados',
+            tenant: { id: tenant.id, modules: returnedModules }
+        });
+    } catch (err) {
+        console.error('[SuperAdmin] Error updating modules:', err);
+        res.status(500).json({ error: 'Error actualizando módulos' });
     }
 });
 

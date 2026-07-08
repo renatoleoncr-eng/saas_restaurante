@@ -138,6 +138,15 @@ export function useSuperAdmin() {
         return handleResponse(res);
     }, [authHeaders]);
 
+    const updateModules = useCallback(async (tenantId, modules) => {
+        const res = await fetch(`${API_BASE}/tenants/${tenantId}/modules`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ modules })
+        });
+        return handleResponse(res);
+    }, [authHeaders]);
+
     return {
         isAuthenticated,
         loading,
@@ -151,6 +160,7 @@ export function useSuperAdmin() {
         updateStorage,
         updateNotes,
         resetAdminPassword,
-        deleteTenant
+        deleteTenant,
+        updateModules
     };
 }

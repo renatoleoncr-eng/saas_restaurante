@@ -215,6 +215,21 @@ router.get('/info', async (req, res) => {
             return res.status(404).json({ error: 'No tenant context' });
         }
 
+        // Parse settings JSON to extract module flags
+        const VALID_MODULES = ['moduloPromocionesHabilitado', 'moduloMenuHabilitado', 'moduloFacturacionHabilitado'];
+        let settings = {};
+        try {
+            settings = JSON.parse(req.tenant.settings || '{}');
+        } catch (e) {
+            settings = {};
+        }
+
+        // Build modules object — default all to true if not explicitly set
+        const modules = VALID_MODULES.reduce((acc, key) => {
+            acc[key] = settings[key] !== false;
+            return acc;
+        }, {});
+
         res.json({
             id: req.tenant.id,
             name: req.tenant.name,
@@ -222,11 +237,13 @@ router.get('/info', async (req, res) => {
             plan: req.tenant.plan,
             status: req.tenant.status,
             logoUrl: req.tenant.logoUrl,
-            onboardingCompleted: req.tenant.onboardingCompleted || false
+            onboardingCompleted: req.tenant.onboardingCompleted || false,
+            modules
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 module.exports = router;

@@ -102,7 +102,7 @@ export default function SuperAdminDashboard() {
         isAuthenticated, logout,
         fetchTenants, fetchStats,
         updateStatus, updatePlan, updateStorage, updateNotes,
-        resetAdminPassword, deleteTenant
+        resetAdminPassword, deleteTenant, updateModules
     } = useSuperAdmin();
 
     const [tenants, setTenants] = useState([]);
@@ -146,6 +146,11 @@ export default function SuperAdminDashboard() {
         if (type === 'notes') setModalValues({ notes: tenant.internalNotes || '' });
         if (type === 'storage') setModalValues({ mb: tenant.storageLimitMb || 50 });
         if (type === 'resetPass') setModalValues({ pass: '' });
+        if (type === 'modules') setModalValues({
+            moduloPromocionesHabilitado: tenant.modules?.moduloPromocionesHabilitado !== false,
+            moduloMenuHabilitado: tenant.modules?.moduloMenuHabilitado !== false,
+            moduloFacturacionHabilitado: tenant.modules?.moduloFacturacionHabilitado !== false
+        });
     }
 
     async function handleAction(action) {
@@ -171,6 +176,13 @@ export default function SuperAdminDashboard() {
                     break;
                 case 'delete':
                     result = await deleteTenant(tenant.id);
+                    break;
+                case 'saveModules':
+                    result = await updateModules(tenant.id, {
+                        moduloPromocionesHabilitado: modalValues.moduloPromocionesHabilitado,
+                        moduloMenuHabilitado: modalValues.moduloMenuHabilitado,
+                        moduloFacturacionHabilitado: modalValues.moduloFacturacionHabilitado
+                    });
                     break;
                 default: break;
             }
@@ -470,6 +482,19 @@ export default function SuperAdminDashboard() {
                                                     >
                                                         🔑
                                                     </button>
+                                                    {/* Modules */}
+                                                    <button
+                                                        title="Módulos del sistema"
+                                                        onClick={() => openModal('modules', tenant)}
+                                                        style={{
+                                                            background: 'rgba(52,211,153,0.15)',
+                                                            border: '1px solid rgba(52,211,153,0.3)',
+                                                            color: '#34d399', padding: '6px 10px',
+                                                            borderRadius: '8px', cursor: 'pointer', fontSize: '14px'
+                                                        }}
+                                                    >
+                                                        🧩
+                                                    </button>
                                                     {/* Delete */}
                                                     {tenant.slug !== 'makala' && (
                                                         <button
@@ -703,6 +728,93 @@ export default function SuperAdminDashboard() {
                             color="#ef4444"
                         >
                             {actionLoading ? '⏳ Eliminando...' : '🗑️ Eliminar Todo'}
+                        </ModalButton>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modules Modal */}
+            {modal?.type === 'modules' && (
+                <Modal title="🧩 Módulos del Sistema" onClose={() => setModal(null)}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '20px' }}>
+                        Controla qué funcionalidades están disponibles para{' '}
+                        <strong style={{ color: '#fff' }}>{modal.tenant.name}</strong>.
+                        Los módulos desactivados quedan completamente ocultos para los usuarios.
+                    </p>
+
+                    {[
+                        {
+                            key: 'moduloPromocionesHabilitado',
+                            label: 'Promociones 2x1',
+                            description: 'Permite crear y gestionar promociones de bebidas con precio especial.',
+                            icon: '🍷'
+                        },
+                        {
+                            key: 'moduloMenuHabilitado',
+                            label: 'Menú',
+                            description: 'Permite ver y gestionar el menú del restaurante.',
+                            icon: '🍽️'
+                        },
+                        {
+                            key: 'moduloFacturacionHabilitado',
+                            label: 'Configuración de Facturación',
+                            description: 'Permite acceder a la configuración de facturación e impresión.',
+                            icon: '🧾'
+                        }
+                    ].map(({ key, label, description, icon }) => {
+                        const isEnabled = modalValues[key] !== false;
+                        return (
+                            <div
+                                key={key}
+                                onClick={() => setModalValues(prev => ({ ...prev, [key]: !isEnabled }))}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '14px',
+                                    padding: '14px 16px', borderRadius: '12px', cursor: 'pointer',
+                                    marginBottom: '10px',
+                                    background: isEnabled ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
+                                    border: `1px solid ${isEnabled ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <div style={{
+                                    width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0,
+                                    border: `2px solid ${isEnabled ? '#34d399' : 'rgba(255,255,255,0.3)'}`,
+                                    background: isEnabled ? '#34d399' : 'transparent',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                }}>
+                                    {isEnabled && <span style={{ color: '#0d0d1a', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                </div>
+                                <div style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ color: isEnabled ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: '600', fontSize: '14px' }}>
+                                        {label}
+                                    </div>
+                                    <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', marginTop: '2px' }}>
+                                        {description}
+                                    </div>
+                                </div>
+                                <div style={{
+                                    fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px',
+                                    color: isEnabled ? '#34d399' : 'rgba(255,255,255,0.25)',
+                                    padding: '3px 8px', borderRadius: '20px',
+                                    background: isEnabled ? 'rgba(52,211,153,0.1)' : 'transparent',
+                                    flexShrink: 0
+                                }}>
+                                    {isEnabled ? 'ON' : 'OFF'}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                        <button onClick={() => setModal(null)} style={{
+                            padding: '10px 20px', background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px',
+                            color: '#fff', cursor: 'pointer', fontSize: '14px'
+                        }}>Cancelar</button>
+                        <ModalButton onClick={() => handleAction('saveModules')} disabled={actionLoading} color="#34d399">
+                            {actionLoading ? '⏳' : '💾 Guardar Módulos'}
                         </ModalButton>
                     </div>
                 </Modal>

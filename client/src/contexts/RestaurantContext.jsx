@@ -299,12 +299,20 @@ export const RestaurantProvider = ({ children }) => {
     // Derived: printing is only enabled when explicitly set to true
     const printingEnabled = billingConfig?.habilitarImpresion === true;
 
+    // Derived: check if a feature module is enabled for this tenant
+    // Defaults to true (enabled) if the module key is not explicitly set to false
+    const isModuleEnabled = (moduleKey) => {
+        if (!tenantInfo?.modules) return true;
+        return tenantInfo.modules[moduleKey] !== false;
+    };
+
     return (
         <RestaurantContext.Provider value={{
             config, areas, products, refreshData, refreshTrigger, updateConfig,
             user, login, logout, socket, reservations,
             tenantSlug, tenantInfo, isLanding, refreshTenantInfo,
-            billingConfig, setBillingConfig, printingEnabled
+            billingConfig, setBillingConfig, printingEnabled,
+            isModuleEnabled
         }}>
             {children}
         </RestaurantContext.Provider>

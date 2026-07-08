@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-    const { user, logout, config, tenantInfo } = useRestaurant();
+    const { user, logout, config, tenantInfo, isModuleEnabled } = useRestaurant();
     const navigate = useNavigate();
     const [currentView, setCurrentView] = useState(() => {
         return localStorage.getItem('lastView') || 'main';
@@ -29,7 +29,7 @@ export default function Dashboard() {
         localStorage.setItem('lastView', currentView);
     }, [currentView]);
 
-    // Role-based view protection
+    // Role-based and module-based view protection
     useEffect(() => {
         const restrictedViews = {
             waiter: ['drink_promos', 'audit'],
@@ -37,11 +37,24 @@ export default function Dashboard() {
             kitchen: ['stock', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit']
         };
 
+        // Module-gated views: redirect if module is disabled
+        const moduleGatedViews = {
+            menu: 'moduloMenuHabilitado',
+            drink_promos: 'moduloPromocionesHabilitado'
+        };
+
+        let shouldRedirect = false;
         if (user && restrictedViews[user.role]?.includes(currentView)) {
-            console.warn(`Role ${user.role} attempted to access restricted view: ${currentView}. Redirecting to main.`);
+            shouldRedirect = true;
+        }
+        if (moduleGatedViews[currentView] && !isModuleEnabled(moduleGatedViews[currentView])) {
+            shouldRedirect = true;
+        }
+        if (shouldRedirect) {
+            console.warn(`View ${currentView} is restricted or disabled. Redirecting to main.`);
             setCurrentView('main');
         }
-    }, [currentView, user.role]);
+    }, [currentView, user.role, isModuleEnabled]);
 
     const [isCollapsed, setIsCollapsed] = useState(true);
     const [isLocked, setIsLocked] = useState(false);
@@ -299,8 +312,8 @@ export default function Dashboard() {
                         Let's verify strict hiding. 
                     */}
 
-                        {/* Menu Management - Admin & Waiter */}
-                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                        {/* Menu Management - Admin & Waiter (requires moduloMenuHabilitado) */}
+                        {['admin', 'waiter', 'cashier'].includes(user.role) && isModuleEnabled('moduloMenuHabilitado') && (
                             <button
                                 onClick={() => { setCurrentView('menu'); if (window.innerWidth < 768) setIsCollapsed(true); }}
                                 title="Menú"
@@ -311,8 +324,8 @@ export default function Dashboard() {
                             </button>
                         )}
 
-                        {/* Drink Promotions - Admin Only */}
-                        {user.role === 'admin' && (
+                        {/* Drink Promotions - Admin Only (requires moduloPromocionesHabilitado) */}
+                        {user.role === 'admin' && isModuleEnabled('moduloPromocionesHabilitado') && (
                             <button
                                 onClick={() => { setCurrentView('drink_promos'); if (window.innerWidth < 768) setIsCollapsed(true); }}
                                 title="Promociones 2x1"
@@ -391,7 +404,7 @@ export default function Dashboard() {
                                         <Users size={16} /> Gestionar Usuarios
                                     </button>
                                 )}
-                                {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                                {['admin', 'waiter', 'cashier'].includes(user.role) && isModuleEnabled('moduloFacturacionHabilitado') && (
                                     <button
                                         onClick={() => { setShowBillingConfig(true); setShowUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -464,7 +477,7 @@ export default function Dashboard() {
                                         <Users size={16} /> Gestionar Usuarios
                                     </button>
                                 )}
-                                {['admin', 'waiter', 'cashier'].includes(user?.role) && (
+                                {['admin', 'waiter', 'cashier'].includes(user?.role) && isModuleEnabled('moduloFacturacionHabilitado') && (
                                     <button
                                         onClick={() => { setShowBillingConfig(true); setShowMobileUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
