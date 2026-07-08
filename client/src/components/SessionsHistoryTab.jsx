@@ -7,9 +7,11 @@ import {
     Coffee, Utensils, Sparkles, Clock, Receipt, Printer 
 } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from './AccountDetailsModal';
 
 export default function SessionsHistoryTab() {
+    const { printingEnabled } = useRestaurant();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -751,20 +753,24 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
                 {/* Footer */}
                 <div className="bg-gray-50 px-5 py-3.5 border-t flex justify-end shrink-0 session-modal-footer gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handlePrintSessionReport('apertura')}
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50 mr-auto"
-                    >
-                        <Printer size={14} /> Imprimir Apertura
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handlePrintSessionReport('cierre')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50"
-                    >
-                        <Printer size={14} /> Imprimir Cierre
-                    </button>
+                    {printingEnabled && (
+                        <button
+                            type="button"
+                            onClick={() => handlePrintSessionReport('apertura')}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50 mr-auto"
+                        >
+                            <Printer size={14} /> Imprimir Apertura
+                        </button>
+                    )}
+                    {printingEnabled && (
+                        <button
+                            type="button"
+                            onClick={() => handlePrintSessionReport('cierre')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-xl shadow active:scale-95 transition-all text-xs flex items-center gap-1.5 cursor-pointer relative z-50"
+                        >
+                            <Printer size={14} /> Imprimir Cierre
+                        </button>
+                    )}
                     <button 
                         type="button"
                         onClick={(e) => {

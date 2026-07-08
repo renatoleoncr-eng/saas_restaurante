@@ -107,6 +107,7 @@ async function refreshAndRetry(originalRequest) {
 
 export const RestaurantProvider = ({ children }) => {
     const [config, setConfig] = useState(null);
+    const [billingConfig, setBillingConfig] = useState(null);
     const [areas, setAreas] = useState([]);
     const [products, setProducts] = useState([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -243,6 +244,14 @@ export const RestaurantProvider = ({ children }) => {
             .catch(err => console.error("Error loading config:", err));
     }, [refreshTrigger, isLanding, tenantSlug]);
 
+    // Billing Config Load (for printingEnabled flag)
+    useEffect(() => {
+        if (isLanding || !tenantSlug || !user) return;
+        axios.get('/api/billing/config')
+            .then(res => setBillingConfig(res.data))
+            .catch(err => console.error("Error loading billing config:", err));
+    }, [refreshTrigger, isLanding, tenantSlug, user]);
+
     // Initial Areas Load
     useEffect(() => {
         if (user && !isLanding && tenantSlug) {
@@ -287,11 +296,15 @@ export const RestaurantProvider = ({ children }) => {
             .catch(() => {});
     };
 
+    // Derived: printing is only enabled when explicitly set to true
+    const printingEnabled = billingConfig?.habilitarImpresion === true;
+
     return (
         <RestaurantContext.Provider value={{
             config, areas, products, refreshData, refreshTrigger, updateConfig,
             user, login, logout, socket, reservations,
-            tenantSlug, tenantInfo, isLanding, refreshTenantInfo
+            tenantSlug, tenantInfo, isLanding, refreshTenantInfo,
+            billingConfig, setBillingConfig, printingEnabled
         }}>
             {children}
         </RestaurantContext.Provider>

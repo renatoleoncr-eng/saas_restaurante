@@ -9,7 +9,7 @@ import PinPadModal from './PinPadModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function TableControl({ tableId, accountId, onClose, initialShowCart = false }) {
-    const { user, refreshTrigger, refreshData } = useRestaurant();
+    const { user, refreshTrigger, refreshData, printingEnabled } = useRestaurant();
     const [account, setAccount] = useState(null);
     const [tableData, setTableData] = useState(null);
     const [isAccountLoaded, setIsAccountLoaded] = useState(false);
@@ -1104,7 +1104,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
         try {
             const isCounter = ['admin', 'cashier'].includes(user?.role);
-            const printComanda = isCounter ? window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?") : false;
+            const printComanda = (isCounter && printingEnabled) ? window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?") : false;
 
             if (!targetAccountId) {
                 // Open account NOW because we are sending an order
@@ -2023,15 +2023,17 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 </button>
                             ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
                                 <div className="flex gap-3 w-full">
-                                    <button
-                                        onClick={() => handlePrintPreCuenta(account.id)}
-                                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                    >
-                                        <Printer size={20} /> Pre-cuenta
-                                    </button>
+                                    {printingEnabled && (
+                                        <button
+                                            onClick={() => handlePrintPreCuenta(account.id)}
+                                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                        >
+                                            <Printer size={20} /> Pre-cuenta
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleCloseClick}
-                                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all"
+                                        className={`${printingEnabled ? 'flex-1' : 'w-full'} bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all`}
                                     >
                                         Pagar
                                     </button>
@@ -3172,15 +3174,17 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
                         ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
                             <div className="flex gap-2 w-full">
-                                <button 
-                                    onClick={() => handlePrintPreCuenta(account.id)} 
-                                    className="flex-1 border-2 border-amber-600 text-amber-600 py-3 rounded-xl font-bold hover:bg-amber-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                >
-                                    <Printer size={16} /> Pre-cuenta
-                                </button>
+                                {printingEnabled && (
+                                    <button 
+                                        onClick={() => handlePrintPreCuenta(account.id)} 
+                                        className="flex-1 border-2 border-amber-600 text-amber-600 py-3 rounded-xl font-bold hover:bg-amber-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                    >
+                                        <Printer size={16} /> Pre-cuenta
+                                    </button>
+                                )}
                                 <button 
                                     onClick={handleCloseClick} 
-                                    className="flex-1 border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all"
+                                    className={`${printingEnabled ? 'flex-1' : 'w-full'} border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all`}
                                 >
                                     Pagar
                                 </button>
@@ -3414,29 +3418,31 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                                 } else {
                                                                     window.open(pdf, '_blank');
                                                                 }
-                                                            } else {
+                                                            } else if (printingEnabled) {
                                                                 axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`).catch(() => {});
                                                             }
                                                         }}
                                                         className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200"
                                                     >
                                                         <Printer size={16} />
-                                                        Ver PDF
+                                                        {pdf ? 'Ver PDF' : (printingEnabled ? 'Imprimir' : 'Comprobante')}
                                                     </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            try {
-                                                                await axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`);
-                                                                alert("Comprobante enviado a la cola de impresión.");
-                                                            } catch (err) {
-                                                                alert("Error al enviar a la impresora.");
-                                                            }
-                                                        }}
-                                                        className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
-                                                    >
-                                                        <Printer size={16} />
-                                                        Imprimir
-                                                    </button>
+                                                    {printingEnabled && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`);
+                                                                    alert("Comprobante enviado a la cola de impresión.");
+                                                                } catch (err) {
+                                                                    alert("Error al enviar a la impresora.");
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
+                                                        >
+                                                            <Printer size={16} />
+                                                            Imprimir
+                                                        </button>
+                                                    )}
                                                 </div>
 
                                                 {/* WhatsApp Sharing Block */}

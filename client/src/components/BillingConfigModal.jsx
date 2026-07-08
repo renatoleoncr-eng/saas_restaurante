@@ -17,7 +17,7 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
 );
 
 const BillingConfigModal = ({ onClose }) => {
-    const { user } = useRestaurant();
+    const { user, setBillingConfig } = useRestaurant();
     const [activeTab, setActiveTab] = useState('config');
     const [viewMode, setViewMode] = useState('config');
     const [loading, setLoading] = useState(false);
@@ -31,7 +31,8 @@ const BillingConfigModal = ({ onClose }) => {
         serieFactura: 'F001',
         serieBoleta: 'B001',
         apiToken: '',
-        billingMode: 'libre'
+        billingMode: 'libre',
+        habilitarImpresion: false
     });
 
     // New Invoice State
@@ -732,6 +733,8 @@ const BillingConfigModal = ({ onClose }) => {
         setLoading(true);
         try {
             await axios.put('/api/billing/config', config);
+            // Sync the global context so printingEnabled updates everywhere immediately
+            if (setBillingConfig) setBillingConfig(config);
             alert('✅ Configuración guardada correctamente.\n\nLa conexión con Sunat Hub ha sido verificada con éxito.');
             onClose(); // Cierra el modal automáticamente
         } catch (err) {
@@ -1418,6 +1421,26 @@ const BillingConfigModal = ({ onClose }) => {
                                     value={config.razonSocial}
                                     onChange={(e) => setConfig({...config, razonSocial: e.target.value})}
                                 />
+                            </div>
+
+                            {/* Impresión Térmica Toggle */}
+                            <div className="bg-[#f0fdf4] border border-green-100 p-5 rounded-xl flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <h4 className="text-green-900 font-bold text-base flex items-center gap-2">
+                                        <Printer size={18} className="text-green-600" />
+                                        Habilitar Impresión Térmica
+                                    </h4>
+                                    <p className="text-green-700/80 text-sm leading-snug">Activa los botones de impresión (pre-cuenta, comanda, apertura/cierre de turno). Desactivar oculta todos estos controles del UX.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={!!config.habilitarImpresion}
+                                        onChange={(e) => setConfig({...config, habilitarImpresion: e.target.checked})}
+                                    />
+                                    <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
                             </div>
 
                             {/* Facturación Electrónica Toggle */}

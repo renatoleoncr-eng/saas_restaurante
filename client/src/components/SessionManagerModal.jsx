@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee, MinusCircle, Printer } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
+    const { printingEnabled } = useRestaurant();
     const [loading, setLoading] = useState(true);
     const [sessionData, setSessionData] = useState(null); // { session, expected, paymentTotals, expenseTotals, payments, salesSummary }
     const [openingCash, setOpeningCash] = useState('');
@@ -294,12 +296,14 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleReprintApertura}
-                                className="w-full bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-bold py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200 text-xs"
-                            >
-                                <Printer size={16} /> Reimprimir Ticket de Apertura
-                            </button>
+                            {printingEnabled && (
+                                <button
+                                    onClick={handleReprintApertura}
+                                    className="w-full bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-bold py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200 text-xs"
+                                >
+                                    <Printer size={16} /> Reimprimir Ticket de Apertura
+                                </button>
+                            )}
 
                             {/* Movimientos de Caja Section */}
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm space-y-3">

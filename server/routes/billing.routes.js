@@ -40,7 +40,7 @@ router.get('/billing/config', async (req, res) => {
 // PUT /billing/config
 router.put('/billing/config', async (req, res) => {
     try {
-        const fields = ['ruc', 'razonSocial', 'direccion', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken', 'billingMode'];
+        const fields = ['ruc', 'razonSocial', 'direccion', 'facturacionElectronica', 'igvTasa', 'operacionesExoneradas', 'serieFactura', 'serieBoleta', 'apiToken', 'billingMode', 'habilitarImpresion'];
         const data = {};
         fields.forEach(f => {
             if (req.body[f] !== undefined) data[f] = req.body[f];

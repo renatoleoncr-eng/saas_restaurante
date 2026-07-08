@@ -701,6 +701,7 @@ const BillingConfig = sequelize.define('BillingConfig', {
     serieBoleta: { type: DataTypes.STRING(10), defaultValue: 'B001' },
     apiToken: { type: DataTypes.STRING, allowNull: true },
     billingMode: { type: DataTypes.STRING, defaultValue: 'libre' },
+    habilitarImpresion: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { timestamps: false });
 
 // INVOICE (Comprobante emitido)
