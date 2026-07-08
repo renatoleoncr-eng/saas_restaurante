@@ -148,6 +148,9 @@ const BillingConfigModal = ({ onClose }) => {
         setLoading(true);
         try {
             await axios.post('/api/config/printers', printers);
+            // Tambien guardamos el config para que se guarde el flag de habilitarImpresion
+            await axios.put('/api/billing/config', config);
+            if (setBillingConfig) setBillingConfig(config);
             alert('✅ Configuración de impresoras guardada correctamente.');
         } catch (err) {
             alert('❌ Error al guardar impresoras: ' + (err.response?.data?.error || err.message));
@@ -1423,26 +1426,6 @@ const BillingConfigModal = ({ onClose }) => {
                                 />
                             </div>
 
-                            {/* Impresión Térmica Toggle */}
-                            <div className="bg-[#f0fdf4] border border-green-100 p-5 rounded-xl flex items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                    <h4 className="text-green-900 font-bold text-base flex items-center gap-2">
-                                        <Printer size={18} className="text-green-600" />
-                                        Habilitar Impresión Térmica
-                                    </h4>
-                                    <p className="text-green-700/80 text-sm leading-snug">Activa los botones de impresión (pre-cuenta, comanda, apertura/cierre de turno). Desactivar oculta todos estos controles del UX.</p>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={!!config.habilitarImpresion}
-                                        onChange={(e) => setConfig({...config, habilitarImpresion: e.target.checked})}
-                                    />
-                                    <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-                                </label>
-                            </div>
-
                             {/* Facturación Electrónica Toggle */}
                             <div className="bg-[#f4f7fe] border border-blue-100 p-5 rounded-xl flex items-center justify-between gap-4">
                                 <div className="space-y-1">
@@ -1579,6 +1562,27 @@ const BillingConfigModal = ({ onClose }) => {
 
                     {activeTab === 'printers' && user?.role === 'admin' && (
                         <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
+
+                            {/* Habilitar Impresión Toggle */}
+                            <div className="bg-[#f0fdf4] border border-green-100 p-5 rounded-xl flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <h4 className="text-green-900 font-bold text-base flex items-center gap-2">
+                                        <Printer size={18} className="text-green-600" />
+                                        Habilitar Impresión
+                                    </h4>
+                                    <p className="text-green-700/80 text-sm leading-snug">Activa los botones de impresión (pre-cuenta, comanda, apertura/cierre de turno). Desactivar oculta todos estos controles del UX.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={!!config.habilitarImpresion}
+                                        onChange={(e) => setConfig({...config, habilitarImpresion: e.target.checked})}
+                                    />
+                                    <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+
 
                             {hasOutdatedAgent && (
                                 <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 flex items-start gap-3">
