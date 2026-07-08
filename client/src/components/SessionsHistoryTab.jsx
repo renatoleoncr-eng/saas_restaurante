@@ -349,9 +349,8 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 min-h-0 relative bg-gray-50/50">
-                    <div className="absolute inset-0 overflow-y-auto overscroll-y-contain touch-pan-y">
-                        <div className="p-4 sm:p-6 space-y-5">
+                <div className="flex-1 overflow-y-auto bg-gray-50/50 overscroll-y-contain touch-pan-y min-h-[300px] sm:min-h-[500px]">
+                    <div className="p-4 sm:p-6 space-y-5">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 space-y-3">
                             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -748,7 +747,6 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                             </div>
                         </>
                     )}
-                        </div>
                     </div>
                 </div>
 
