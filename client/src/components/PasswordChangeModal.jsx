@@ -39,7 +39,8 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                 newPassword: newPassword || undefined,
                 newPin: newPin || null,
                 requesterRole: user.role,
-                requesterId: user.id
+                requesterId: user.id,
+                userId: user.id
             });
             alert('Credenciales actualizadas correctamente');
             onClose();

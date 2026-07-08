@@ -98,6 +98,10 @@ const DETAIL_KEY_LABELS = {
     ip: 'Dirección IP',
     status: 'Estado',
     total: 'Total',
+    requirePinPrompt: 'Requiere PIN',
+    active: 'Activo',
+    name: 'Nombre',
+    price: 'Precio'
     customerName: 'Cliente',
     clientDni: 'DNI / RUC',
     clientAddress: 'Dirección',
@@ -164,12 +168,29 @@ function formatReference(log) {
         }
         case 'ADD_PAYMENT':
             return `Abono de S/ ${parseFloat(details.amount || 0).toFixed(2)} (${details.paymentMethod || 'Efectivo'})`;
+        case 'CREATE_USER':
+            return `Rol: ${details.role || '-'}`;
+        case 'DELETE_USER':
+            return `Usuario desactivado`;
+        case 'UPDATE_USER': {
+            if (details.changes) {
+                const parts = [];
+                Object.entries(details.changes).forEach(([k, v]) => {
+                    const label = DETAIL_KEY_LABELS[k] || k;
+                    let displayVal = String(v);
+                    if (typeof v === 'boolean') displayVal = v ? 'Sí' : 'No';
+                    parts.push(`${label}: ${displayVal}`);
+                });
+                return parts.length > 0 ? parts.join(', ') : 'Actualización sin cambios detallados';
+            }
+            return 'Usuario editado';
+        }
         default:
             break;
     }
 
     // Fallback for other actions: list relevant keys in a single readable line
-    const excludedKeys = ['userId', 'username', 'id', 'createdAt', 'updatedAt', 'entityId', 'sessionId'];
+    const excludedKeys = ['userId', 'username', 'id', 'createdAt', 'updatedAt', 'entityId', 'sessionId', 'changes'];
     const parts = [];
     
     if (details.tableId) {
@@ -178,16 +199,29 @@ function formatReference(log) {
 
     Object.entries(details).forEach(([k, v]) => {
         if (excludedKeys.includes(k) || k === 'tableId') return;
+        
+        // Handle nested objects safely instead of skipping them completely
+        if (typeof v === 'object' && v !== null) {
+            Object.entries(v).forEach(([subK, subV]) => {
+                const label = DETAIL_KEY_LABELS[subK] || subK;
+                let displayVal = String(subV);
+                if (typeof subV === 'boolean') displayVal = subV ? 'Sí' : 'No';
+                if (!displayVal.startsWith('{') && !displayVal.startsWith('[')) {
+                    parts.push(`${label}: ${displayVal}`);
+                }
+            });
+            return;
+        }
+
         const label = DETAIL_KEY_LABELS[k] || k;
         let displayVal = String(v);
         if (typeof v === 'boolean') {
             displayVal = v ? 'Sí' : 'No';
         }
-        if (displayVal.startsWith('{') || displayVal.startsWith('[')) return;
         parts.push(`${label}: ${displayVal}`);
     });
 
-    return parts.join(' · ') || String(log.details || '-');
+    return parts.join(' · ') || (typeof log.details === 'string' && log.details.startsWith('{') ? 'Detalles de operación' : String(log.details || '-'));
 }
 
 function TableRow({ log }) {

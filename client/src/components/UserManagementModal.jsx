@@ -3,8 +3,10 @@ import axios from 'axios';
 import { Users, Plus, Edit, Trash2, Key, UserPlus, X, RotateCcw } from 'lucide-react';
 import PasswordChangeModal from './PasswordChangeModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { useRestaurant } from '../contexts/RestaurantContext';
 
 export default function UserManagementModal({ onClose }) {
+    const { user } = useRestaurant();
     useModalBackHandler(true, onClose);
 
     const [users, setUsers] = useState([]);
@@ -50,7 +52,7 @@ export default function UserManagementModal({ onClose }) {
     const handleDelete = async (id) => {
         if (!confirm('¿Desactivar este usuario?')) return;
         try {
-            await axios.delete(`/api/users/${id}`);
+            await axios.delete(`/api/users/${id}`, { data: { userId: user?.id } });
             loadUsers();
         } catch (err) {
             alert('Error desactivando usuario');
@@ -59,7 +61,7 @@ export default function UserManagementModal({ onClose }) {
 
     const handleReactivate = async (id) => {
         try {
-            await axios.put(`/api/users/${id}/reactivate`);
+            await axios.put(`/api/users/${id}/reactivate`, { userId: user?.id });
             loadUsers();
         } catch (err) {
             alert('Error reactivando usuario');
@@ -75,11 +77,12 @@ export default function UserManagementModal({ onClose }) {
                     displayName: formData.displayName,
                     role: formData.role,
                     pin: formData.pin,
-                    requirePinPrompt: formData.requirePinPrompt
+                    requirePinPrompt: formData.requirePinPrompt,
+                    userId: user?.id
                 });
             } else {
                 // Create
-                await axios.post('/api/users', formData);
+                await axios.post('/api/users', { ...formData, userId: user?.id });
             }
             setShowForm(false);
             setEditingUser(null);
