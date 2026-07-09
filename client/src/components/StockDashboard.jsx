@@ -52,7 +52,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
     // Onboarding help modal
     const [showProductHelpModal, setShowProductHelpModal] = useState(false);
-    const [hasSeenProductHelp, setHasSeenProductHelp] = useState(false);
+    const [hasSeenProductHelp, setHasSeenProductHelp] = useState(() => localStorage.getItem('hasSeenProductHelp') === 'true');
 
     useModalBackHandler(!!adjustmentItem, () => setAdjustmentItem(null));
     useModalBackHandler(!!creatingSection && !creatingSection.startsWith('expand-'), () => setCreatingSection(null));
@@ -68,6 +68,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         if (!tenantInfo?.onboardingCompleted && !hasSeenProductHelp) {
             setShowProductHelpModal(true);
             setHasSeenProductHelp(true);
+            localStorage.setItem('hasSeenProductHelp', 'true');
         }
     }, [tenantInfo, hasSeenProductHelp]);
 
