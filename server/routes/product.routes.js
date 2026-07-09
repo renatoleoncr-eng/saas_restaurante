@@ -460,7 +460,7 @@ router.get('/products/movements/all', async (req, res) => {
                 { model: getModels().Account, attributes: ['id', 'accountType'], required: false }
             ],
             order: [['createdAt', 'DESC']],
-            limit: 100
+            limit: 1000
         });
         res.json(movements);
     } catch (err) {

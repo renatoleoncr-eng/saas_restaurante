@@ -22,6 +22,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false); // New State for Transfer
     const [isSendingOrder, setIsSendingOrder] = useState(false); // Prevent double-clicks
+    const isSendingRef = useRef(false); // Synchronous flag to prevent double-clicks
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
@@ -1098,8 +1099,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const executeSendOrder = async (authorPin = null) => {
-        if (isSendingOrder) return false;
+        if (isSendingOrder || isSendingRef.current) return false;
         setIsSendingOrder(true);
+        isSendingRef.current = true;
         let targetAccountId = account?.id;
 
         try {
@@ -1111,6 +1113,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 const newAccount = await handleAutoOpen();
                 if (!newAccount) {
                     setIsSendingOrder(false);
+                    isSendingRef.current = false;
                     return false;
                 }
                 targetAccountId = newAccount.id;
@@ -1134,6 +1137,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             refreshData();
             
             setIsSendingOrder(false);
+            isSendingRef.current = false;
             return true;
         } catch (err) {
             const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || 'Error enviando pedido';
@@ -1144,6 +1148,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             }
             console.error(err);
             setIsSendingOrder(false);
+            isSendingRef.current = false;
             return false;
         }
     };
