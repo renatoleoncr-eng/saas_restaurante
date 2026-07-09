@@ -25,7 +25,8 @@ async function logAction(req, action, entity, entityId, details = null) {
             entity,
             entityId: String(entityId),
             details: detailsStr,
-            ipAddress
+            ipAddress,
+            TenantId: req.tenant ? req.tenant.id : null
         });
     } catch (err) {
         console.error("Failed to write audit log:", err);
