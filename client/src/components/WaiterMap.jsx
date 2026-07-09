@@ -75,7 +75,7 @@ export default function WaiterMap({ onGoToSection }) {
             
             {loadingSession ? (
                 <div className="text-center py-10 text-gray-500 animate-pulse">Cargando estado del turno...</div>
-            ) : !activeSession && !tenantInfo?.onboardingCompleted ? (
+            ) : !activeSession && tenantInfo && !tenantInfo.onboardingCompleted ? (
             // NEW RESTAURANT — show onboarding guide instead of "Turno Cerrado"
             <>
                 <OnboardingWelcome

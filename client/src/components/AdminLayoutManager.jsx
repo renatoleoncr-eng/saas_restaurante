@@ -141,7 +141,7 @@ export default function AdminLayoutManager({ onGoToSection }) {
             </div>
 
             {/* Main Content Area */}
-            {!activeSession && !tenantInfo?.onboardingCompleted ? (
+            {!activeSession && tenantInfo && !tenantInfo.onboardingCompleted ? (
                 // NEW RESTAURANT — show onboarding guide
                 <>
                     <OnboardingWelcome
