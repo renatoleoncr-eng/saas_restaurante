@@ -203,7 +203,8 @@ router.post('/', upload.single('image'), async (req, res) => {
             isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : true,
             orderIndex: orderIndex || 0,
             phoneNumber: phoneNumber || null,
-            imageUrl
+            imageUrl,
+            TenantId: req.tenant.id
         });
 
         appEmitter.emit('qr_config_changed');
@@ -406,6 +407,7 @@ router.post('/:id/adjust', async (req, res) => {
                     type: adjustmentValue > 0 ? 'income' : 'expense',
                     description: description || `Ajuste manual de saldo - ${qr.name}`
                 }),
+                TenantId: req.tenant.id,
                 UserId: req.body.userId || null
             });
         }

@@ -193,7 +193,8 @@ router.post('/', upload.array('image', 10), async (req, res) => {
                 imageUrl,
                 orderIndex: orderIndex || 0,
                 groupId: groupId || null,
-                isActive: true
+                isActive: true,
+                TenantId: req.tenant.id
             });
             createdPromotions.push(promotion);
         }
