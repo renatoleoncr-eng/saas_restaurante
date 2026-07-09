@@ -276,7 +276,7 @@ const restoreOrderStock = async (order) => {
         // Models are used in sub-functions, but logic here calls them.
         console.log(`[Stock] restoreOrderStock called for Order ${order.id} | Product: ${order.ProductId} | Qty: ${order.quantity} | Pres: ${order.presentation}`);
         // 1. Restore Stock for Main Product
-        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, order.UserId, order.AccountId);
+        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, order.UserId, order.AccountId, req.tenant.id);
 
         // 2. Restore Stock for SubItems
         if (order.subItemsData) {
@@ -293,7 +293,7 @@ const restoreOrderStock = async (order) => {
 
                     // B. Restore Physical Inventory (if linked)
                     if (sub.productId) {
-                        await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId);
+                        await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, req.tenant.id);
                         console.log(`[Stock] Restored physical stock for sub-product ${sub.productId} by ${totalSubQty}`);
                     }
                 }
@@ -768,7 +768,7 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
 };
 
 // Helper function to process stock change
-const processStockChange = async (productId, quantity, isDeduction, presentation = null, transaction = null, userId = null, accountId = null) => {
+const processStockChange = async (productId, quantity, isDeduction, presentation = null, transaction = null, userId = null, accountId = null, tenantId = null) => {
     try {
         const { Product, Recipe, Ingredient, ProductVariant, IngredientMovement, ProductMovement } = getModels();
 
@@ -789,7 +789,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
         if ((product.type === 'daily_entry' || product.type === 'daily_main') && product.linkedProductId) {
             console.log(`[Stock] Product ${productId} is linked to ${product.linkedProductId}. Redirecting stock movement.`);
             // Deduct from the linked product
-            return processStockChange(product.linkedProductId, quantity, isDeduction, presentation, transaction, userId, accountId);
+            return processStockChange(product.linkedProductId, quantity, isDeduction, presentation, transaction, userId, accountId, tenantId);
         }
 
         if (product.Recipes && product.Recipes.length > 0) {
@@ -883,7 +883,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                         previousStock: previousStock,
                         newStock: newStock,
                         UserId: userId, // System action or specific user
-                        AccountId: accountId || null
+                        AccountId: accountId || null,
+                        TenantId: tenantId
                     }, { transaction });
                 } else {
                     console.log(`[Stock] Warning: Recipe matched but has no Ingredient linked? ID: ${recipe.id}`);
@@ -923,7 +924,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 previousStock: currentStock,
                 newStock: currentStock, // Virtual, no change
                 UserId: userId,
-                AccountId: accountId || null
+                AccountId: accountId || null,
+                TenantId: tenantId
             }, { transaction });
             console.log(`[Stock] Recorded ProductMovement for recipe item: ${product.name}`);
         } else if (product.isStockManaged) {
@@ -998,7 +1000,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 previousStock: previousStockCalc,
                 newStock: newStockValue,
                 UserId: userId, // System action or specific user
-                AccountId: accountId || null
+                AccountId: accountId || null,
+                TenantId: tenantId
             }, { transaction });
 
             // REMOVED: DOUBLE STOCK DEDUCTION BUG FIX
@@ -1036,7 +1039,9 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 reason: menuReason,
                 previousStock: 0, // Virtual
                 newStock: 0,      // Virtual
-                UserId: userId
+                UserId: userId,
+                AccountId: accountId || null,
+                TenantId: tenantId
             }, { transaction });
             console.log(`[Stock] Created ProductMovement for Menu ${product.name}`);
         } else {
@@ -1060,7 +1065,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 previousStock: 0,
                 newStock: 0,
                 UserId: userId,
-                AccountId: accountId || null
+                AccountId: accountId || null,
+                TenantId: tenantId
             }, { transaction });
             console.log(`[Stock] Created virtual ProductMovement for Libre product ${product.name}`);
         }
@@ -1164,7 +1170,7 @@ router.post('/orders', async (req, res) => {
                     for (const sub of item.subItems) {
                         if (sub.productId) {
                             const subQty = (sub.quantity || 1) * (item.quantity || 1);
-                            await processStockChange(sub.productId, subQty, true, null, t, userId, accountId);
+                            await processStockChange(sub.productId, subQty, true, null, t, userId, accountId, req.tenant.id);
                         }
                     }
                 }
@@ -1252,7 +1258,7 @@ router.post('/orders', async (req, res) => {
 
             // 1. Deduct Stock for Main Product
             console.log(`[Orders] Deducting stock for main product: ${item.productId}, qty: ${item.quantity}, presentation: ${item.presentation}`);
-            await processStockChange(item.productId, item.quantity, true, item.presentation, t, userId, accountId);
+            await processStockChange(item.productId, item.quantity, true, item.presentation, t, userId, accountId, req.tenant.id);
 
             // 2. Deduct Stock for SubItems (Menu Components)
             if (item.subItems && Array.isArray(item.subItems)) {
@@ -1273,7 +1279,7 @@ router.post('/orders', async (req, res) => {
                     if (sub.productId) {
                         const totalSubQty = (sub.quantity || 1) * item.quantity;
                         console.log(`[Orders] Deducting physical stock for productId: ${sub.productId}, qty: ${totalSubQty}`);
-                        await processStockChange(sub.productId, totalSubQty, true, null, t, userId, accountId);
+                        await processStockChange(sub.productId, totalSubQty, true, null, t, userId, accountId, req.tenant.id);
                     } else {
                         console.log(`[Orders] SubItem has no productId (virtual): ${sub.name}`);
                     }
@@ -1501,7 +1507,7 @@ router.put('/orders/:id/decrement', async (req, res) => {
         (async () => {
             try {
                 // Restore stock for 1 unit of main product
-                await processStockChange(order.ProductId, 1, false, order.presentation, null, order.UserId, order.AccountId);
+                await processStockChange(order.ProductId, 1, false, order.presentation, null, order.UserId, order.AccountId, req.tenant.id);
 
                 // Restore stock for subItems with scale 1
                 if (order.subItemsData) {
@@ -1517,7 +1523,7 @@ router.put('/orders/:id/decrement', async (req, res) => {
 
                             // B. Restore Physical Inventory (if linked)
                             if (sub.productId) {
-                                await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId);
+                                await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, req.tenant.id);
                             }
                         }
                     }
