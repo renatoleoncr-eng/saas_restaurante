@@ -2015,9 +2015,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             {cart.length > 0 ? (
                                 <button
                                     onClick={sendOrder}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2"
+                                    disabled={isSendingOrder}
+                                    className={`w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                                 >
-                                    Enviar Pedido <Check size={20} />
+                                    {isSendingOrder ? 'Enviando...' : 'Enviar Pedido'} {!isSendingOrder && <Check size={20} />}
                                 </button>
                             ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                                 <button
