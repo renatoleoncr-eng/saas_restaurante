@@ -1895,7 +1895,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                                 </div>
                                                                                             ) : product.requiresPreparation ? (
                                                                                                 <button
-                                                                                                    onClick={() => setRecipeProduct({ ...product, _targetVariant: { name: v.name, price: v.price } })}
+                                                                                                    onClick={() => setRecipeProduct(product)}
                                                                                                     className="text-orange-600 hover:bg-orange-50 p-1 rounded flex items-center gap-1 text-xs font-bold border border-orange-100"
                                                                                                     title="Ver/Editar Receta"
                                                                                                 >

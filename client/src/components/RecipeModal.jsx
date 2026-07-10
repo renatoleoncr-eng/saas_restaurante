@@ -184,8 +184,8 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] sm:max-h-[85vh]">
+                <div className="p-4 sm:px-6 border-b flex justify-between items-center bg-gray-50 shrink-0">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                         <ChefHat className="text-orange-600" /> Receta: {product.name}
                     </h3>
@@ -203,7 +203,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto">
+                <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
                     <p className="text-sm text-gray-500 mb-4">
                         Define los ingredientes para cada presentación. Cuando se venda una presentación específica, se descontarán sus ingredientes correspondientes.
                     </p>
