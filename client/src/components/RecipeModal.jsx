@@ -39,6 +39,9 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
             if (product._targetVariant) {
                 return [product._targetVariant];
             }
+            if (product.ProductVariants && product.ProductVariants.length > 0) {
+                return product.ProductVariants;
+            }
             if (product.presentations) {
                 const parsed = typeof product.presentations === 'string' ? JSON.parse(product.presentations) : product.presentations;
                 return Array.isArray(parsed) ? parsed : [];
@@ -213,11 +216,11 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                                         value={forms[sectionName]?.quantity || ''}
                                                         onChange={e => updateForm(sectionName, 'quantity', e.target.value)}
                                                         onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') addIngredient(sectionName);
+                                                            if (e.key === 'Enter') addIngredient(section);
                                                         }}
                                                     />
                                                     <button
-                                                        onClick={() => addIngredient(sectionName)}
+                                                        onClick={() => addIngredient(section)}
                                                         className="bg-orange-600 hover:bg-orange-700 text-white p-1.5 rounded transition-colors flex items-center justify-center min-w-[36px]"
                                                     >
                                                         <Plus size={18} />
