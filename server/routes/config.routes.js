@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, printEvent } = require('../utils/printer');
 
 const LATEST_AGENT_VERSION = "1.0.0";
 
@@ -123,16 +123,45 @@ router.post('/config/printers/test', async (req, res) => {
 router.get('/config/printers/pending', (req, res) => {
     try {
         const { printers, agentId } = req.query;
-        let jobs;
+        let keys = null;
         if (printers) {
-            const keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
-            jobs = getPendingJobsForPrinters(keys, agentId);
-        } else {
-            jobs = getPendingJobs(agentId);
+            keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
         }
-        res.json(jobs);
+
+        const fetchJobs = () => {
+            if (keys) return getPendingJobsForPrinters(keys, agentId);
+            return getPendingJobs(agentId);
+        };
+
+        let jobs = fetchJobs();
+        if (jobs && jobs.length > 0) {
+            return res.json(jobs);
+        }
+
+        // Long-polling
+        const onNewJob = () => {
+            jobs = fetchJobs();
+            if (jobs && jobs.length > 0) {
+                clearTimeout(timeoutId);
+                printEvent.removeListener('new_job', onNewJob);
+                if (!res.headersSent) res.json(jobs);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            printEvent.removeListener('new_job', onNewJob);
+            if (!res.headersSent) res.json([]);
+        }, 25000); // 25s timeout
+
+        printEvent.on('new_job', onNewJob);
+
+        req.on('close', () => {
+            clearTimeout(timeoutId);
+            printEvent.removeListener('new_job', onNewJob);
+        });
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        if (!res.headersSent) res.status(500).json({ error: err.message });
     }
 });
 

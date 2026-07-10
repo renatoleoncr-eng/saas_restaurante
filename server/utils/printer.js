@@ -1,7 +1,11 @@
 const { execFile } = require('child_process');
 const path = require('path');
 
+const EventEmitter = require('events');
+
 // In-memory print queue for local print agent when server is running in the cloud (Linux/Docker)
+const printEvent = new EventEmitter();
+printEvent.setMaxListeners(100);
 const pendingJobs = [];
 let jobCounter = 0;
 const isWindows = process.platform === 'win32';
@@ -200,6 +204,7 @@ async function sendToPrinter(printerKey, printerConfig, hexData) {
             createdAt: new Date()
         };
         pendingJobs.push(job);
+        printEvent.emit('new_job');
         console.log(`[Printer Queue] Queued print job #${job.id} for local print agent (${printerKey || 'caja'}).`);
         return { success: true, queued: true, jobId: job.id };
     }
@@ -764,5 +769,6 @@ module.exports = {
     triggerComandaPrint,
     triggerInvoicePrint,
     getPendingJobs,
-    getPendingJobsForPrinters
+    getPendingJobsForPrinters,
+    printEvent
 };
