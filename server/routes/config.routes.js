@@ -3,7 +3,7 @@ const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
 const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, printEvent } = require('../utils/printer');
 
-const LATEST_AGENT_VERSION = "1.0.0";
+const LATEST_AGENT_VERSION = "1.1.0";
 
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
@@ -88,7 +88,7 @@ router.post('/config/printers', async (req, res) => {
 // POST test printer
 router.post('/config/printers/test', async (req, res) => {
     try {
-        const { printerKey, type, path, printerName, agentId } = req.body;
+        const { printerKey, type, path, printerName } = req.body;
         
         if (!type || type === 'disabled') {
             return res.status(400).json({ error: 'La impresora esta deshabilitada. Activala primero.' });
@@ -112,7 +112,7 @@ router.post('/config/printers/test', async (req, res) => {
         builder.bold().line("SI PUEDES LEER ESTO, LA IMPRESION").line("HA SIDO CONFIGURADA CORRECTAMENTE!").bold(false);
         builder.line("-".repeat(42)).feed(4).cut();
 
-        const config = { type, path, printerName, agentId };
+        const config = { type, path, printerName };
         const result = await sendToPrinter(printerKey, config, builder.toHex());
 
         if (result.success) {

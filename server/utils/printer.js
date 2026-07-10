@@ -706,30 +706,24 @@ function filterJobsByAgent(jobsArray, agentId) {
     const jobsToKeep = [];
 
     for (const job of jobsArray) {
-        if (!job.printerConfig) {
+        if (!job.printerConfig || !job.printerConfig.printerName) {
             jobsToReturn.push(job);
             continue;
         }
 
-        let targetAgentId = job.printerConfig.agentId;
-        let finalJob = job;
-
-        // Check if printerName contains a tag [DESKTOP-XXX]
-        if (!targetAgentId && job.printerConfig.printerName) {
-            const match = job.printerConfig.printerName.match(/^\[(.*?)\]\s*(.*)$/);
-            if (match) {
-                targetAgentId = match[1];
-                // Clone the job to strip the tag for the agent
-                finalJob = JSON.parse(JSON.stringify(job));
-                finalJob.printerConfig.printerName = match[2];
-            }
-        }
-
-        if (targetAgentId) {
+        const printerName = job.printerConfig.printerName;
+        const match = printerName.match(/^\[(.*?)\]\s*(.*)$/);
+        
+        if (match) {
+            const targetAgentId = match[1];
             if (agentId && targetAgentId === agentId) {
-                jobsToReturn.push(finalJob);
+                // Strip the tag and return it to this agent
+                const jobClone = JSON.parse(JSON.stringify(job));
+                jobClone.printerConfig.printerName = match[2];
+                jobsToReturn.push(jobClone);
             } else {
-                jobsToKeep.push(job); // Keep original with tag for later
+                // Belong to another agent, keep in queue
+                jobsToKeep.push(job);
             }
         } else {
             // Un-tagged printer, can go to any agent

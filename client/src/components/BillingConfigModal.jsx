@@ -57,9 +57,9 @@ const BillingConfigModal = ({ onClose }) => {
 
     // Printer States
     const [printers, setPrinters] = useState({
-        caja: { type: 'disabled', path: '', printerName: '', agentId: '' },
-        cocina: { type: 'disabled', path: '', printerName: '', agentId: '' },
-        barra: { type: 'disabled', path: '', printerName: '', agentId: '' }
+        caja: { type: 'disabled', path: '', printerName: '' },
+        cocina: { type: 'disabled', path: '', printerName: '' },
+        barra: { type: 'disabled', path: '', printerName: '' }
     });
     const [testLoading, setTestLoading] = useState({});
     const [windowsPrinters, setWindowsPrinters] = useState([]);
@@ -1788,33 +1788,6 @@ const BillingConfigModal = ({ onClose }) => {
                                                         />
                                                     )}
                                                     <span className="text-[10px] text-gray-400 block">Nombre exacto de la impresora instalada en Windows.</span>
-                                                </div>
-                                            )}
-
-                                            {prt.type !== 'disabled' && prt.type !== 'windows_print' && agentStatus === 'active' && activeAgents.length > 0 && (
-                                                <div className="space-y-1 animate-in fade-in duration-200 border-t pt-3 mt-3">
-                                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                                        <span>Computadora (Agente)</span>
-                                                    </label>
-                                                    <select
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50"
-                                                        value={prt.agentId || ''}
-                                                        onChange={(e) => {
-                                                            const agentId = e.target.value;
-                                                            setPrinters(prev => ({
-                                                                ...prev,
-                                                                [key]: { ...prev[key], agentId }
-                                                            }));
-                                                        }}
-                                                    >
-                                                        <option value="">Aleatorio (Cualquier PC)</option>
-                                                        {activeAgents.map(agent => (
-                                                            <option key={agent} value={agent}>{agent}</option>
-                                                        ))}
-                                                    </select>
-                                                    <span className="text-[10px] text-gray-400 block">
-                                                        Selecciona qué computadora enviará la orden a la impresora.
-                                                    </span>
                                                 </div>
                                             )}
 
