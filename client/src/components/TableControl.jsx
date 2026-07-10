@@ -1101,7 +1101,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         setPinError('');
         try {
             // Validate PIN first
-            const res = await axios.post('/api/users/validate-pin', { pin: enteredPin });
+            const res = await axios.post('/api/validate-pin', { pin: enteredPin });
             if (res.data.success) {
                 setShowPinPad(false);
                 setValidatedPinForOrder(enteredPin);
