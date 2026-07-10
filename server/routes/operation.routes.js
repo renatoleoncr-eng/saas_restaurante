@@ -1394,7 +1394,7 @@ router.delete('/orders/:id', async (req, res) => {
         // 5. Background: Restore Stock & Notify
         (async () => {
             try {
-                await restoreOrderStock(order);
+                await restoreOrderStock(order, req.tenant.id);
                 const io = req.app.get('io');
                 if (io && account) {
                     io.emit('new_order', { accountId: account.id, tableId: account.TableId });

@@ -125,7 +125,7 @@ router.delete('/accounts/:id', async (req, res) => {
             const operationRoutes = require('./operation.routes');
             for (const order of account.Orders) {
                 if (order.status !== 'cancelled') {
-                    await operationRoutes.restoreOrderStock(order);
+                    await operationRoutes.restoreOrderStock(order, req.tenant.id);
                 }
             }
         }
