@@ -55,15 +55,11 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
         if (!editForm.name) return alert("Nombre requerido");
         try {
             const isEditing = !!editForm.id;
-            const res = await axios({
-                method: isEditing ? 'put' : 'post',
-                url: `/api/stock/ingredients${isEditing ? `/${editForm.id}` : ''}`,
-                data: { ...editForm, unit: 'Unidades' }
-            });
+            const res = await axios.post('/api/stock/ingredients', { ...editForm, unit: 'Unidades' });
 
             // Optimistic update
             if (isEditing) {
-                setIngredients(prev => prev.map(inv => inv.id === res.data.id ? res.data : inv));
+                setIngredients(prev => prev.map(inv => inv.id === editForm.id ? { ...inv, ...editForm } : inv));
             } else {
                 setIngredients(prev => [...prev, res.data]);
             }
