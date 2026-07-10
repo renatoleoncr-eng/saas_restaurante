@@ -168,7 +168,24 @@ function fetchPrinters() {
             if (!err && stdout.trim()) {
                 try {
                     const parsed = JSON.parse(stdout.trim());
-                    cachedPrinters = Array.isArray(parsed) ? parsed : [parsed];
+                    const allPrinters = Array.isArray(parsed) ? parsed : [parsed];
+                    
+                    // Filter out common virtual/fake printers to keep UI clean
+                    const ignored = [
+                        'microsoft print to pdf',
+                        'microsoft xps document writer',
+                        'fax',
+                        'onenote',
+                        'onenote (desktop)',
+                        'send to onenote',
+                        'webex',
+                        'anydesk printer'
+                    ];
+                    
+                    cachedPrinters = allPrinters.filter(p => {
+                        const name = (p || '').toLowerCase();
+                        return !ignored.some(ign => name.includes(ign));
+                    });
                 } catch (_) {}
             }
         }
