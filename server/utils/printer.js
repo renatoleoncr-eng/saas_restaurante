@@ -172,7 +172,13 @@ async function getPrintersConfig(tenantId) {
     const { Setting } = getModels();
     try {
         const key = tenantId ? `printer_config_${tenantId}` : 'printer_config';
-        const setting = await Setting.findByPk(key);
+        let setting = await Setting.findByPk(key);
+        
+        // Fallback for migrated DBs
+        if (!setting && tenantId) {
+            setting = await Setting.findByPk('printer_config');
+        }
+
         if (setting) {
             return JSON.parse(setting.value);
         }

@@ -44,7 +44,13 @@ router.put('/config', async (req, res) => {
 router.get('/config/printers', async (req, res) => {
     try {
         const printerKey = `printer_config_${req.tenant.id}`;
-        const setting = await Setting.findByPk(printerKey);
+        let setting = await Setting.findByPk(printerKey);
+        
+        // Fallback for migrated DBs
+        if (!setting && req.tenant.id) {
+            setting = await Setting.findByPk('printer_config');
+        }
+
         if (setting) {
             return res.json(JSON.parse(setting.value));
         }
