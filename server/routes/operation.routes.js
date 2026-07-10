@@ -600,11 +600,7 @@ const checkStockAvailability = async (orderItems) => {
                 });
 
                 if (product) {
-                    // VALIDATION: Prevent ordering prepared products that have no recipe configured
-                    if (product.requiresPreparation && !product.isStockManaged && product.type !== 'menu' && (!product.Recipes || product.Recipes.length === 0)) {
-                        errors.push(`El producto "${product.name}" requiere preparación pero no tiene una receta configurada. Por favor, configure la receta en el panel de administración.`);
-                        continue;
-                    }
+                    // validation pushed to accumulateRequirements
                 }
             }
 
@@ -716,22 +712,15 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
     }
 
     if (product.Recipes && product.Recipes.length > 0) {
-        // Resolve target recipes based on presentation (copied from processStockChange logic)
         let targetRecipes = [];
         if (presentation) {
             targetRecipes = product.Recipes.filter(r => r.presentation === presentation);
-            if (targetRecipes.length === 0) targetRecipes = product.Recipes.filter(r => r.presentation === null);
         } else {
             targetRecipes = product.Recipes.filter(r => r.presentation === null);
-            if (targetRecipes.length === 0 && product.Recipes.length > 0) {
-                const availablePresentations = [...new Set(product.Recipes.map(r => r.presentation).filter(p => p))];
-                if (availablePresentations.length === 1) {
-                    targetRecipes = product.Recipes.filter(r => r.presentation === availablePresentations[0]);
-                } else {
-                    const fallbackPres = availablePresentations.find(p => ['Personal', 'Individual', 'Standard', 'Normal'].includes(p));
-                    if (fallbackPres) targetRecipes = product.Recipes.filter(r => r.presentation === fallbackPres);
-                }
-            }
+        }
+
+        if (targetRecipes.length === 0 && product.requiresPreparation && !product.isStockManaged && product.type !== 'menu') {
+            throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
         }
 
         for (const recipe of targetRecipes) {
@@ -744,6 +733,8 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
                 ingredientReqs[id].qty += amount;
             }
         }
+    } else if (product.requiresPreparation && !product.isStockManaged && product.type !== 'menu') {
+        throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
     } else if (product.isStockManaged) {
         if (presentation) {
             const variant = await ProductVariant.findOne({ where: { ProductId: productId, name: presentation } });
@@ -794,42 +785,16 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
 
         if (product.Recipes && product.Recipes.length > 0) {
             console.log(`[Stock] Product ${product.name} has recipes.`);
-            // Filter Recipes based on Presentation
             let targetRecipes = [];
 
             if (presentation) {
-                // 1. Try to find recipes for this specific presentation
                 targetRecipes = product.Recipes.filter(r => r.presentation === presentation);
-
-                // 2. Fallback to base
-                if (targetRecipes.length === 0) {
-                    targetRecipes = product.Recipes.filter(r => r.presentation === null);
-                }
             } else {
-                // No presentation specified (e.g. Menu SubItem)
-                // 1. Try Base Recipe first
                 targetRecipes = product.Recipes.filter(r => r.presentation === null);
+            }
 
-                // 2. Fallback: If no base recipe, but other presentations exist
-                if (targetRecipes.length === 0 && product.Recipes.length > 0) {
-                    // Get list of available presentations
-                    const availablePresentations = [...new Set(product.Recipes.map(r => r.presentation).filter(p => p))];
-
-                    if (availablePresentations.length === 1) {
-                        // Case A: Only one presentation exists (e.g. 'Personal'), use it
-                        console.log(`[Stock] Warning: No base recipe for ${product.name}. Using unique presentation: ${availablePresentations[0]}`);
-                        targetRecipes = product.Recipes.filter(r => r.presentation === availablePresentations[0]);
-                    } else {
-                        // Case B: Multiple exist. Try 'Personal' or 'Standard'
-                        const fallbackPres = availablePresentations.find(p => ['Personal', 'Individual', 'Standard', 'Normal'].includes(p));
-                        if (fallbackPres) {
-                            console.log(`[Stock] Warning: No base recipe for ${product.name}. Using fallback presentation: ${fallbackPres}`);
-                            targetRecipes = product.Recipes.filter(r => r.presentation === fallbackPres);
-                        } else {
-                            console.log(`[Stock] Warning: No base recipe for ${product.name} and ambiguous presentations (${availablePresentations.join(',')}). Skipping.`);
-                        }
-                    }
-                }
+            if (targetRecipes.length === 0 && product.requiresPreparation && !product.isStockManaged && product.type !== 'menu') {
+                throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
             }
 
             // Handle Ingredients
@@ -928,6 +893,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 TenantId: tenantId
             }, { transaction });
             console.log(`[Stock] Recorded ProductMovement for recipe item: ${product.name}`);
+        } else if (product.requiresPreparation && !product.isStockManaged && product.type !== 'menu') {
+            throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
         } else if (product.isStockManaged) {
             console.log(`[Stock] Product ${product.name} is direct stock managed.`);
             // Handle Direct Stock (No Recipe, e.g. Soda Cans, Beer)
