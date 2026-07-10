@@ -1,7 +1,79 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
-import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+
+const SearchableSelect = ({ ingredients, value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedIng = ingredients.find(i => String(i.id) === String(value));
+    const filtered = ingredients.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <div ref={wrapperRef} className="relative w-full sm:flex-1 text-sm">
+            <div 
+                className={`border p-2 rounded outline-none bg-white cursor-pointer flex justify-between items-center transition-colors h-[38px] ${isOpen ? 'border-orange-500 ring-1 ring-orange-500' : 'hover:border-gray-400'}`}
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <span className={selectedIng ? "text-gray-900 truncate font-medium" : "text-gray-500 truncate"}>
+                    {selectedIng ? `${selectedIng.name} (Stock: ${selectedIng.stock} ${selectedIng.unit})` : "+ Buscar Insumo..."}
+                </span>
+                <ChevronDown size={16} className={`text-gray-500 flex-shrink-0 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-[60] w-full mt-1 bg-white border border-gray-200 rounded shadow-xl max-h-64 flex flex-col overflow-hidden">
+                    <div className="p-2 border-b bg-gray-50 sticky top-0">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar..."
+                                className="w-full pl-8 pr-2 py-1.5 border rounded outline-none text-sm focus:border-orange-500 bg-white"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <div className="overflow-y-auto overscroll-contain">
+                        {filtered.length === 0 ? (
+                            <div className="p-3 text-gray-500 text-center italic text-xs">No se encontraron insumos</div>
+                        ) : (
+                            filtered.map(ing => (
+                                <div
+                                    key={ing.id}
+                                    className={`p-2 hover:bg-orange-50 cursor-pointer border-b last:border-0 ${String(value) === String(ing.id) ? 'bg-orange-100' : ''}`}
+                                    onClick={() => {
+                                        onChange(ing.id);
+                                        setIsOpen(false);
+                                        setSearch("");
+                                    }}
+                                >
+                                    <div className="font-bold text-gray-800 text-xs">{ing.name}</div>
+                                    <div className="text-[10px] text-gray-500 font-medium">Stock actual: <span className={ing.stock > 0 ? 'text-green-600' : 'text-red-500'}>{ing.stock}</span> {ing.unit}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function RecipeModal({ product, onClose, apiBase = '/api/stock', recipePostPath = null, recipeGetPath = null, recipeDeletePath = null }) {
     useModalBackHandler(true, onClose);
@@ -196,23 +268,18 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                             )}
 
                                             {/* ADD FORM */}
-                                            <div className="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-50 p-2 rounded border border-dashed border-gray-300">
-                                                <select
-                                                    className="border p-1.5 rounded w-full sm:flex-1 text-sm outline-none focus:border-orange-500"
-                                                    value={forms[sectionName]?.ingredientId || ''}
-                                                    onChange={e => updateForm(sectionName, 'ingredientId', e.target.value)}
-                                                >
-                                                    <option value="">+ Agregar Insumo...</option>
-                                                    {ingredients.map(ing => (
-                                                        <option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>
-                                                    ))}
-                                                </select>
+                                            <div className="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-50 p-2.5 rounded-lg border border-dashed border-gray-300">
+                                                <SearchableSelect 
+                                                    ingredients={ingredients}
+                                                    value={forms[sectionName]?.ingredientId}
+                                                    onChange={val => updateForm(sectionName, 'ingredientId', val)}
+                                                />
                                                 <div className="flex gap-2 w-full sm:w-auto">
                                                     <input
                                                         type="number"
                                                         step="0.5"
                                                         placeholder="Cant."
-                                                        className="border p-1.5 rounded flex-1 sm:w-20 text-sm outline-none focus:border-orange-500"
+                                                        className="border p-1.5 rounded flex-1 sm:w-24 text-sm outline-none focus:border-orange-500 h-[38px]"
                                                         value={forms[sectionName]?.quantity || ''}
                                                         onChange={e => updateForm(sectionName, 'quantity', e.target.value)}
                                                         onKeyDown={(e) => {
