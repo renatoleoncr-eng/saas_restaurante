@@ -582,7 +582,7 @@ const updateDailyMenuStock = async (menuItemId, quantity, isDeduction, tenantId,
 };
 
 // Helper function to check stock availability before processing an order
-const checkStockAvailability = async (orderItems) => {
+const checkStockAvailability = async (orderItems, tenantId) => {
     const { Product, Recipe, Ingredient, ProductVariant, DailyMenu } = getModels();
     const errors = [];
     const ingredientReqs = {}; // { id: { name, unit, qty } }
@@ -619,14 +619,14 @@ const checkStockAvailability = async (orderItems) => {
                     if (sub.productId) {
                         // Recursive check for subitems if they have recipes or stock
                         const totalSubQty = (sub.quantity || 1) * qty;
-                        await accumulateRequirements(sub.productId, totalSubQty, null, ingredientReqs, productReqs, variantReqs);
+                        await accumulateRequirements(sub.productId, totalSubQty, null, ingredientReqs, productReqs, variantReqs, tenantId);
                     }
                 }
             }
 
             // 2. Handle Main Product
             if (item.productId) {
-                await accumulateRequirements(item.productId, qty, item.presentation, ingredientReqs, productReqs, variantReqs);
+                await accumulateRequirements(item.productId, qty, item.presentation, ingredientReqs, productReqs, variantReqs, tenantId);
             }
         }
 
@@ -662,7 +662,7 @@ const checkStockAvailability = async (orderItems) => {
             const now = new Date();
             now.setHours(now.getHours() - 5);
             const today = now.toISOString().split('T')[0];
-            const menu = await DailyMenu.findOne({ where: { date: today, TenantId: req.tenant.id } });
+            const menu = await DailyMenu.findOne({ where: { date: today, TenantId: tenantId } });
 
             if (menu) {
                 const entries = JSON.parse(menu.entries || '[]');
@@ -691,7 +691,7 @@ const checkStockAvailability = async (orderItems) => {
 };
 
 // Helper to accumulate requirements for a product/variant/ingredients
-const accumulateRequirements = async (productId, quantity, presentation, ingredientReqs, productReqs, variantReqs) => {
+const accumulateRequirements = async (productId, quantity, presentation, ingredientReqs, productReqs, variantReqs, tenantId) => {
     if (!productId) {
         console.warn("[StockCheck] accumulateRequirements called with null productId. Skipping.");
         return;
@@ -708,7 +708,7 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
 
     // NEW: Check linkedProductId for menu items
     if ((product.type === 'daily_entry' || product.type === 'daily_main') && product.linkedProductId) {
-        return accumulateRequirements(product.linkedProductId, quantity, presentation, ingredientReqs, productReqs, variantReqs);
+        return accumulateRequirements(product.linkedProductId, quantity, presentation, ingredientReqs, productReqs, variantReqs, tenantId);
     }
 
     if (product.Recipes && product.Recipes.length > 0) {
@@ -737,7 +737,7 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
         throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
     } else if (product.isStockManaged) {
         if (presentation) {
-            const variant = await ProductVariant.findOne({ where: { ProductId: productId, name: presentation, TenantId: req.tenant.id } });
+            const variant = await ProductVariant.findOne({ where: { ProductId: productId, name: presentation, TenantId: tenantId } });
             if (variant) {
                 if (!variantReqs[variant.id]) {
                     variantReqs[variant.id] = { name: `${product.name} [${variant.name}]`, qty: 0 };
@@ -1091,7 +1091,7 @@ router.post('/orders', async (req, res) => {
 
 
         // 1. VALIDATE STOCK BEFORE PROCESSING
-        const stockCheck = await checkStockAvailability(products);
+        const stockCheck = await checkStockAvailability(products, req.tenant.id);
         if (!stockCheck.ok) {
             console.warn("[Orders] Stock validation FAILED:", JSON.stringify(stockCheck.errors));
             await t.rollback();

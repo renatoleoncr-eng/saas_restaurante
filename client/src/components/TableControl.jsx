@@ -1080,6 +1080,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const [showPinPad, setShowPinPad] = useState(false);
     const [pinError, setPinError] = useState('');
+    const [validatedPinForOrder, setValidatedPinForOrder] = useState(null);
 
     const sendOrder = async () => {
         if (cart.length === 0) return;
@@ -1108,13 +1109,22 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 setValidatedPinForOrder(enteredPin);
                 
                 if (printingEnabled) {
-                    setShowPrintConfirm(true);
+                    // Delay slightly to allow PinPadModal's history.back() to complete before pushing new state
+                    setTimeout(() => setShowPrintConfirm(true), 100);
                 } else {
                     await executeSendOrder(enteredPin, false);
                 }
             }
         } catch (err) {
-            const msg = err.response?.data?.error || 'PIN incorrecto';
+            console.error('Validate PIN Error:', err);
+            let msg = `Error interno: ${err.message || err.toString()}`;
+            if (err.response?.data?.error) {
+                msg = err.response.data.error;
+            } else if (err.response?.status === 400 || err.response?.status === 401) {
+                msg = 'PIN incorrecto o usuario inactivo';
+            } else if (err.response?.status) {
+                msg = `Error del servidor HTTP ${err.response.status}`;
+            }
             setPinError(msg);
             alert(msg);
         }

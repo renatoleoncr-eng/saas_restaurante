@@ -287,14 +287,7 @@ export default function AdminLayoutManager({ onGoToSection }) {
                                                 "border-gray-300 bg-gray-100 text-gray-500"}`}
                                         >
                                             {/* Action Buttons overlay (Always visible for easy tapping on mobile, styled cleanly) */}
-                                            <div className="absolute top-1.5 left-1.5 right-1.5 flex justify-between items-center z-10">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleRenameTable(table); }}
-                                                    className="p-1 bg-white/95 hover:bg-white text-purple-600 rounded-lg shadow-sm border border-purple-100 transition-colors"
-                                                    title="Renombrar Mesa"
-                                                >
-                                                    <Edit size={12} />
-                                                </button>
+                                            <div className="absolute top-1.5 right-1.5 flex justify-end items-center z-10">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteTable(table.id); }}
                                                     className="p-1 bg-white/95 hover:bg-white text-red-500 rounded-lg shadow-sm border border-red-100 transition-colors"
