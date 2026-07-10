@@ -938,7 +938,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </>
                     ) : (
                         <>
-                            {['admin', 'waiter', 'cashier'].includes(user?.role) && (
+                            {user?.role === 'admin' && (
                                 <button 
                                     onClick={(e) => {
                                         setActiveTab('config');
@@ -1386,7 +1386,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </div>
                     )}
 
-                    {activeTab === 'config' && ['admin', 'waiter', 'cashier'].includes(user?.role) && (
+                    {activeTab === 'config' && user?.role === 'admin' && (
                         <form onSubmit={handleSaveConfig} className="max-w-xl mx-auto space-y-6 py-6 px-2">
                             {/* RUC */}
                             <div className="space-y-2">
