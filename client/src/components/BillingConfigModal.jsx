@@ -18,7 +18,7 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
 
 const BillingConfigModal = ({ onClose }) => {
     const { user, setBillingConfig } = useRestaurant();
-    const [activeTab, setActiveTab] = useState('config');
+    const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'config' : 'printers');
     const [viewMode, setViewMode] = useState('config');
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState({
