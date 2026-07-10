@@ -34,43 +34,52 @@ const SearchableSelect = ({ ingredients, value, onChange }) => {
                 <ChevronDown size={16} className={`text-gray-500 flex-shrink-0 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
-            {isOpen && (
-                <div className="absolute z-[60] w-full mt-1 bg-white border border-gray-200 rounded shadow-xl max-h-64 flex flex-col overflow-hidden">
-                    <div className="p-2 border-b bg-gray-50 sticky top-0">
-                        <div className="relative">
-                            <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
+            {isOpen && createPortal(
+                <div 
+                    className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4"
+                    onClick={() => setIsOpen(false)}
+                >
+                    <div 
+                        className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-3 border-b bg-gray-50 flex items-center gap-2">
+                            <Search size={18} className="text-gray-400 shrink-0" />
                             <input
                                 type="text"
-                                placeholder="Buscar..."
-                                className="w-full pl-8 pr-2 py-1.5 border rounded outline-none text-sm focus:border-orange-500 bg-white"
+                                placeholder="Buscar insumo..."
+                                className="w-full bg-transparent outline-none text-sm font-medium"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
                                 autoFocus
                             />
+                            <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-gray-200 rounded-full text-gray-500">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar flex-1 p-1">
+                            {filtered.length === 0 ? (
+                                <div className="p-6 text-gray-500 text-center text-sm">No se encontraron insumos</div>
+                            ) : (
+                                filtered.map(ing => (
+                                    <div
+                                        key={ing.id}
+                                        className={`px-4 py-3 hover:bg-orange-50 cursor-pointer border-b last:border-0 rounded-lg mx-1 my-1 transition-colors ${String(value) === String(ing.id) ? 'bg-orange-100 border-orange-200' : 'border-transparent'}`}
+                                        onClick={() => {
+                                            onChange(ing.id);
+                                            setIsOpen(false);
+                                            setSearch("");
+                                        }}
+                                    >
+                                        <div className="font-bold text-gray-800 text-sm mb-0.5">{ing.name}</div>
+                                        <div className="text-xs text-gray-500 font-medium">Stock actual: <span className={ing.stock > 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{ing.stock}</span> {ing.unit}</div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
-                    <div className="overflow-y-auto overscroll-contain">
-                        {filtered.length === 0 ? (
-                            <div className="p-3 text-gray-500 text-center italic text-xs">No se encontraron insumos</div>
-                        ) : (
-                            filtered.map(ing => (
-                                <div
-                                    key={ing.id}
-                                    className={`p-2 hover:bg-orange-50 cursor-pointer border-b last:border-0 ${String(value) === String(ing.id) ? 'bg-orange-100' : ''}`}
-                                    onClick={() => {
-                                        onChange(ing.id);
-                                        setIsOpen(false);
-                                        setSearch("");
-                                    }}
-                                >
-                                    <div className="font-bold text-gray-800 text-xs">{ing.name}</div>
-                                    <div className="text-[10px] text-gray-500 font-medium">Stock actual: <span className={ing.stock > 0 ? 'text-green-600' : 'text-red-500'}>{ing.stock}</span> {ing.unit}</div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -155,6 +164,12 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
     const addIngredient = async (section) => {
         const form = forms[section.name] || {};
         if (!form.ingredientId || !form.quantity) return;
+
+        const qty = parseFloat(form.quantity);
+        if (qty % 0.5 !== 0) {
+            alert('La cantidad debe ser un múltiplo de 0.5 (ej. 1, 1.5, 2, 2.5)');
+            return;
+        }
 
         try {
             await axios.post(postRecipeUrl, {
