@@ -889,7 +889,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
-                        {user?.role === 'admin' && (
+                        {['admin', 'mesero/control'].includes(user?.role) && (
                             <button 
                                 onClick={() => {
                                     if (viewMode === 'comprobantes') {
@@ -938,7 +938,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </>
                     ) : (
                         <>
-                            {user?.role === 'admin' && (
+                            {['admin', 'mesero/control'].includes(user?.role) && (
                                 <button 
                                     onClick={(e) => {
                                         setActiveTab('config');
@@ -950,7 +950,7 @@ const BillingConfigModal = ({ onClose }) => {
                                     {activeTab === 'config' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1f63fb] rounded-t-full"></div>}
                                 </button>
                             )}
-                            {user?.role === 'admin' && (
+                            {['admin', 'mesero/control'].includes(user?.role) && (
                                 <button 
                                     onClick={(e) => {
                                         setActiveTab('printers');
@@ -1386,7 +1386,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </div>
                     )}
 
-                    {activeTab === 'config' && user?.role === 'admin' && (
+                    {activeTab === 'config' && ['admin', 'mesero/control'].includes(user?.role) && (
                         <form onSubmit={handleSaveConfig} className="max-w-xl mx-auto space-y-6 py-6 px-2">
                             {/* RUC */}
                             <div className="space-y-2">
@@ -1560,7 +1560,7 @@ const BillingConfigModal = ({ onClose }) => {
                         </form>
                     )}
 
-                    {activeTab === 'printers' && user?.role === 'admin' && (
+                    {activeTab === 'printers' && ['admin', 'mesero/control'].includes(user?.role) && (
                         <form onSubmit={handleSavePrinters} className="max-w-4xl mx-auto space-y-8 py-4">
 
                             {/* Habilitar Impresión Toggle */}

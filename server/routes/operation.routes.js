@@ -271,12 +271,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Helper to restore stock for an order
-const restoreOrderStock = async (order) => {
+const restoreOrderStock = async (order, tenantId) => {
     try {
         // Models are used in sub-functions, but logic here calls them.
         console.log(`[Stock] restoreOrderStock called for Order ${order.id} | Product: ${order.ProductId} | Qty: ${order.quantity} | Pres: ${order.presentation}`);
         // 1. Restore Stock for Main Product
-        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, order.UserId, order.AccountId, req.tenant.id);
+        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, order.UserId, order.AccountId, tenantId);
 
         // 2. Restore Stock for SubItems
         if (order.subItemsData) {
@@ -293,7 +293,7 @@ const restoreOrderStock = async (order) => {
 
                     // B. Restore Physical Inventory (if linked)
                     if (sub.productId) {
-                        await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, req.tenant.id);
+                        await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, tenantId);
                         console.log(`[Stock] Restored physical stock for sub-product ${sub.productId} by ${totalSubQty}`);
                     }
                 }
@@ -489,7 +489,7 @@ router.post('/accounts/:id/cancel', async (req, res) => {
             console.log(`[Cancel] Restoring stock for ${account.Orders.length} orders in Account ${id}`);
             for (const order of account.Orders) {
                 if (order.status !== 'cancelled') {
-                    await restoreOrderStock(order);
+                    await restoreOrderStock(order, req.tenant.id);
                     order.status = 'cancelled';
                     await order.save();
                 }
