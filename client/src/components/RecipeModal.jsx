@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
@@ -182,7 +183,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
     };
 
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] sm:max-h-[85vh]">
                 <div className="p-4 sm:px-6 border-b flex justify-between items-center bg-gray-50 shrink-0">
@@ -302,6 +303,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
