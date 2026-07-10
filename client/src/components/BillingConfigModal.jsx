@@ -1791,7 +1791,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                 </div>
                                             )}
 
-                                            {prt.type !== 'disabled' && prt.type !== 'windows_print' && agentActive && activeAgents.length > 0 && (
+                                            {prt.type !== 'disabled' && prt.type !== 'windows_print' && agentStatus === 'active' && activeAgents.length > 0 && (
                                                 <div className="space-y-1 animate-in fade-in duration-200 border-t pt-3 mt-3">
                                                     <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
                                                         <span>Computadora (Agente)</span>
