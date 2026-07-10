@@ -1077,36 +1077,47 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const [showPinPad, setShowPinPad] = useState(false);
     const [pinError, setPinError] = useState('');
+    const [pendingPrintWants, setPendingPrintWants] = useState(false);
 
     const sendOrder = async () => {
         if (cart.length === 0) return;
 
+        let wantsPrint = false;
+        if (printingEnabled) {
+            wantsPrint = window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?");
+        }
+
         if (user?.requirePinPrompt) {
+            setPendingPrintWants(wantsPrint);
             setPinError('');
             setShowPinPad(true);
             return;
         }
 
-        await executeSendOrder();
+        await executeSendOrder(null, wantsPrint);
     };
 
     const handlePinConfirm = async (enteredPin) => {
         setPinError('');
-        const success = await executeSendOrder(enteredPin);
-        if (success) {
-            setShowPinPad(false);
+        try {
+            // Validate PIN first
+            const res = await axios.post('/api/users/validate-pin', { pin: enteredPin });
+            if (res.data.success) {
+                setShowPinPad(false);
+                await executeSendOrder(enteredPin, pendingPrintWants);
+            }
+        } catch (err) {
+            setPinError(err.response?.data?.error || 'PIN incorrecto');
         }
     };
 
-    const executeSendOrder = async (authorPin = null) => {
+    const executeSendOrder = async (authorPin = null, printComanda = false) => {
         if (isSendingOrder || isSendingRef.current) return false;
         setIsSendingOrder(true);
         isSendingRef.current = true;
         let targetAccountId = account?.id;
 
         try {
-            const isCounter = ['admin', 'cashier'].includes(user?.role);
-            const printComanda = (isCounter && printingEnabled) ? window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?") : false;
 
             if (!targetAccountId) {
                 // Open account NOW because we are sending an order

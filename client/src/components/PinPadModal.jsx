@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Delete } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -10,16 +10,40 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
         onClose();
     });
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleGlobalKeyDown = (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                setPin(prev => {
+                    if (prev.length < 4) {
+                        return prev + e.key;
+                    }
+                    return prev;
+                });
+            } else if (e.key === 'Backspace') {
+                setPin(prev => prev.slice(0, -1));
+            } else if (e.key === 'Escape') {
+                setPin('');
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [isOpen, onClose]);
+
+    useEffect(() => {
+        if (pin.length === 4) {
+            onConfirm(pin);
+        }
+    }, [pin, onConfirm]);
+
     if (!isOpen) return null;
 
     const handleKeyPress = (num) => {
         if (pin.length < 4) {
-            const newPin = pin + num;
-            setPin(newPin);
-            // Auto confirm on 4 digits
-            if (newPin.length === 4) {
-                onConfirm(newPin);
-            }
+            setPin(pin + num);
         }
     };
 
