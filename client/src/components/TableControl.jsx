@@ -804,6 +804,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [showStaffConfirm, setShowStaffConfirm] = useState(false);
     const [staffTotalInput, setStaffTotalInput] = useState('');
     const [staffCommentInput, setStaffCommentInput] = useState('');
+    const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+    const [orderError, setOrderError] = useState(null);
     // --------------------------------------
 
     useModalBackHandler(true, onClose);
@@ -1078,11 +1080,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const [showPinPad, setShowPinPad] = useState(false);
     const [pinError, setPinError] = useState('');
-    const [showPrintConfirm, setShowPrintConfirm] = useState(false);
-    const [validatedPinForOrder, setValidatedPinForOrder] = useState(null);
 
     const sendOrder = async () => {
         if (cart.length === 0) return;
+        setOrderError(null);
 
         if (user?.requirePinPrompt) {
             setPinError('');
@@ -1127,6 +1128,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const executeSendOrder = async (authorPin = null, printComanda = false) => {
         if (isSendingOrder || isSendingRef.current) return false;
+        setOrderError(null);
         setIsSendingOrder(true);
         isSendingRef.current = true;
         let targetAccountId = account?.id;
@@ -1166,8 +1168,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return true;
         } catch (err) {
             const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || err.message || 'Error enviando pedido';
-            alert(`Error: ${errorMsg}`);
-            console.error(err);
+            setOrderError(errorMsg);
             setIsSendingOrder(false);
             isSendingRef.current = false;
             return false;
@@ -2033,11 +2034,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     </div>
                                 </div>
                             )}
+                            {orderError && (
+                                <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-3 font-bold text-center text-xs">
+                                    {orderError}
+                                </div>
+                            )}
                             {cart.length > 0 ? (
                                 <button
                                     onClick={sendOrder}
                                     disabled={isSendingOrder}
-                                    className={`w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    className={`w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
                                 >
                                     {isSendingOrder ? 'Enviando...' : 'Enviar Pedido'} {!isSendingOrder && <Check size={20} />}
                                 </button>
@@ -3205,8 +3211,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 </div>
                             </div>
                         )}
+                        {orderError && (
+                            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-3 font-bold text-center text-xs">
+                                {orderError}
+                            </div>
+                        )}
                         {cart.length > 0 ? (
-                            <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
+                            <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
                         ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                             <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
                         ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
