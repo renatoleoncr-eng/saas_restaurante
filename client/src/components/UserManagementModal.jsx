@@ -70,6 +70,15 @@ export default function UserManagementModal({ onClose }) {
 
     const handleSave = async (e) => {
         e.preventDefault();
+
+        if (formData.pin) {
+            const isDuplicate = users.some(u => u.pin === formData.pin && u.id !== editingUser?.id);
+            if (isDuplicate) {
+                alert('Ya está en uso');
+                return;
+            }
+        }
+
         try {
             if (editingUser) {
                 // Update

@@ -29,7 +29,7 @@ router.post('/users', async (req, res) => {
         // Check duplicate PIN within this tenant
         if (pin) {
             const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
-            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está en uso' });
         }
 
         const newUser = await User.create({
@@ -61,7 +61,7 @@ router.put('/users/:id', async (req, res) => {
         // Check duplicate PIN within this tenant
         if (pin && pin !== user.pin) {
             const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
-            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está en uso' });
         }
 
         if (displayName !== undefined) user.displayName = displayName;
@@ -133,7 +133,7 @@ router.put('/users/:id/password', async (req, res) => {
         // Check duplicate PIN within this tenant
         if (newPin && newPin !== user.pin) {
             const existingPin = await User.findOne({ where: { pin: newPin, TenantId: tenantId } });
-            if (existingPin) return res.status(400).json({ error: 'El PIN ya está asignado a otro usuario' });
+            if (existingPin) return res.status(400).json({ error: 'El PIN ya está en uso' });
         }
 
         if (newPassword) {
@@ -148,6 +148,28 @@ router.put('/users/:id/password', async (req, res) => {
 
         res.json({ message: 'Credenciales actualizadas correctamente' });
 
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Validate PIN
+router.post('/validate-pin', async (req, res) => {
+    try {
+        const tenantId = req.tenant.id;
+        const { pin } = req.body;
+        const { User } = getModels();
+
+        if (!pin) {
+            return res.status(400).json({ error: 'PIN requerido' });
+        }
+
+        const user = await User.findOne({ where: { pin, TenantId: tenantId } });
+        if (!user || user.active === false) {
+            return res.status(400).json({ error: 'PIN incorrecto o usuario inactivo' });
+        }
+
+        res.json({ success: true, user: { id: user.id, role: user.role } });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

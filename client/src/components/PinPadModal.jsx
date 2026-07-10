@@ -4,14 +4,24 @@ import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
     const [pin, setPin] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useModalBackHandler(isOpen, () => {
+        if (isSubmitting) return;
         setPin('');
         onClose();
     });
 
+    // Reset state when opened
     useEffect(() => {
-        if (!isOpen) return;
+        if (isOpen) {
+            setPin('');
+            setIsSubmitting(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || isSubmitting) return;
 
         const handleGlobalKeyDown = (e) => {
             if (e.key >= '0' && e.key <= '9') {
@@ -25,7 +35,7 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
                 setPin(prev => prev.slice(0, -1));
             } else if (e.key === 'Enter') {
                 if (pin.length === 4) {
-                    onConfirm(pin);
+                    handleSubmitRef.current();
                 }
             } else if (e.key === 'Escape') {
                 setPin('');
@@ -35,7 +45,20 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [isOpen, onClose, pin, onConfirm]);
+    }, [isOpen, onClose, pin, isSubmitting]);
+
+    const handleSubmit = async () => {
+        if (pin.length !== 4 || isSubmitting) return;
+        setIsSubmitting(true);
+        await onConfirm(pin);
+        setIsSubmitting(false);
+    };
+
+    // Use a ref to avoid dependency cycles in useEffect
+    const handleSubmitRef = React.useRef(handleSubmit);
+    useEffect(() => {
+        handleSubmitRef.current = handleSubmit;
+    }, [handleSubmit]);
 
     if (!isOpen) return null;
 
@@ -149,17 +172,15 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
                     </button>
                     <button
                         type="button"
-                        onClick={() => {
-                            if (pin.length === 4) onConfirm(pin);
-                        }}
-                        disabled={pin.length < 4}
+                        onClick={handleSubmit}
+                        disabled={pin.length < 4 || isSubmitting}
                         className={`flex-1 py-3 rounded-xl font-bold tracking-wide transition duration-200 ${
-                            pin.length === 4 
+                            pin.length === 4 && !isSubmitting
                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' 
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                         }`}
                     >
-                        Ingresar
+                        {isSubmitting ? 'Validando...' : 'Ingresar'}
                     </button>
                 </div>
             </div>
