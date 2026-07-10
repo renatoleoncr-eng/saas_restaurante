@@ -164,10 +164,11 @@ function getModels() {
 }
 
 // Fetch Printer Config from settings
-async function getPrintersConfig() {
+async function getPrintersConfig(tenantId) {
     const { Setting } = getModels();
     try {
-        const setting = await Setting.findByPk('printer_config');
+        const key = tenantId ? `printer_config_${tenantId}` : 'printer_config';
+        const setting = await Setting.findByPk(key);
         if (setting) {
             return JSON.parse(setting.value);
         }
@@ -227,8 +228,8 @@ async function sendToPrinter(printerKey, printerConfig, hexData) {
 }
 
 // Global print handler that automatically routes to printers
-async function printTicket(printerKey, builder) {
-    const configs = await getPrintersConfig();
+async function printTicket(printerKey, builder, tenantId) {
+    const configs = await getPrintersConfig(tenantId);
     let printerConfig = configs[printerKey];
     let targetPrinterKey = printerKey;
 
@@ -250,8 +251,8 @@ async function printTicket(printerKey, builder) {
 
 // === TICKET TEMPLATE GENERATORS ===
 
-// 1. Apertura de Turno (Shift Open)
 async function triggerAperturaPrint(session, user) {
+    const tenantId = session.TenantId;
     const builder = new EscPosBuilder().init();
     builder.kickDrawer(); // Kick cash drawer at opening
     builder.alignCenter().doubleSize().bold().line("APERTURA DE CAJA").doubleSize(false).bold(false).feed(1);
@@ -265,11 +266,12 @@ async function triggerAperturaPrint(session, user) {
     builder.bold().line(formatLine("MONTO APERTURA EFECTIVO:", formattedVal)).bold(false);
     builder.line("-".repeat(42)).feed(4).cut();
 
-    return await printTicket('caja', builder);
+    return await printTicket('caja', builder, tenantId);
 }
 
 // 2. Cierre de Turno (Shift Close Report)
 async function triggerCierrePrint(session, expected, countedDetails, user) {
+    const tenantId = session.TenantId;
     const builder = new EscPosBuilder().init();
     builder.alignCenter().doubleSize().bold().line("CIERRE DE CAJA").doubleSize(false).bold(false).feed(1);
     builder.alignLeft();
@@ -348,23 +350,24 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
     
     builder.line("=".repeat(42)).feed(4).cut();
 
-    return await printTicket('caja', builder);
+    return await printTicket('caja', builder, tenantId);
 }
 
 // Helper to get restaurant header info (name, RUC, address) from BillingConfig or RestaurantConfig
-async function getRestaurantHeader() {
+async function getRestaurantHeader(tenantId) {
     const { RestaurantConfig, BillingConfig } = getModels();
     let rName = 'MI RESTAURANTE';
     let rRuc = '';
     let rAddress = '';
     try {
-        const billConfig = await BillingConfig.findOne();
+        const whereClause = tenantId ? { TenantId: tenantId } : {};
+        const billConfig = await BillingConfig.findOne({ where: whereClause });
         if (billConfig && billConfig.razonSocial) {
             rName = billConfig.razonSocial;
             rRuc = billConfig.ruc || '';
             rAddress = billConfig.direccion || '';
         } else {
-            const config = await RestaurantConfig.findOne();
+            const config = await RestaurantConfig.findOne({ where: whereClause });
             if (config) {
                 rName = config.name || rName;
                 rAddress = config.address || rAddress;
@@ -372,7 +375,8 @@ async function getRestaurantHeader() {
         }
     } catch (_) {
         try {
-            const config = await RestaurantConfig.findOne();
+            const whereClause = tenantId ? { TenantId: tenantId } : {};
+            const config = await RestaurantConfig.findOne({ where: whereClause });
             if (config) {
                 rName = config.name || rName;
                 rAddress = config.address || rAddress;
@@ -384,9 +388,10 @@ async function getRestaurantHeader() {
 
 // 3. Pre-cuenta (Table consumption detail)
 async function triggerPreCuentaPrint(account, table, orders, payments, user) {
+    const tenantId = account.TenantId || (table && table.TenantId);
     const builder = new EscPosBuilder().init();
     
-    const header = await getRestaurantHeader();
+    const header = await getRestaurantHeader(tenantId);
 
     builder.alignCenter().doubleSize().bold().line(header.name).doubleSize(false).bold(false);
     if (header.ruc) builder.line(`R.U.C. ${header.ruc}`);
@@ -463,11 +468,12 @@ async function triggerPreCuentaPrint(account, table, orders, payments, user) {
     builder.line("GRACIAS POR SU PREFERENCIA");
     builder.feed(4).cut();
 
-    return await printTicket('caja', builder);
+    return await printTicket('caja', builder, tenantId);
 }
 
 // 4. Comanda (Kitchen / Bar dish slips)
 async function triggerComandaPrint(table, items, type, user) {
+    const tenantId = table.TenantId;
     const builder = new EscPosBuilder().init();
     
     builder.alignCenter();
@@ -503,7 +509,7 @@ async function triggerComandaPrint(table, items, type, user) {
     builder.feed(4).cut();
 
     const printerKey = type.toLowerCase() === 'barra' ? 'barra' : 'cocina';
-    return await printTicket(printerKey, builder);
+    return await printTicket(printerKey, builder, tenantId);
 }
 
 // Helper: Format date/time manually in 24h to avoid locale AM/PM artifacts (e.g. "p.am.")
@@ -520,6 +526,7 @@ function formatDateTime24h(date) {
 
 // 5. Boleta / Factura Fiscal (Electronic Receipt)
 async function triggerInvoicePrint(invoice, account) {
+    const tenantId = invoice.TenantId || (account && account.TenantId);
     const builder = new EscPosBuilder().init();
     builder.kickDrawer(); // Kick cash drawer for sale receipts
 
@@ -528,7 +535,8 @@ async function triggerInvoicePrint(invoice, account) {
     let igvTasa = 18;       // safe fallback
     let isExonerado = false;
     try {
-        const billCfg = await BillingConfig.findOne();
+        const whereClause = tenantId ? { TenantId: tenantId } : {};
+        const billCfg = await BillingConfig.findOne({ where: whereClause });
         if (billCfg) {
             igvTasa     = parseFloat(billCfg.igvTasa) || 18;
             isExonerado = !!billCfg.operacionesExoneradas;
@@ -542,7 +550,7 @@ async function triggerInvoicePrint(invoice, account) {
         if (methods.length > 0) formaPago = methods.join('+');
     }
 
-    const header = await getRestaurantHeader();
+    const header = await getRestaurantHeader(tenantId);
 
     // ─── HEADER ───────────────────────────────────────────────────────────────
     builder.alignCenter().doubleSize().bold().line(header.name).doubleSize(false).bold(false);
@@ -679,7 +687,7 @@ async function triggerInvoicePrint(invoice, account) {
     builder.line("Gracias por su preferencia.");
     builder.feed(4).cut();
 
-    return await printTicket('caja', builder);
+    return await printTicket('caja', builder, tenantId);
 }
 
 function filterJobsByAgent(jobsArray, agentId) {
