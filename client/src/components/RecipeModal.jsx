@@ -164,36 +164,38 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                         <div className="p-4 bg-white animate-in slide-in-from-top-2">
                                             {/* LIST */}
                                             {sectionRecipes.length > 0 ? (
-                                                <table className="w-full text-sm mb-4">
-                                                    <thead>
-                                                        <tr className="text-gray-500 border-b">
-                                                            <th className="text-left py-2">Insumo</th>
-                                                            <th className="text-left py-2">Cantidad</th>
-                                                            <th className="text-right py-2"></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {sectionRecipes.map(r => (
-                                                            <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 group">
-                                                                <td className="py-2">{r.Ingredient?.name}</td>
-                                                                <td className="py-2 font-bold">{r.quantity} {r.Ingredient?.unit}</td>
-                                                                <td className="py-2 text-right">
-                                                                    <button onClick={() => removeIngredient(r.id)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                </td>
+                                                <div className="overflow-x-auto w-full mb-4">
+                                                    <table className="w-full text-sm min-w-[300px]">
+                                                        <thead>
+                                                            <tr className="text-gray-500 border-b">
+                                                                <th className="text-left py-2">Insumo</th>
+                                                                <th className="text-left py-2">Cantidad</th>
+                                                                <th className="text-right py-2"></th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody>
+                                                            {sectionRecipes.map(r => (
+                                                                <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 group">
+                                                                    <td className="py-2">{r.Ingredient?.name}</td>
+                                                                    <td className="py-2 font-bold whitespace-nowrap">{r.quantity} {r.Ingredient?.unit}</td>
+                                                                    <td className="py-2 text-right">
+                                                                        <button onClick={() => removeIngredient(r.id)} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors">
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             ) : (
                                                 <p className="text-center text-gray-400 italic text-sm py-4 mb-4">No hay ingredientes configurados para esta variante.</p>
                                             )}
 
                                             {/* ADD FORM */}
-                                            <div className="flex gap-2 items-center bg-gray-50 p-2 rounded border border-dashed border-gray-300">
+                                            <div className="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-50 p-2 rounded border border-dashed border-gray-300">
                                                 <select
-                                                    className="border p-1.5 rounded flex-1 text-sm outline-none focus:border-orange-500"
+                                                    className="border p-1.5 rounded w-full sm:flex-1 text-sm outline-none focus:border-orange-500"
                                                     value={forms[sectionName]?.ingredientId || ''}
                                                     onChange={e => updateForm(sectionName, 'ingredientId', e.target.value)}
                                                 >
@@ -202,21 +204,25 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                                         <option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>
                                                     ))}
                                                 </select>
-                                                <input
-                                                    type="number"
-                                                    step="0.5"
-                                                    placeholder="Cant."
-                                                    className="border p-1.5 rounded w-20 text-sm outline-none focus:border-orange-500"
-                                                    value={forms[sectionName]?.quantity || ''}
-                                                    onChange={e => updateForm(sectionName, 'quantity', e.target.value)}
-                                                />
-                                                <button
-                                                    onClick={() => addIngredient(section)}
-                                                    className="bg-orange-600 text-white p-1.5 rounded hover:bg-orange-700 transition-colors"
-                                                    disabled={!forms[sectionName]?.ingredientId}
-                                                >
-                                                    <Plus size={18} />
-                                                </button>
+                                                <div className="flex gap-2 w-full sm:w-auto">
+                                                    <input
+                                                        type="number"
+                                                        step="0.5"
+                                                        placeholder="Cant."
+                                                        className="border p-1.5 rounded flex-1 sm:w-20 text-sm outline-none focus:border-orange-500"
+                                                        value={forms[sectionName]?.quantity || ''}
+                                                        onChange={e => updateForm(sectionName, 'quantity', e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') addIngredient(sectionName);
+                                                        }}
+                                                    />
+                                                    <button
+                                                        onClick={() => addIngredient(sectionName)}
+                                                        className="bg-orange-600 hover:bg-orange-700 text-white p-1.5 rounded transition-colors flex items-center justify-center min-w-[36px]"
+                                                    >
+                                                        <Plus size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}

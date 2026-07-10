@@ -17,6 +17,7 @@ router.get('/ingredients', async (req, res) => {
 // Create/Update Ingredient — scoped to tenant
 router.post('/ingredients', async (req, res) => {
     const { Op } = require('sequelize');
+    const { Ingredient, sequelize } = getModels();
     try {
         const { name, unit, stock, id } = req.body;
         const trimmedName = name ? name.trim().toLowerCase() : '';
