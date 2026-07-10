@@ -157,7 +157,7 @@ router.get('/config/printers/pending', (req, res) => {
         const timeoutId = setTimeout(() => {
             printEvent.removeListener('new_job', onNewJob);
             if (!res.headersSent) res.json([]);
-        }, 25000); // 25s timeout
+        }, 8000); // 8s timeout to prevent agent's 10s socket timeout
 
         printEvent.on('new_job', onNewJob);
 
