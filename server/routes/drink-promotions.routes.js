@@ -220,10 +220,18 @@ router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
         const { ingredientId, quantity, presentation } = req.body;
         if (!ingredientId || !quantity) return res.status(400).json({ error: 'ingredientId y quantity son requeridos' });
 
+        const { DrinkPromotionItem } = getModels();
+        const promoItem = await DrinkPromotionItem.findOne({ where: { id: req.params.itemId, TenantId: req.tenant.id } });
+        if (!promoItem) return res.status(404).json({ error: 'Item de promoción no encontrado o no pertenece a este tenant.' });
+
+        const ingredient = await Ingredient.findOne({ where: { id: ingredientId, TenantId: req.tenant.id } });
+        if (!ingredient) return res.status(404).json({ error: 'Ingrediente no encontrado o no pertenece a este tenant.' });
+
         const whereClause = {
             DrinkPromotionItemId: req.params.itemId,
             IngredientId: ingredientId,
-            presentation: presentation || null
+            presentation: presentation || null,
+            TenantId: req.tenant.id
         };
 
         const existing = await DrinkItemRecipe.findOne({ where: whereClause });

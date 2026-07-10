@@ -1,0 +1,1 @@
+﻿const { getModels } = require('/app/server/models'); async function test() { const models = getModels(1); const c = await models.BillingConfig.findOne(); console.log(JSON.stringify(c.printers, null, 2)); process.exit(0); } test();

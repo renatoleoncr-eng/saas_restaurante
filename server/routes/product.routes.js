@@ -279,7 +279,7 @@ router.put('/products/:id', async (req, res) => {
         }
 
         if (recipes) {
-            await Recipe.destroy({ where: { ProductId: id }, transaction: t });
+            await Recipe.destroy({ where: { ProductId: id, TenantId: req.tenant.id }, transaction: t });
             for (const r of recipes) {
                 await Recipe.create({
                     ProductId: id,
@@ -361,7 +361,7 @@ router.post('/products/:id/movement', async (req, res) => {
         let variantName = null;
 
         if (variantId) {
-            const variant = await ProductVariant.findOne({ where: { id: variantId, TenantId: req.tenant.id }, transaction: t });
+            const variant = await ProductVariant.findOne({ where: { id: variantId, ProductId: id, TenantId: req.tenant.id }, transaction: t });
             if (!variant) throw new Error("Variante no encontrada");
 
             previousStock = parseFloat(variant.stock);

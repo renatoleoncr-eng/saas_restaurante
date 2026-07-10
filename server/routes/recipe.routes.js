@@ -173,6 +173,13 @@ router.post('/recipes', async (req, res) => {
         const { productId, ingredientId, quantity, presentation } = req.body;
         const tenantId = req.tenant.id;
 
+        // Verify product and ingredient belong to tenant
+        const product = await Product.findOne({ where: { id: productId, TenantId: tenantId } });
+        if (!product) return res.status(404).json({ error: 'Producto no encontrado o no pertenece a este tenant.' });
+
+        const ingredient = await Ingredient.findOne({ where: { id: ingredientId, TenantId: tenantId } });
+        if (!ingredient) return res.status(404).json({ error: 'Ingrediente no encontrado o no pertenece a este tenant.' });
+
         const whereClause = {
             ProductId: productId,
             IngredientId: ingredientId,

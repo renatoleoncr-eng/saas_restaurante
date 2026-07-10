@@ -201,7 +201,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                                 </select>
                                                 <input
                                                     type="number"
-                                                    step="0.01"
+                                                    step="0.5"
                                                     placeholder="Cant."
                                                     className="border p-1.5 rounded w-20 text-sm outline-none focus:border-orange-500"
                                                     value={forms[sectionName]?.quantity || ''}
