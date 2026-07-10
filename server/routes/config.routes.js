@@ -88,7 +88,7 @@ router.post('/config/printers', async (req, res) => {
 // POST test printer
 router.post('/config/printers/test', async (req, res) => {
     try {
-        const { printerKey, type, path, printerName } = req.body;
+        const { printerKey, type, path, printerName, agentId } = req.body;
         
         if (!type || type === 'disabled') {
             return res.status(400).json({ error: 'La impresora esta deshabilitada. Activala primero.' });
@@ -112,7 +112,7 @@ router.post('/config/printers/test', async (req, res) => {
         builder.bold().line("SI PUEDES LEER ESTO, LA IMPRESION").line("HA SIDO CONFIGURADA CORRECTAMENTE!").bold(false);
         builder.line("-".repeat(42)).feed(4).cut();
 
-        const config = { type, path, printerName };
+        const config = { type, path, printerName, agentId };
         const result = await sendToPrinter(printerKey, config, builder.toHex());
 
         if (result.success) {

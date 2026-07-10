@@ -1113,7 +1113,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             }
         } catch (err) {
-            setPinError(err.response?.data?.error || 'PIN incorrecto');
+            const msg = err.response?.data?.error || 'PIN incorrecto';
+            setPinError(msg);
+            alert(msg);
         }
     };
 
@@ -1163,12 +1165,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             isSendingRef.current = false;
             return true;
         } catch (err) {
-            const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || 'Error enviando pedido';
-            if (user?.requirePinPrompt) {
-                setPinError(errorMsg);
-            } else {
-                alert(errorMsg);
-            }
+            const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || err.message || 'Error enviando pedido';
+            alert(`Error: ${errorMsg}`);
             console.error(err);
             setIsSendingOrder(false);
             isSendingRef.current = false;
