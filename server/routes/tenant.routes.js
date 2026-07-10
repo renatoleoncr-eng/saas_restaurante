@@ -230,6 +230,17 @@ router.get('/info', async (req, res) => {
             return acc;
         }, {});
 
+        // Backwards compatibility for legacy tenants: if onboarding is false, check if they have sessions
+        let onboardingCompleted = req.tenant.onboardingCompleted || false;
+        if (!onboardingCompleted) {
+            const sessionCount = await models.Session.count({ where: { TenantId: req.tenant.id } });
+            if (sessionCount > 0) {
+                onboardingCompleted = true;
+                // Update DB so we don't have to check next time
+                await models.Tenant.update({ onboardingCompleted: true }, { where: { id: req.tenant.id } });
+            }
+        }
+
         res.json({
             id: req.tenant.id,
             name: req.tenant.name,
@@ -237,7 +248,7 @@ router.get('/info', async (req, res) => {
             plan: req.tenant.plan,
             status: req.tenant.status,
             logoUrl: req.tenant.logoUrl,
-            onboardingCompleted: req.tenant.onboardingCompleted || false,
+            onboardingCompleted,
             modules
         });
     } catch (err) {

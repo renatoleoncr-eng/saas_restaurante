@@ -17,14 +17,24 @@ export function useSuperAdmin() {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    const logout = useCallback(() => {
+        localStorage.removeItem('saas_admin_token');
+        setToken(null);
+    }, []);
+
     const authHeaders = useCallback(() => ({
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
     }), [token]);
 
     const handleResponse = async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (res.status === 401) {
+                logout();
+            }
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
         return data;
     };
 
@@ -49,12 +59,7 @@ export function useSuperAdmin() {
         } finally {
             setLoading(false);
         }
-    }, []);
-
-    const logout = useCallback(() => {
-        localStorage.removeItem('saas_admin_token');
-        setToken(null);
-    }, []);
+    }, [logout]);
 
     // ── Tenants ──────────────────────────────────────────────────────────────
 
@@ -66,9 +71,6 @@ export function useSuperAdmin() {
             return await handleResponse(res);
         } catch (err) {
             setError(err.message);
-            if (err.message.includes('401') || err.message.includes('Autenticación')) {
-                logout();
-            }
             throw err;
         } finally {
             setLoading(false);

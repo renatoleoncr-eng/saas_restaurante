@@ -72,6 +72,14 @@ function setupAxiosInterceptors(tenantSlug) {
                 if (code === 'TOKEN_EXPIRED') {
                     // Try to refresh the token
                     return refreshAndRetry(error.config);
+                } else {
+                    // Invalid token or no token but 401 received
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('user');
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login';
+                    }
                 }
             }
             return Promise.reject(error);

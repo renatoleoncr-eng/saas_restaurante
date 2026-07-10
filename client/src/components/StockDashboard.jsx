@@ -41,6 +41,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         return localStorage.getItem('stock_freeTab') || 'stock';
     }); // 'stock' or 'movements'
     const [movements, setMovements] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
     const [sales, setSales] = useState([]);
     const [ingredients, setIngredients] = useState([]);
     const [loadingMovements, setLoadingMovements] = useState(false);
@@ -299,6 +300,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
     };
 
     const handleSaveProduct = async (keepOpen = false) => {
+        if (isSaving) return;
+        setIsSaving(true);
         try {
             // Validation: Ensure entries and mains have a price strictly greater than 0
             if (editForm.type === 'daily_entry' || editForm.type === 'daily_main') {
@@ -368,6 +371,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
             console.error("Error saving product", error);
             const msg = error.response?.data?.error || "Error al guardar producto";
             alert(msg);
+        } finally {
+            setIsSaving(false);
         }
     };
 

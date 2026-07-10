@@ -1699,7 +1699,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                             ...prev,
                                                             [key]: { ...prev[key], type }
                                                         }));
-                                                        if (type === 'windows_print') fetchWindowsPrinters();
+                                                        if (type === 'windows_print') checkAgentStatus();
                                                     }}
                                                 >
                                                     <option value="disabled">Deshabilitada</option>
