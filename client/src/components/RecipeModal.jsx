@@ -36,6 +36,9 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
 
     const presentations = useMemo(() => {
         try {
+            if (product._targetVariant) {
+                return [product._targetVariant];
+            }
             if (product.presentations) {
                 const parsed = typeof product.presentations === 'string' ? JSON.parse(product.presentations) : product.presentations;
                 return Array.isArray(parsed) ? parsed : [];
