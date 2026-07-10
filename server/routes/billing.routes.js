@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { BillingConfig, Invoice, User, Account, Table } = require('../models');
+const { BillingConfig, Invoice, User, Account, Table, Order, Product } = require('../models');
 const { Op } = require('sequelize');
 
 const SUNAT_HUB_URL = process.env.SUNAT_HUB_URL || 'https://sunat.maksuites.com.pe';
@@ -181,6 +181,46 @@ router.post('/billing/invoices', async (req, res) => {
             return res.status(400).json({ error: 'El RUC del receptor no puede ser igual al RUC de la empresa emisora.' });
         }
 
+        // Prevent double emission by checking if the requested items exceed the remaining account balance
+        const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
+        
+        if (accountId) {
+            const account = await Account.findByPk(accountId, {
+                include: [
+                    { model: Invoice, where: { status: { [Op.ne]: 'anulado' } }, required: false },
+                    { model: Order, where: { status: { [Op.ne]: 'cancelled' } }, required: false, include: [Product] }
+                ]
+            });
+            
+            if (account) {
+                let totalPossible = 0;
+                if (account.Orders) {
+                    for (const ord of account.Orders) {
+                        const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) 
+                            ? parseFloat(ord.priceAtOrder) 
+                            : (ord.Product?.price || 0);
+                        totalPossible += price * (ord.quantity || 1);
+                    }
+                }
+                
+                let totalAlreadyBilled = 0;
+                if (account.Invoices) {
+                    for (const inv of account.Invoices) {
+                        totalAlreadyBilled += parseFloat(inv.total || 0);
+                    }
+                }
+                
+                const remainingBalance = Math.max(0, totalPossible - totalAlreadyBilled);
+                
+                // Allow a small tolerance for floating point issues (e.g. 0.05)
+                if (finalTotalPay > remainingBalance + 0.05) {
+                    return res.status(400).json({ 
+                        error: `El saldo pendiente de la cuenta es S/ ${remainingBalance.toFixed(2)}, no puede emitir un comprobante por S/ ${finalTotalPay.toFixed(2)}. Posible comprobante duplicado.` 
+                    });
+                }
+            }
+        }
+
         const isExonerado = config.operacionesExoneradas;
         const afeCode = isExonerado ? '20' : '10';
         const igvRate = parseFloat(config.igvTasa) / 100;
@@ -228,7 +268,6 @@ router.post('/billing/invoices', async (req, res) => {
         });
 
         const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
-        const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
         const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
 
         // Payload para el Hub

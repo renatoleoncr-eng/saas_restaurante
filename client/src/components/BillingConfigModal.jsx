@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     X, Settings, FileText, Plus, Search, Trash2, 
     CheckCircle, AlertCircle, Printer, Download,
@@ -66,6 +67,12 @@ const BillingConfigModal = ({ onClose }) => {
     const [agentStatus, setAgentStatus] = useState('unknown'); // 'active' | 'inactive' | 'unknown'
     const [agentLatestVersion, setAgentLatestVersion] = useState(null);
     const [hasOutdatedAgent, setHasOutdatedAgent] = useState(false);
+
+    // Annulment Modal States
+    const [annulTarget, setAnnulTarget] = useState(null);
+    const [annulReason, setAnnulReason] = useState('ANULACION DE LA OPERACION');
+    const [isAnnulLoading, setIsAnnulLoading] = useState(false);
+    const [annulSuccessDoc, setAnnulSuccessDoc] = useState(null);
 
     // Derived helpers
     const isFactura = newInvoice.tipo === 'factura';
@@ -685,27 +692,26 @@ const BillingConfigModal = ({ onClose }) => {
         window.open(whatsappUrl, '_blank');
     };
 
-    const handleAnnulInvoice = async (inv) => {
-        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
-        const reason = window.prompt(`¿Está seguro de anular el comprobante ${docId}? Ingrese el motivo de la anulación (se emitirá una Nota de Crédito):`, 'ANULACION DE LA OPERACION');
-        if (reason === null) return; // cancelled
+    const handleAnnulInvoice = (inv) => {
+        setAnnulTarget(inv);
+        setAnnulReason('ANULACION DE LA OPERACION');
+    };
 
-        setLoading(true);
+    const confirmAnnulInvoice = async () => {
+        if (!annulTarget || !annulReason) return;
+        setIsAnnulLoading(true);
         try {
-            const res = await axios.post(`/api/billing/invoices/${inv.id}/anular`, { reason });
+            const res = await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, { reason: annulReason });
             if (res.data.success) {
-                alert('✅ Comprobante anulado correctamente y Nota de Crédito emitida.');
                 fetchInvoices();
-                const ncUrl = res.data.invoice?.notaCreditoUrl;
-                if (ncUrl && window.confirm('¿Desea abrir el PDF de la Nota de Crédito generada?')) {
-                    window.open(ncUrl, '_blank');
-                }
+                setAnnulSuccessDoc(res.data.invoice);
             }
         } catch (err) {
             console.error(err);
             alert('❌ Error al anular: ' + (err.response?.data?.error || err.message));
         } finally {
-            setLoading(false);
+            setIsAnnulLoading(false);
+            setAnnulTarget(null);
         }
     };
 
@@ -1834,6 +1840,104 @@ const BillingConfigModal = ({ onClose }) => {
                     accountId={selectedAccountId} 
                     onClose={() => setSelectedAccountId(null)} 
                 />
+            )}
+
+            {annulTarget && createPortal(
+                <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 md:p-8 bg-rose-50/50 border-b border-rose-100 flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-rose-500 shadow-sm border border-rose-100 mb-4">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Anular Comprobante</h2>
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2 bg-white px-3 py-1 rounded-full shadow-sm border border-rose-100">
+                                {annulTarget.tipo === 'factura' ? 'Factura' : 'Boleta'} {annulTarget.serie}-{String(annulTarget.correlativo).padStart(6, '0')}
+                            </p>
+                        </div>
+                        <div className="p-6 md:p-8 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo de la anulación</label>
+                                <input 
+                                    type="text" 
+                                    value={annulReason} 
+                                    onChange={(e) => setAnnulReason(e.target.value)} 
+                                    className="w-full bg-slate-50 border-transparent px-4 py-3.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-200 transition-all placeholder:text-slate-300" 
+                                    placeholder="Ingrese el motivo de la anulación..." 
+                                    disabled={isAnnulLoading}
+                                />
+                                <p className="text-[9px] font-bold text-slate-400 mt-2 px-1">Se emitirá una Nota de Crédito automáticamente para invalidar este comprobante.</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
+                                <button 
+                                    onClick={() => setAnnulTarget(null)} 
+                                    disabled={isAnnulLoading}
+                                    className="py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={confirmAnnulInvoice} 
+                                    disabled={isAnnulLoading || !annulReason}
+                                    className="py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-900/20 transition-all flex items-center justify-center gap-2 disabled:bg-rose-300"
+                                >
+                                    {isAnnulLoading ? <><Loader size={16} className="animate-spin" /> Anulando...</> : 'Anular Ahora'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {annulSuccessDoc && createPortal(
+                <div className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-white">
+                        <div className="p-8 text-center bg-slate-50/50 border-b border-slate-100">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl shadow-emerald-900/10">
+                                <CheckCircle className="text-emerald-600" size={40} strokeWidth={3} />
+                            </div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tighter">
+                                ¡Anulado!
+                            </h2>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                                Nota de Crédito generada
+                            </p>
+                        </div>
+                        
+                        <div className="p-6 space-y-3">
+                            <button
+                                onClick={() => {
+                                    handleShareWhatsapp(annulSuccessDoc, 'nc');
+                                }}
+                                className="w-full flex items-center justify-center gap-3 py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95"
+                            >
+                                <WhatsAppIcon size={20} />
+                                Compartir WhatsApp
+                            </button>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => {
+                                        const ncUrl = annulSuccessDoc.notaCreditoUrl || '#';
+                                        window.open(ncUrl, '_blank');
+                                    }}
+                                    className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 text-slate-600 active:scale-95 transition-all"
+                                >
+                                    <FileText size={16} />
+                                    Ver PDF
+                                </button>
+                                <button
+                                    onClick={() => setAnnulSuccessDoc(null)}
+                                    className="flex items-center justify-center gap-2 py-3 bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black active:scale-95 transition-all shadow-md"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

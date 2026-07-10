@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
     X, 
@@ -66,6 +66,9 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [selectedItems, setSelectedItems] = useState([]);
     const [activeTab, setActiveTab] = useState('emit');
     const [selectedDocId, setSelectedDocId] = useState(null);
+
+    const [annulTarget, setAnnulTarget] = useState(null);
+    const [annulReason, setAnnulReason] = useState('ANULACION DE LA OPERACION');
 
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -677,13 +680,18 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         }
     };
 
-    const handleAnnul = async (doc) => {
-        if (!window.confirm(`¿Está seguro de anular el comprobante ${doc.serie}-${doc.correlativo}? Se emitirá una Nota de Crédito.`)) return;
+    const handleAnnul = (doc) => {
+        setAnnulTarget(doc);
+        setAnnulReason('ANULACION DE LA OPERACION');
+    };
+
+    const confirmAnnul = async () => {
+        if (!annulTarget || !annulReason) return;
         
         setLoading(true);
         try {
-            const res = await axios.post(`/api/billing/invoices/${doc.id}/anular`, {
-                reason: 'Anulación por error en datos / Gestión de Comprobantes'
+            const res = await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, {
+                reason: annulReason
             });
             
             if (res.data.success) {
@@ -701,6 +709,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             setErrorMsg(error.response?.data?.error || error.message);
         } finally {
             setLoading(false);
+            setAnnulTarget(null);
         }
     };
 
@@ -1339,6 +1348,53 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     background: #cbd5e1;
                 }
             `}} />
+
+            {annulTarget && (
+                <div className="fixed inset-0 z-[10000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 md:p-8 bg-rose-50/50 border-b border-rose-100 flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-rose-500 shadow-sm border border-rose-100 mb-4">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Anular Comprobante</h2>
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2 bg-white px-3 py-1 rounded-full shadow-sm border border-rose-100">
+                                {annulTarget.tipo === 'factura' ? 'Factura' : 'Boleta'} {annulTarget.serie}-{String(annulTarget.correlativo).padStart(6, '0')}
+                            </p>
+                        </div>
+                        <div className="p-6 md:p-8 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo de la anulación</label>
+                                <input 
+                                    type="text" 
+                                    value={annulReason} 
+                                    onChange={(e) => setAnnulReason(e.target.value)} 
+                                    className="w-full bg-slate-50 border-transparent px-4 py-3.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-200 transition-all placeholder:text-slate-300" 
+                                    placeholder="Ingrese el motivo de la anulación..." 
+                                    disabled={loading}
+                                />
+                                <p className="text-[9px] font-bold text-slate-400 mt-2 px-1">Se emitirá una Nota de Crédito automáticamente para invalidar este comprobante.</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
+                                <button 
+                                    onClick={() => setAnnulTarget(null)} 
+                                    disabled={loading}
+                                    className="py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={confirmAnnul} 
+                                    disabled={loading || !annulReason}
+                                    className="py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-900/20 transition-all flex items-center justify-center gap-2 disabled:bg-rose-300"
+                                >
+                                    {loading ? <><RefreshCw size={16} className="animate-spin" /> Anulando...</> : 'Anular Ahora'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>,
         document.body
     );

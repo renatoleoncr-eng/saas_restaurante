@@ -337,8 +337,8 @@ const AccountDetailsModal = ({
                                             <div className="font-bold text-blue-700 text-sm">
                                                 {formatCurrency(inv.total)}
                                             </div>
-                                            <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700">
-                                                {inv.sunatResponse ? 'Aceptado SUNAT' : 'Local'}
+                                            <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${inv.status === 'anulado' ? 'bg-rose-100 text-rose-700' : 'bg-green-100 text-green-700'}`}>
+                                                {inv.status === 'anulado' ? 'ANULADA' : (inv.sunatResponse ? 'Aceptado SUNAT' : 'Local')}
                                             </span>
                                         </div>
                                     </div>
