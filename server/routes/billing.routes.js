@@ -103,7 +103,7 @@ router.get('/billing/invoices', async (req, res) => {
             }
             where[Op.or] = docFilters;
         }
-        if (req.query.desde || req.query.hasta) {
+        if (!req.query.documento && (req.query.desde || req.query.hasta)) {
             where.emitidoAt = {};
             if (req.query.desde) where.emitidoAt[Op.gte] = new Date(req.query.desde + 'T00:00:00.000-05:00');
             if (req.query.hasta) where.emitidoAt[Op.lte] = new Date(req.query.hasta + 'T23:59:59.999-05:00');
