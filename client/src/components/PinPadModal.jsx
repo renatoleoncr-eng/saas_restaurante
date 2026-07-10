@@ -23,6 +23,10 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
                 });
             } else if (e.key === 'Backspace') {
                 setPin(prev => prev.slice(0, -1));
+            } else if (e.key === 'Enter') {
+                if (pin.length === 4) {
+                    onConfirm(pin);
+                }
             } else if (e.key === 'Escape') {
                 setPin('');
                 onClose();
@@ -31,13 +35,7 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [isOpen, onClose]);
-
-    useEffect(() => {
-        if (pin.length === 4) {
-            onConfirm(pin);
-        }
-    }, [pin, onConfirm]);
+    }, [isOpen, onClose, pin, onConfirm]);
 
     if (!isOpen) return null;
 
@@ -137,17 +135,33 @@ export default function PinPadModal({ isOpen, onClose, onConfirm, errorMsg }) {
                     </button>
                 </div>
 
-                {/* Cancel Button */}
-                <button
-                    type="button"
-                    onClick={() => {
-                        handleClear();
-                        onClose();
-                    }}
-                    className="w-full py-3 rounded-xl border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800/50 font-bold tracking-wide transition duration-200 mt-2"
-                >
-                    Cancelar
-                </button>
+                {/* Actions */}
+                <div className="flex gap-3 mt-2">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            handleClear();
+                            onClose();
+                        }}
+                        className="flex-1 py-3 rounded-xl border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800/50 font-bold tracking-wide transition duration-200"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (pin.length === 4) onConfirm(pin);
+                        }}
+                        disabled={pin.length < 4}
+                        className={`flex-1 py-3 rounded-xl font-bold tracking-wide transition duration-200 ${
+                            pin.length === 4 
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' 
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        }`}
+                    >
+                        Ingresar
+                    </button>
+                </div>
             </div>
         </div>
     );
