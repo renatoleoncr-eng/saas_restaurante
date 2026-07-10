@@ -6,6 +6,7 @@ import { ShoppingCart, Utensils, Beer, X, Check, FileText, Search, Plus, Minus, 
 import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
+import PrintConfirmModal from './PrintConfirmModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 export default function TableControl({ tableId, accountId, onClose, initialShowCart = false }) {
@@ -1077,24 +1078,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const [showPinPad, setShowPinPad] = useState(false);
     const [pinError, setPinError] = useState('');
-    const [pendingPrintWants, setPendingPrintWants] = useState(false);
+    const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+    const [validatedPinForOrder, setValidatedPinForOrder] = useState(null);
 
     const sendOrder = async () => {
         if (cart.length === 0) return;
 
-        let wantsPrint = false;
-        if (printingEnabled) {
-            wantsPrint = window.confirm("¿Deseas imprimir la comanda de este pedido en Cocina/Barra?");
-        }
-
         if (user?.requirePinPrompt) {
-            setPendingPrintWants(wantsPrint);
             setPinError('');
             setShowPinPad(true);
             return;
         }
 
-        await executeSendOrder(null, wantsPrint);
+        if (printingEnabled) {
+            setShowPrintConfirm(true);
+        } else {
+            await executeSendOrder(null, false);
+        }
     };
 
     const handlePinConfirm = async (enteredPin) => {
@@ -1104,11 +1104,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             const res = await axios.post('/api/users/validate-pin', { pin: enteredPin });
             if (res.data.success) {
                 setShowPinPad(false);
-                await executeSendOrder(enteredPin, pendingPrintWants);
+                setValidatedPinForOrder(enteredPin);
+                
+                if (printingEnabled) {
+                    setShowPrintConfirm(true);
+                } else {
+                    await executeSendOrder(enteredPin, false);
+                }
             }
         } catch (err) {
             setPinError(err.response?.data?.error || 'PIN incorrecto');
         }
+    };
+
+    const handlePrintConfirmDialog = async (wantsPrint) => {
+        setShowPrintConfirm(false);
+        await executeSendOrder(validatedPinForOrder, wantsPrint);
+        setValidatedPinForOrder(null);
     };
 
     const executeSendOrder = async (authorPin = null, printComanda = false) => {
@@ -2268,6 +2280,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         onClose={() => setShowPinPad(false)}
                         onConfirm={handlePinConfirm}
                         errorMsg={pinError}
+                    />
+
+                    {/* Print Confirm Modal */}
+                    <PrintConfirmModal
+                        isOpen={showPrintConfirm}
+                        onClose={() => {
+                            setShowPrintConfirm(false);
+                            setValidatedPinForOrder(null);
+                        }}
+                        onConfirm={handlePrintConfirmDialog}
                     />
 
                     {/* Main Content Area — Flex column to support sticky footer */}
