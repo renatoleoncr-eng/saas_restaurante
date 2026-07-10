@@ -158,7 +158,6 @@ router.post('/validate-pin', async (req, res) => {
     try {
         const tenantId = req.tenant.id;
         const { pin } = req.body;
-        const { User } = getModels();
 
         if (!pin) {
             return res.status(400).json({ error: 'PIN requerido' });
