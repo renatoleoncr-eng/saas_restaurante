@@ -878,7 +878,7 @@ Payment.beforeCreate(async (payment, options) => {
         if (!payment.qr_id) {
             try {
                 const { consumeQrLimit } = require('../routes/qr.routes');
-                const qrId = await consumeQrLimit(payment.amount, options.transaction);
+                const qrId = await consumeQrLimit(payment.amount, payment.TenantId, options.transaction);
                 payment.qr_id = qrId;
             } catch (err) {
                 console.error("[Payment Hook] Error consuming QR limit:", err);

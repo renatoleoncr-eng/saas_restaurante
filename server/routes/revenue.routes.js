@@ -30,9 +30,9 @@ router.get('/revenue/breakdown', apiKeyAuth, async (req, res) => {
 
         // 1. Fetch BillingConfig and ALL active QR accounts
         const [billingConfig, qrAccounts] = await Promise.all([
-            BillingConfig.findOne().catch(() => null),
+            BillingConfig.findOne({ where: { TenantId: req.tenant.id } }).catch(() => null),
             QrAccount.findAll({
-                where: { isActive: true },
+                where: { isActive: true, TenantId: req.tenant.id },
                 attributes: ['id', 'name']
             }).catch(() => [])
         ]);
@@ -60,7 +60,8 @@ router.get('/revenue/breakdown', apiKeyAuth, async (req, res) => {
         const closedAccounts = await Account.findAll({
             where: {
                 status: 'closed',
-                closedAt: { [Op.between]: [startDate, endDate] }
+                closedAt: { [Op.between]: [startDate, endDate] },
+                TenantId: req.tenant.id
             },
             attributes: ['id']
         });

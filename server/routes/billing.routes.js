@@ -135,7 +135,8 @@ router.get('/public/comprobante/:hash', async (req, res) => {
         }
         
         const invoiceId = decoded.split('_')[1];
-        const invoice = await Invoice.findByPk(invoiceId, {
+        const invoice = await Invoice.findOne({
+            where: { id: invoiceId },
             include: [
                 { model: User, attributes: ['id', 'username'] },
                 { model: Account, include: [Table] }
@@ -144,7 +145,7 @@ router.get('/public/comprobante/:hash', async (req, res) => {
         
         if (!invoice) return res.status(404).json({ error: 'Comprobante no encontrado' });
         
-        const config = await BillingConfig.findOne();
+        const config = await BillingConfig.findOne({ where: { TenantId: invoice.TenantId } });
         res.json({ invoice, config });
     } catch (err) {
         res.status(500).json({ error: 'Error procesando el enlace' });
@@ -154,7 +155,7 @@ router.get('/public/comprobante/:hash', async (req, res) => {
 // POST /billing/invoices (Emitir via Hub)
 router.post('/billing/invoices', async (req, res) => {
     try {
-        const config = await BillingConfig.findOne();
+        const config = await BillingConfig.findOne({ where: { TenantId: req.tenant.id } });
         if (!config) return res.status(400).json({ error: 'Configuración no encontrada' });
 
         const { tipo, clienteDocumento, clienteNombre, clienteDireccion, items, userId, accountId } = req.body;
@@ -187,7 +188,7 @@ router.post('/billing/invoices', async (req, res) => {
         // Correlativo auto-incremental por serie
         const serie = tipo === 'factura' ? config.serieFactura : config.serieBoleta;
         const lastInvoice = await Invoice.findOne({
-            where: { tipo, serie },
+            where: { tipo, serie, TenantId: req.tenant.id },
             order: [['correlativo', 'DESC']]
         });
         const correlativo = (lastInvoice?.correlativo || 0) + 1;
@@ -330,7 +331,7 @@ router.post('/billing/invoices', async (req, res) => {
 // POST /api/billing/invoices/:id/anular
 router.post('/billing/invoices/:id/anular', async (req, res) => {
     try {
-        const invoice = await Invoice.findByPk(req.params.id);
+        const invoice = await Invoice.findOne({ where: { id: req.params.id, TenantId: req.tenant.id } });
         if (!invoice) return res.status(404).json({ error: 'Comprobante no encontrado' });
 
         if (invoice.status === 'anulado') {
@@ -341,7 +342,7 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
             });
         }
 
-        const config = await BillingConfig.findOne();
+        const config = await BillingConfig.findOne({ where: { TenantId: req.tenant.id } });
         if (!config) return res.status(400).json({ error: 'Configuración no encontrada' });
 
         const reason = req.body.reason || req.body.motivoText || 'ANULACION DE LA OPERACION';

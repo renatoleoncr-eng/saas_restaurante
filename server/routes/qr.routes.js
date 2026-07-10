@@ -127,7 +127,7 @@ const consumeQrLimit = async (amount, transaction = null) => {
         const monthKey = `${peruNow.getFullYear()}-${String(peruNow.getMonth() + 1).padStart(2, '0')}`;
 
         const qrs = await QrAccount.findAll({
-            where: { isActive: true },
+            where: { isActive: true, TenantId: tenantId },
             order: [['orderIndex', 'ASC'], ['id', 'ASC']],
             transaction
         });
@@ -173,6 +173,7 @@ const consumeQrLimit = async (amount, transaction = null) => {
 router.get('/', async (req, res) => {
     try {
         const qrs = await QrAccount.findAll({
+            where: { TenantId: req.tenant.id },
             order: [['orderIndex', 'ASC'], ['id', 'ASC']]
         });
         
@@ -221,7 +222,7 @@ router.put('/reorder', async (req, res) => {
     try {
         const { items } = req.body;
         for (const item of items) {
-            await QrAccount.update({ orderIndex: item.orderIndex }, { where: { id: item.id } });
+            await QrAccount.update({ orderIndex: item.orderIndex }, { where: { id: item.id, TenantId: req.tenant.id } });
         }
         
         appEmitter.emit('qr_config_changed');
@@ -239,7 +240,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
         const { id } = req.params;
         const { name, limitAmount, isUnlimited, isActive, orderIndex, phoneNumber } = req.body;
         
-        const qr = await QrAccount.findByPk(id);
+        const qr = await QrAccount.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!qr) return res.status(404).json({ error: 'QR no encontrado' });
 
         if (name !== undefined) qr.name = name;
@@ -308,7 +309,7 @@ router.get('/active', async (req, res) => {
         const monthKey = `${peruNow.getFullYear()}-${String(peruNow.getMonth() + 1).padStart(2, '0')}`;
 
         const qrs = await QrAccount.findAll({
-            where: { isActive: true },
+            where: { isActive: true, TenantId: req.tenant.id },
             order: [['orderIndex', 'ASC'], ['id', 'ASC']]
         });
         
@@ -357,10 +358,10 @@ router.get('/active', async (req, res) => {
 // ROUTE: Reset sums manually
 router.post('/reset', async (req, res) => {
     try {
-        await QrAccount.update({ accumulated_month_sum: 0 }, { where: {} });
+        await QrAccount.update({ accumulated_month_sum: 0 }, { where: { TenantId: req.tenant.id } });
         
         // Delete qr adjustments and notify config change
-        await Payment.destroy({ where: { method: 'qr_adjustment' } });
+        await Payment.destroy({ where: { method: 'qr_adjustment', TenantId: req.tenant.id } });
 
         appEmitter.emit('qr_config_changed');
         appEmitter.emit('check_active_qr');
@@ -378,7 +379,7 @@ router.post('/:id/adjust', async (req, res) => {
         const { id } = req.params;
         const { adjustment, description } = req.body;
         
-        const qr = await QrAccount.findByPk(id);
+        const qr = await QrAccount.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!qr) return res.status(404).json({ error: 'QR no encontrado' });
 
         const now = new Date();
@@ -444,6 +445,7 @@ router.get('/movements', async (req, res) => {
             ]
         };
         conditions.push(qrBaseCriteria);
+        conditions.push({ TenantId: req.tenant.id });
 
         // 2. Filter by month
         if (month && month !== 'all' && month !== '') {

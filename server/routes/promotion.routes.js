@@ -31,6 +31,7 @@ const upload = multer({ storage: storage });
 router.get('/groups', async (req, res) => {
     try {
         const groups = await PromotionGroup.findAll({
+            where: { TenantId: req.tenant.id },
             include: [{
                 model: Promotion,
                 as: 'Images',
@@ -51,7 +52,7 @@ router.get('/groups', async (req, res) => {
 // CREATE a promotion group
 router.post('/groups', async (req, res) => {
     try {
-        const group = await PromotionGroup.create(req.body);
+        const group = await PromotionGroup.create({ ...req.body, TenantId: req.tenant.id });
         
         // Notify client screen of configuration changes
         appEmitter.emit('promotions_config_changed');
@@ -68,7 +69,7 @@ router.put('/groups/reorder', async (req, res) => {
     try {
         const { items } = req.body;
         for (const item of items) {
-            await PromotionGroup.update({ orderIndex: item.orderIndex }, { where: { id: item.id } });
+            await PromotionGroup.update({ orderIndex: item.orderIndex }, { where: { id: item.id, TenantId: req.tenant.id } });
         }
 
         appEmitter.emit('promotions_config_changed');
@@ -84,9 +85,9 @@ router.put('/groups/reorder', async (req, res) => {
 router.put('/groups/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const [updated] = await PromotionGroup.update(req.body, { where: { id } });
+        const [updated] = await PromotionGroup.update(req.body, { where: { id, TenantId: req.tenant.id } });
         if (updated) {
-            const updatedGroup = await PromotionGroup.findByPk(id);
+            const updatedGroup = await PromotionGroup.findOne({ where: { id, TenantId: req.tenant.id } });
             
             appEmitter.emit('promotions_config_changed');
 
@@ -105,7 +106,7 @@ router.delete('/groups/:id', async (req, res) => {
         const { id } = req.params;
         
         // Find associated images and delete physical files
-        const promotions = await Promotion.findAll({ where: { groupId: id } });
+        const promotions = await Promotion.findAll({ where: { groupId: id, TenantId: req.tenant.id } });
         for (const promo of promotions) {
             if (promo.imageUrl) {
                 const filePath = path.join(__dirname, '..', promo.imageUrl);
@@ -116,7 +117,7 @@ router.delete('/groups/:id', async (req, res) => {
             await promo.destroy();
         }
 
-        const deleted = await PromotionGroup.destroy({ where: { id } });
+        const deleted = await PromotionGroup.destroy({ where: { id, TenantId: req.tenant.id } });
         if (deleted) {
             appEmitter.emit('promotions_config_changed');
             return res.status(204).send();
@@ -137,7 +138,7 @@ router.delete('/groups/:id', async (req, res) => {
 router.get('/active', async (req, res) => {
     try {
         const promotions = await Promotion.findAll({
-            where: { isActive: true },
+            where: { isActive: true, TenantId: req.tenant.id },
             include: [{
                 model: PromotionGroup,
                 as: 'Group',
@@ -165,7 +166,7 @@ router.get('/', async (req, res) => {
         if (groupId) where.groupId = groupId;
 
         const promotions = await Promotion.findAll({
-            where,
+            where: { ...where, TenantId: req.tenant.id },
             order: [['orderIndex', 'ASC'], ['createdAt', 'DESC']]
         });
         res.json(promotions);
@@ -213,7 +214,7 @@ router.put('/reorder', async (req, res) => {
     try {
         const { items } = req.body;
         for (const item of items) {
-            await Promotion.update({ orderIndex: item.orderIndex }, { where: { id: item.id } });
+            await Promotion.update({ orderIndex: item.orderIndex }, { where: { id: item.id, TenantId: req.tenant.id } });
         }
 
         appEmitter.emit('promotions_config_changed');
@@ -231,7 +232,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
         const { id } = req.params;
         const { name, isActive, orderIndex } = req.body;
         
-        const promotion = await Promotion.findByPk(id);
+        const promotion = await Promotion.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!promotion) {
             return res.status(404).json({ error: 'Promoción no encontrada' });
         }
@@ -266,7 +267,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const promotion = await Promotion.findByPk(id);
+        const promotion = await Promotion.findOne({ where: { id, TenantId: req.tenant.id } });
 
         if (!promotion) {
             return res.status(404).json({ error: 'Promoción no encontrada' });

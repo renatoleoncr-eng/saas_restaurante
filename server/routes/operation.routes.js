@@ -287,7 +287,7 @@ const restoreOrderStock = async (order, tenantId) => {
 
                     // A. Restore Menu Config Stock (Virtual Limit)
                     if (sub.menuItemId) {
-                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, false);
+                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, false, req.tenant.id);
                         console.log(`[Stock] Restored DailyMenu stock for item ${sub.menuItemId} by ${totalSubQty}`);
                     }
 
@@ -528,7 +528,7 @@ router.post('/accounts/:id/cancel', async (req, res) => {
 
 // Helper to update DailyMenu stock (Limit) - ID-BASED
 // Helper to update DailyMenu stock (Limit) - ID-BASED
-const updateDailyMenuStock = async (menuItemId, quantity, isDeduction, transaction = null) => {
+const updateDailyMenuStock = async (menuItemId, quantity, isDeduction, tenantId, transaction = null) => {
     try {
         const { DailyMenu } = getModels();
         if (!menuItemId) return; // Skip if no menu item ID provided
@@ -540,7 +540,7 @@ const updateDailyMenuStock = async (menuItemId, quantity, isDeduction, transacti
         const today = now.toISOString().split('T')[0];
 
         // Find menu for today using the same transaction to see uncommitted changes
-        const menu = await DailyMenu.findOne({ where: { date: today }, transaction });
+        const menu = await DailyMenu.findOne({ where: { date: today, TenantId: tenantId }, transaction });
         if (!menu) {
             console.log(`[MenuStock] No menu found for ${today}`);
             return;
@@ -662,7 +662,7 @@ const checkStockAvailability = async (orderItems) => {
             const now = new Date();
             now.setHours(now.getHours() - 5);
             const today = now.toISOString().split('T')[0];
-            const menu = await DailyMenu.findOne({ where: { date: today } });
+            const menu = await DailyMenu.findOne({ where: { date: today, TenantId: req.tenant.id } });
 
             if (menu) {
                 const entries = JSON.parse(menu.entries || '[]');
@@ -737,7 +737,7 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
         throw new Error(`El producto "${product.name}"${presentation ? ` (Variedad: ${presentation})` : ''} requiere preparación pero no tiene una receta configurada.`);
     } else if (product.isStockManaged) {
         if (presentation) {
-            const variant = await ProductVariant.findOne({ where: { ProductId: productId, name: presentation } });
+            const variant = await ProductVariant.findOne({ where: { ProductId: productId, name: presentation, TenantId: req.tenant.id } });
             if (variant) {
                 if (!variantReqs[variant.id]) {
                     variantReqs[variant.id] = { name: `${product.name} [${variant.name}]`, qty: 0 };
@@ -764,10 +764,11 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
         const { Product, Recipe, Ingredient, ProductVariant, IngredientMovement, ProductMovement } = getModels();
 
         // 1. Update Daily Menu Stock (Limit) if applicable
-        await updateDailyMenuStock(productId, quantity, isDeduction, transaction);
+        await updateDailyMenuStock(productId, quantity, isDeduction, tenantId, transaction);
 
         console.log(`[Stock] Processing ${productId} Qty:${quantity} Ded:${isDeduction} Pres:${presentation}`);
-        const product = await Product.findByPk(productId, {
+        const product = await Product.findOne({
+            where: { id: productId, TenantId: tenantId },
             include: [{ model: Recipe, include: [Ingredient] }],
             transaction
         });
@@ -909,7 +910,8 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
                 const variant = await ProductVariant.findOne({
                     where: {
                         ProductId: productId,
-                        name: presentation
+                        name: presentation,
+                        TenantId: tenantId
                     }
                 });
 
@@ -1237,7 +1239,7 @@ router.post('/orders', async (req, res) => {
                     if (sub.menuItemId) {
                         const totalSubQty = (sub.quantity || 1) * item.quantity;
                         console.log(`[Orders] Updating menu stock for menuItemId: ${sub.menuItemId}, qty: ${totalSubQty}`);
-                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, true, t);
+                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, true, req.tenant.id, t);
                     } else {
                         console.log(`[Orders] SubItem has no menuItemId: ${sub.name}`);
                     }
@@ -1485,7 +1487,7 @@ router.put('/orders/:id/decrement', async (req, res) => {
 
                             // A. Restore Menu Config Stock (Virtual Limit)
                             if (sub.menuItemId) {
-                                await updateDailyMenuStock(sub.menuItemId, totalSubQty, false);
+                                await updateDailyMenuStock(sub.menuItemId, totalSubQty, false, req.tenant.id);
                             }
 
                             // B. Restore Physical Inventory (if linked)
