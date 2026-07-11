@@ -3,12 +3,16 @@ const path = require('path');
 
 const EventEmitter = require('events');
 
-// In-memory print queue for local print agent when server is running in the cloud (Linux/Docker)
+// printEvent is used ONLY for real-time long-polling notification.
+// Actual job persistence is now in the DB (PrintJob table).
 const printEvent = new EventEmitter();
 printEvent.setMaxListeners(100);
-const pendingJobs = [];
-let jobCounter = 0;
 const isWindows = process.platform === 'win32';
+
+function getModels() {
+    return require('../models');
+}
+
 
 const formatPrinterDate = (date) => {
     if (!date) return '';
@@ -162,12 +166,9 @@ function formatLine(left, right, width = 42) {
     return left + ' '.repeat(spacesNeeded) + right;
 }
 
-// Helper to get active models dynamically to avoid circular dependencies
-function getModels() {
-    return require('../models');
-}
 
 // Fetch Printer Config from settings
+
 async function getPrintersConfig(tenantId) {
     const { Setting } = getModels();
     try {
@@ -200,19 +201,41 @@ async function sendToPrinter(printerKey, printerConfig, hexData) {
     }
 
     if (!isWindows) {
-        // Queue the job for local print agent polling from the restaurant PC
-        jobCounter++;
-        const job = {
-            id: jobCounter,
-            printerKey: printerKey || 'caja',
-            printerConfig,
-            hexData,
-            createdAt: new Date()
-        };
-        pendingJobs.push(job);
-        printEvent.emit('new_job');
-        console.log(`[Printer Queue] Queued print job #${job.id} for local print agent (${printerKey || 'caja'}).`);
-        return { success: true, queued: true, jobId: job.id };
+        // Determine which agent should handle this job
+        let targetAgentId = printerConfig.agentId || null;
+        let finalPrinterName = printerConfig.printerName || '';
+
+        // Extract agent from printer name format: "[HOSTNAME] PrinterName"
+        if (!targetAgentId && finalPrinterName) {
+            const match = finalPrinterName.match(/^\[(.*?)\]\s*(.*)$/);
+            if (match) {
+                targetAgentId = match[1];
+                finalPrinterName = match[2];
+            }
+        }
+
+        // Build resolved config (with extracted printerName if applicable)
+        const resolvedConfig = { ...printerConfig, printerName: finalPrinterName };
+
+        // Persist job to DB so it survives server restarts and agent disconnects
+        try {
+            const { PrintJob } = getModels();
+            const job = await PrintJob.create({
+                printerKey: printerKey || 'caja',
+                printerConfig: JSON.stringify(resolvedConfig),
+                hexData,
+                targetAgentId: targetAgentId || null,
+                status: 'pending',
+                TenantId: resolvedConfig.TenantId || null
+            });
+            console.log(`[Printer Queue] Saved print job #${job.id} to DB for agent '${targetAgentId || 'any'}' (${printerKey}).`);
+            // Notify any connected long-polling agent immediately
+            printEvent.emit('new_job');
+            return { success: true, queued: true, jobId: job.id };
+        } catch (dbErr) {
+            console.error('[Printer Queue] Failed to save job to DB:', dbErr.message);
+            return { success: false, error: dbErr.message };
+        }
     }
 
     return new Promise((resolve) => {
@@ -257,7 +280,7 @@ async function printTicket(printerKey, builder, tenantId) {
     }
 
     const hex = builder.toHex();
-    return await sendToPrinter(targetPrinterKey, printerConfig, hex);
+    return await sendToPrinter(targetPrinterKey, { ...printerConfig, TenantId: tenantId }, hex);
 }
 
 // === TICKET TEMPLATE GENERATORS ===
@@ -701,68 +724,106 @@ async function triggerInvoicePrint(invoice, account) {
     return await printTicket('caja', builder, tenantId);
 }
 
-function filterJobsByAgent(jobsArray, agentId) {
-    const jobsToReturn = [];
-    const jobsToKeep = [];
+// =============================================
+// DB-backed print queue helpers
+// =============================================
 
-    for (const job of jobsArray) {
-        if (!job.printerConfig) {
-            jobsToReturn.push(job);
-            continue;
-        }
+/**
+ * Fetches pending print jobs from DB for a given agent.
+ * Atomically marks them as 'processing' to prevent double-delivery.
+ */
+async function getPendingJobs(agentId) {
+    const { PrintJob } = getModels();
+    const { Op } = require('sequelize');
 
-        let targetAgentId = job.printerConfig.agentId;
-        let finalJob = job;
-
-        if (!targetAgentId && job.printerConfig.printerName) {
-            const match = job.printerConfig.printerName.match(/^\[(.*?)\]\s*(.*)$/);
-            if (match) {
-                targetAgentId = match[1];
-                finalJob = JSON.parse(JSON.stringify(job));
-                finalJob.printerConfig.printerName = match[2];
-            }
-        }
-
-        if (targetAgentId) {
-            if (agentId && targetAgentId === agentId) {
-                jobsToReturn.push(finalJob);
-            } else {
-                jobsToKeep.push(job);
-            }
-        } else {
-            jobsToReturn.push(job);
-        }
+    const where = { status: 'pending' };
+    if (agentId) {
+        where[Op.or] = [
+            { targetAgentId: agentId },
+            { targetAgentId: null }
+        ];
     }
-    
-    return { jobsToReturn, jobsToKeep };
+
+    const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
+    if (jobs.length === 0) return [];
+
+    // Mark as processing to prevent other agents picking same job
+    const ids = jobs.map(j => j.id);
+    await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
+
+    return jobs.map(j => ({
+        id: j.id,
+        printerKey: j.printerKey,
+        printerConfig: JSON.parse(j.printerConfig),
+        hexData: j.hexData
+    }));
 }
 
-function getPendingJobs(agentId) {
-    const result = filterJobsByAgent(pendingJobs, agentId);
-    pendingJobs.length = 0;
-    pendingJobs.push(...result.jobsToKeep);
-    return result.jobsToReturn;
+/**
+ * Fetches pending jobs filtered by printer keys.
+ */
+async function getPendingJobsForPrinters(printerKeys, agentId) {
+    const { PrintJob } = getModels();
+    const { Op } = require('sequelize');
+
+    const where = {
+        status: 'pending',
+        printerKey: { [Op.in]: printerKeys }
+    };
+    if (agentId) {
+        where[Op.or] = [
+            { targetAgentId: agentId },
+            { targetAgentId: null }
+        ];
+    }
+
+    const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
+    if (jobs.length === 0) return [];
+
+    const ids = jobs.map(j => j.id);
+    await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
+
+    return jobs.map(j => ({
+        id: j.id,
+        printerKey: j.printerKey,
+        printerConfig: JSON.parse(j.printerConfig),
+        hexData: j.hexData
+    }));
 }
 
-function getPendingJobsForPrinters(printerKeys, agentId) {
-    const preFilteredToKeep = [];
-    const jobsToExamine = [];
-    
-    for (const job of pendingJobs) {
-        if (!job.printerKey || printerKeys.includes(job.printerKey.toLowerCase())) {
-            jobsToExamine.push(job);
-        } else {
-            preFilteredToKeep.push(job);
-        }
+/**
+ * Acknowledge a completed job. Marks it done and deletes it.
+ */
+async function ackPrintJob(jobId, success, errorMessage) {
+    const { PrintJob } = getModels();
+    const job = await PrintJob.findByPk(jobId);
+    if (!job) return;
+
+    if (success) {
+        await job.destroy(); // Clean up immediately on success
+    } else {
+        await job.update({ status: 'failed', errorMessage: errorMessage || 'unknown error' });
     }
-    
-    const result = filterJobsByAgent(jobsToExamine, agentId);
-    
-    pendingJobs.length = 0;
-    pendingJobs.push(...preFilteredToKeep);
-    pendingJobs.push(...result.jobsToKeep);
-    
-    return result.jobsToReturn;
+}
+
+/**
+ * Cleanup: delete failed jobs older than 24h (called on server startup).
+ */
+async function cleanupOldPrintJobs() {
+    try {
+        const { PrintJob } = getModels();
+        const { Op } = require('sequelize');
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const deleted = await PrintJob.destroy({
+            where: {
+                status: { [Op.in]: ['failed', 'processing'] },
+                createdAt: { [Op.lt]: cutoff }
+            }
+        });
+        if (deleted > 0) console.log(`[PrintJob Cleanup] Deleted ${deleted} stale print jobs.`);
+    } catch (err) {
+        console.error('[PrintJob Cleanup] Error:', err.message);
+    }
 }
 
 module.exports = {
@@ -779,5 +840,8 @@ module.exports = {
     triggerInvoicePrint,
     getPendingJobs,
     getPendingJobsForPrinters,
+    ackPrintJob,
+    cleanupOldPrintJobs,
     printEvent
 };
+

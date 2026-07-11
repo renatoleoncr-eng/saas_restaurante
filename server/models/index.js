@@ -838,6 +838,42 @@ const Setting = sequelize.define('Setting', {
     timestamps: true
 });
 
+// =============================================
+// PRINT JOB MODEL (Persistent Print Queue)
+// =============================================
+const PrintJob = sequelize.define('PrintJob', {
+    printerKey: {
+        type: DataTypes.STRING(20),  // 'caja', 'cocina', 'barra'
+        allowNull: false
+    },
+    printerConfig: {
+        type: DataTypes.TEXT,        // JSON: { type, path, printerName, agentId }
+        allowNull: false
+    },
+    hexData: {
+        type: DataTypes.TEXT('long'), // ESC/POS hex string
+        allowNull: false
+    },
+    targetAgentId: {
+        type: DataTypes.STRING,      // hostname of the PC that should print this
+        allowNull: true
+    },
+    status: {
+        type: DataTypes.ENUM('pending', 'processing', 'done', 'failed'),
+        defaultValue: 'pending'
+    },
+    errorMessage: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
+}, {
+    timestamps: true,
+    indexes: [
+        { fields: ['status', 'targetAgentId'] },  // fast agent polling
+        { fields: ['status', 'createdAt'] }        // fast cleanup
+    ]
+});
+
 // --- ASSOCIATIONS FOR NEW MODELS ---
 
 QrAccount.hasMany(Payment, { foreignKey: 'qr_id', as: 'Payments' });
@@ -855,7 +891,7 @@ const tenantScopedModels = [
     ProductMovement, Recipe, AuditLog, DailyMenu, Expense,
     ProductVariant, Payment, DrinkPromotion, DrinkPromotionItem,
     DrinkItemRecipe, CashSession, BillingConfig, Invoice,
-    QrAccount, PromotionGroup, Promotion, Setting
+    QrAccount, PromotionGroup, Promotion, Setting, PrintJob
 ];
 
 tenantScopedModels.forEach(Model => {
@@ -957,5 +993,6 @@ module.exports = {
     QrAccount,
     PromotionGroup,
     Promotion,
-    Setting
+    Setting,
+    PrintJob
 };

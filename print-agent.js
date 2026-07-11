@@ -114,6 +114,26 @@ function poll() {
     });
 }
 
+function ackJob(jobId, success, errorMsg) {
+    if (!jobId) return;
+    const payload = JSON.stringify({ success, error: errorMsg || null });
+    const url = `${serverUrl}/api/config/printers/jobs/${jobId}/ack`;
+    const urlObj = new URL(url);
+    const client = url.startsWith('https') ? https : http;
+    const options = {
+        method: 'POST',
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    };
+    const req = client.request(options, (res) => { res.resume(); });
+    req.on('error', () => {});
+    req.setTimeout(4000, () => { req.destroy(); });
+    req.write(payload);
+    req.end();
+}
+
 function processJobs(jobs) {
     if (jobs.length === 0) {
         poll();
@@ -128,6 +148,7 @@ function processJobs(jobs) {
 
     if (ptype === 'DISABLED') {
         log(`[WARN] Trabajo #${job.id} omitido porque la impresora local está deshabilitada.`);
+        ackJob(job.id, false, 'printer disabled');
         setTimeout(() => processJobs(jobs), 300);
         return;
     }
@@ -146,13 +167,16 @@ function processJobs(jobs) {
         if (error) {
             log(`[ERROR] Trabajo #${job.id} fallo: ${error.message}`);
             if (stderr) log(`[ERROR] Detalle: ${stderr.trim()}`);
+            ackJob(job.id, false, error.message);
         } else {
             const info = stdout ? stdout.replace(/[\r\n]+/g, ' ').trim() : '';
             log(`[OK] Trabajo #${job.id} impreso. ${info}`);
+            ackJob(job.id, true);
         }
         setTimeout(() => processJobs(jobs), 300);
     });
 }
+
 
 // ─── CLOUD SYNC: REPORTE AL SERVIDOR ───────────────────────────────────────────
 // En lugar de escuchar en un puerto local, el agente hace ping a la nube

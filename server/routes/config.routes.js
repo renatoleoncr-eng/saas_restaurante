@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, printEvent } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent } = require('../utils/printer');
+
+// Run cleanup on startup
+setTimeout(cleanupOldPrintJobs, 5000);
+// Also run daily cleanup
+setInterval(cleanupOldPrintJobs, 24 * 60 * 60 * 1000);
 
 const LATEST_AGENT_VERSION = "1.1.0";
 
@@ -125,8 +130,8 @@ router.post('/config/printers/test', async (req, res) => {
     }
 });
 
-// GET pending print jobs for local print agent
-router.get('/config/printers/pending', (req, res) => {
+// GET pending print jobs for local print agent (long-polling, DB-backed)
+router.get('/config/printers/pending', async (req, res) => {
     try {
         const { printers, agentId } = req.query;
         let keys = null;
@@ -134,30 +139,33 @@ router.get('/config/printers/pending', (req, res) => {
             keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
         }
 
-        const fetchJobs = () => {
+        const fetchJobs = async () => {
             if (keys) return getPendingJobsForPrinters(keys, agentId);
             return getPendingJobs(agentId);
         };
 
-        let jobs = fetchJobs();
+        // Check DB immediately
+        let jobs = await fetchJobs();
         if (jobs && jobs.length > 0) {
             return res.json(jobs);
         }
 
-        // Long-polling
-        const onNewJob = () => {
-            jobs = fetchJobs();
-            if (jobs && jobs.length > 0) {
-                clearTimeout(timeoutId);
-                printEvent.removeListener('new_job', onNewJob);
-                if (!res.headersSent) res.json(jobs);
-            }
+        // Long-polling: wait up to 8s for a new job event
+        const onNewJob = async () => {
+            try {
+                jobs = await fetchJobs();
+                if (jobs && jobs.length > 0) {
+                    clearTimeout(timeoutId);
+                    printEvent.removeListener('new_job', onNewJob);
+                    if (!res.headersSent) res.json(jobs);
+                }
+            } catch (_) {}
         };
 
         const timeoutId = setTimeout(() => {
             printEvent.removeListener('new_job', onNewJob);
             if (!res.headersSent) res.json([]);
-        }, 8000); // 8s timeout to prevent agent's 10s socket timeout
+        }, 8000);
 
         printEvent.on('new_job', onNewJob);
 
@@ -168,6 +176,18 @@ router.get('/config/printers/pending', (req, res) => {
 
     } catch (err) {
         if (!res.headersSent) res.status(500).json({ error: err.message });
+    }
+});
+
+// POST acknowledge a print job (agent confirms success or failure)
+router.post('/config/printers/jobs/:id/ack', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { success, error: errorMsg } = req.body;
+        await ackPrintJob(parseInt(id, 10), success !== false, errorMsg);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
