@@ -1099,6 +1099,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         }
     };
 
+    const cartNeedsPrinting = () => {
+        if (!printingEnabled) return false;
+        for (const item of cart) {
+            if (!item.productId) return true; // Combos/Promos usually print
+            const p = products.find(prod => prod.id === item.productId);
+            if (p) {
+                // If it is NOT a Terminado (isStockManaged=true & requiresPreparation=false), it needs printing
+                if (!(p.isStockManaged === true && p.requiresPreparation === false)) {
+                    return true;
+                }
+            } else {
+                return true; // Unknown product, assume it prints
+            }
+        }
+        return false;
+    };
+
     const handlePinConfirm = async (enteredPin) => {
         setPinError('');
         try {
@@ -1108,7 +1125,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 setShowPinPad(false);
                 setValidatedPinForOrder(enteredPin);
                 
-                if (printingEnabled) {
+                if (cartNeedsPrinting()) {
                     // Delay slightly to allow PinPadModal's history.back() to complete before pushing new state
                     setTimeout(() => setShowPrintConfirm(true), 100);
                 } else {
