@@ -400,8 +400,13 @@ router.post('/sessions/close', async (req, res) => {
     try {
         const { sessionId, closingNotes, closingDetails, userId } = req.body;
 
-        if (!closingNotes || closingNotes.trim() === '') {
-            return res.status(400).json({ error: 'Es obligatorio ingresar las notas de cierre' });
+        let hasDifferences = false;
+        if (closingDetails && closingDetails.differences) {
+            hasDifferences = Object.values(closingDetails.differences).some(diff => Math.abs(diff) >= 0.01);
+        }
+
+        if (hasDifferences && (!closingNotes || closingNotes.trim() === '')) {
+            return res.status(400).json({ error: 'Es obligatorio ingresar las notas de cierre debido a que hay un descuadre en la caja' });
         }
 
         const session = await CashSession.findOne({ where: { id: sessionId, TenantId: req.tenant.id } });

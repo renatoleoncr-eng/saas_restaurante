@@ -132,9 +132,23 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
         }
     };
 
+    const getHasDifferences = () => {
+        if (!sessionData || !sessionData.expected) return false;
+        let diffEfectivo = (parseFloat(countedValues.efectivo) || 0) - (sessionData.expected.efectivo || 0);
+        if (Math.abs(diffEfectivo) < 0.01) diffEfectivo = 0;
+        let diffTarjeta = (parseFloat(countedValues.tarjeta) || 0) - (sessionData.expected.tarjeta || 0);
+        if (Math.abs(diffTarjeta) < 0.01) diffTarjeta = 0;
+        let diffYape = (parseFloat(countedValues.yape) || 0) - (sessionData.expected.yape || 0);
+        if (Math.abs(diffYape) < 0.01) diffYape = 0;
+        let diffTransferencia = (parseFloat(countedValues.transferencia) || 0) - (sessionData.expected.transferencia || 0);
+        if (Math.abs(diffTransferencia) < 0.01) diffTransferencia = 0;
+        return diffEfectivo !== 0 || diffTarjeta !== 0 || diffYape !== 0 || diffTransferencia !== 0;
+    };
+
     const handleRequestCloseSession = () => {
-        if (!closingNotes || closingNotes.trim() === '') {
-            alert("Es obligatorio ingresar las notas de cierre.");
+        const hasDifferences = getHasDifferences();
+        if (hasDifferences && (!closingNotes || closingNotes.trim() === '')) {
+            alert("Es obligatorio ingresar las notas de cierre debido a que hay un descuadre en la caja.");
             return;
         }
         setShowConfirmCloseModal(true);
@@ -785,12 +799,14 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Notas de Cierre <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Notas de Cierre {getHasDifferences() && <span className="text-red-500">*</span>}
+                                </label>
                                 <textarea 
                                     value={closingNotes}
                                     onChange={e => setClosingNotes(e.target.value)}
                                     className="w-full border-2 border-gray-100 rounded-xl p-4 text-sm focus:border-red-500 outline-none transition-all resize-none"
-                                    placeholder="Describa cualquier descuadre o detalle del turno..."
+                                    placeholder={getHasDifferences() ? "Describa el motivo del descuadre..." : "Describa cualquier detalle del turno (opcional)..."}
                                     rows={3}
                                 />
                             </div>
