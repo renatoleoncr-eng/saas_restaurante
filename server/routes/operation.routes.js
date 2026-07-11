@@ -1286,6 +1286,10 @@ router.post('/orders', async (req, res) => {
                         if (item.productId) {
                             const p = await Product.findByPk(item.productId);
                             if (p) {
+                                // Exclude products that do not require preparation (e.g., beers, sodas)
+                                if (p.requiresPreparation === false) {
+                                    continue;
+                                }
                                 type = p.type;
                                 name = p.name;
                             }
