@@ -1106,7 +1106,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             const p = products.find(prod => prod.id === item.productId);
             if (p) {
                 // If it is NOT a Terminado (isStockManaged=true & requiresPreparation=false), it needs printing
-                if (!(p.isStockManaged === true && p.requiresPreparation === false)) {
+                if (!(p.isStockManaged && !p.requiresPreparation)) {
                     return true;
                 }
             } else {
