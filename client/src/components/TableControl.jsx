@@ -1115,8 +1115,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             if (!item.productId) return true; // Combos/Promos usually print
             const p = products.find(prod => prod.id === item.productId);
             if (p) {
-                // Exclude ONLY "Productos Terminados" (isStockManaged=true & requiresPreparation=false)
-                if (!(p.isStockManaged && !p.requiresPreparation)) {
+                // Terminado = isStockManaged=true (regardless of requiresPreparation, which may be stale in old records)
+                if (!p.isStockManaged) {
                     return true;
                 }
             } else {

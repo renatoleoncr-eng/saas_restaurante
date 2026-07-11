@@ -1287,9 +1287,9 @@ router.post('/orders', async (req, res) => {
                         if (item.productId) {
                             const p = await Product.findByPk(item.productId);
                             if (p) {
-                                // Exclude ONLY "Productos Terminados" (isStockManaged: true, requiresPreparation: false)
-                                // "Productos Libres" (isStockManaged: false, requiresPreparation: false) SHOULD print
-                                if (p.isStockManaged === true && p.requiresPreparation === false) {
+                                // Terminado = isStockManaged=true → no comanda needed
+                                // (requiresPreparation may be stale in old records, don't rely on it)
+                                if (p.isStockManaged) {
                                     continue;
                                 }
                                 type = p.type;
