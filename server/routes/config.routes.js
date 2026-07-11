@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent, formatPrinterDate } = require('../utils/printer');
 
 // Run cleanup on startup
 setTimeout(cleanupOldPrintJobs, 5000);
@@ -122,7 +122,7 @@ router.post('/config/printers/test', async (req, res) => {
         } else {
             builder.line(`Nombre Windows: ${printerName}`);
         }
-        builder.line(`Fecha de Prueba: ${new Date().toLocaleString('es-PE')}`);
+        builder.line(`Fecha de Prueba: ${formatPrinterDate(new Date())}`);
         builder.line("-".repeat(42));
         builder.bold().line("SI PUEDES LEER ESTO, LA IMPRESION").line("HA SIDO CONFIGURADA CORRECTAMENTE!").bold(false);
         builder.line("-".repeat(42)).feed(4).cut();

@@ -16,12 +16,17 @@ function getModels() {
 
 const formatPrinterDate = (date) => {
     if (!date) return '';
-    return cleanSpanishChars(
-        new Date(date).toLocaleString('es-PE')
-            .replace(/\u202f/g, ' ')
-            .replace(/p\.\s*m\./i, 'PM')
-            .replace(/a\.\s*m\./i, 'AM')
-    );
+    const d = new Date(date);
+    let hh = d.getHours();
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    const ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12;
+    hh = hh ? hh : 12;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year} ${hh}:${mm}:${ss} ${ampm}`;
 };
 
 // Helper to remove accents and special Spanish characters for 100% printer compatibility
@@ -828,6 +833,7 @@ async function cleanupOldPrintJobs() {
 
 module.exports = {
     cleanSpanishChars,
+    formatPrinterDate,
     EscPosBuilder,
     formatLine,
     getPrintersConfig,
