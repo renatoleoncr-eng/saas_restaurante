@@ -250,83 +250,29 @@ export default function QrDisplay() {
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 flex items-center justify-center overflow-hidden m-0 p-0 select-none cursor-none relative">
+    <div className="w-screen h-screen bg-slate-950 flex flex-row overflow-hidden m-0 p-0 select-none cursor-none relative">
       
-      {/* ROULETTE MODE OVERLAY */}
-      {showRoulette && rouletteConfig && (
-         <RouletteDisplay 
-            config={rouletteConfig.config || rouletteConfig} 
-            onComplete={(winner) => {
-               console.log("Roulette spin completed, reporting winner:", winner);
-               if (socket) {
-                   socket.emit('report_roulette_winner', {
-                       winnerName: winner.name,
-                       winnerIcon: winner.icon,
-                       accountId: rouletteConfig.accountId,
-                       prize: winner
-                   });
-               }
-            }}
-         />
-      )}
+      {/* LEFT AREA: ADS & ROULETTE */}
+      <div className="flex-1 h-full relative overflow-hidden">
+        {/* ROULETTE MODE OVERLAY */}
+        {showRoulette && rouletteConfig && (
+           <RouletteDisplay 
+              config={rouletteConfig.config || rouletteConfig} 
+              onComplete={(winner) => {
+                 console.log("Roulette spin completed, reporting winner:", winner);
+                 if (socket) {
+                     socket.emit('report_roulette_winner', {
+                         winnerName: winner.name,
+                         winnerIcon: winner.icon,
+                         accountId: rouletteConfig.accountId,
+                         prize: winner
+                     });
+                 }
+              }}
+           />
+        )}
 
-      {/* QR COUNTDOWN / STEADY MODE */}
-      {showMode === 'qr' && activeQr && (
-        <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-          
-          <div className="bg-slate-950/60 backdrop-blur-xl border-2 border-emerald-500/20 p-8 rounded-[40px] shadow-2xl flex flex-col items-center max-w-lg w-full relative">
-            <h2 className="text-3xl font-black text-white uppercase italic tracking-wider mb-2">
-               Pago con <span className="text-emerald-400">Código QR</span>
-            </h2>
-            <p className="text-slate-400 text-sm font-medium mb-6">{activeQr.name}</p>
-
-            {activeQr.imageUrl ? (
-              isVideo(activeQr.imageUrl) ? (
-                 <video 
-                     src={getMediaUrl(activeQr.imageUrl)} 
-                     className="w-full h-64 object-contain rounded-2xl mb-6" 
-                     autoPlay loop muted playsInline 
-                 />
-              ) : (
-                 <img 
-                     src={getMediaUrl(activeQr.imageUrl)} 
-                     alt={activeQr.name} 
-                     className="w-64 h-64 object-contain rounded-2xl mb-6 shadow-md transition-all duration-700"
-                     onError={(e) => {
-                         console.error("Failed to load QR image:", activeQr.imageUrl);
-                         e.target.style.display = 'none';
-                         e.target.parentElement.innerHTML = '<div class="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-2xl h-64 w-64"><div class="flex flex-col items-center">❗<br/>Código no disponible</div></div>';
-                     }}
-                 />
-              )
-            ) : (
-               <div className="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-2xl h-64 w-64 mb-6">
-                 <div className="flex flex-col items-center">❗<br/>Código no disponible</div>
-               </div>
-            )}
-
-            <div className="w-full bg-slate-900/60 border border-slate-800 p-4 rounded-2xl text-center">
-              <p className="text-slate-300 font-bold text-base leading-none mb-1">
-                 {getRemainingCaption(activeQr)}
-              </p>
-              {activeQr.phoneNumber && (
-                <p className="text-emerald-400 font-mono text-sm tracking-widest mt-1">
-                  Celular: {activeQr.phoneNumber}
-                </p>
-              )}
-            </div>
-            
-            {/* Elegant Peruvian Watermark or instruction */}
-            <div className="mt-6 flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-               <span className="text-[10px] uppercase font-black tracking-widest text-slate-500">Transacción Segura</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADS / SLIDESHOW MODE (Default background visual loop) */}
-      {(showMode === 'ads' || !activeQr) && (
+        {/* ADS / SLIDESHOW MODE */}
         <div className="w-full h-full relative overflow-hidden bg-slate-950">
           
           {/* PROJECTION CARD OVERLAY */}
@@ -422,6 +368,63 @@ export default function QrDisplay() {
               )}
             </>
           )}
+        </div>
+      </div>
+
+      {/* RIGHT AREA: PERMANENT QR DISPLAY */}
+      {activeQr && (
+        <div className="w-[420px] h-full bg-slate-950 border-l border-slate-800 flex flex-col items-center justify-center p-8 shadow-2xl relative z-20">
+          
+          <div className="w-full flex flex-col items-center">
+            <h2 className="text-3xl font-black text-white uppercase italic tracking-wider mb-2 text-center">
+               Pago <span className="text-emerald-400">QR</span>
+            </h2>
+            <p className="text-slate-400 text-base font-medium mb-8 text-center">{activeQr.name}</p>
+
+            {activeQr.imageUrl ? (
+              isVideo(activeQr.imageUrl) ? (
+                 <video 
+                     src={getMediaUrl(activeQr.imageUrl)} 
+                     className="w-full max-h-[350px] object-contain rounded-3xl mb-8" 
+                     autoPlay loop muted playsInline 
+                 />
+              ) : (
+                 <img 
+                     src={getMediaUrl(activeQr.imageUrl)} 
+                     alt={activeQr.name} 
+                     className="w-full max-h-[350px] object-contain rounded-3xl mb-8 shadow-lg transition-all duration-700"
+                     onError={(e) => {
+                         console.error("Failed to load QR image:", activeQr.imageUrl);
+                         e.target.style.display = 'none';
+                         e.target.parentElement.innerHTML = '<div class="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-2xl h-48 w-full"><div class="flex flex-col items-center">❗<br/>Código no disponible</div></div>';
+                     }}
+                 />
+              )
+            ) : (
+               <div className="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-3xl h-64 w-full mb-8">
+                 <div className="flex flex-col items-center">❗<br/>Código no disponible</div>
+               </div>
+            )}
+
+            <div className="w-full bg-slate-900/60 border border-slate-800 p-5 rounded-2xl text-center">
+              <p className="text-slate-300 font-bold text-sm leading-none mb-3">
+                 {getRemainingCaption(activeQr)}
+              </p>
+              {activeQr.phoneNumber && (
+                <div className="bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 mt-2 shadow-inner">
+                  <p className="text-slate-400 text-[11px] uppercase tracking-[0.2em] mb-1">Número de Celular</p>
+                  <p className="text-emerald-400 font-mono text-2xl tracking-widest font-bold">
+                    {activeQr.phoneNumber}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-8 flex items-center gap-2">
+               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+               <span className="text-xs uppercase font-black tracking-widest text-slate-500">Transacción Segura</span>
+            </div>
+          </div>
         </div>
       )}
       

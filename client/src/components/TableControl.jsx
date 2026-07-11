@@ -1082,21 +1082,31 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [pinError, setPinError] = useState('');
     const [validatedPinForOrder, setValidatedPinForOrder] = useState(null);
 
+    // Single unified function called after PIN is validated (or skipped).
+    // Decides whether to show the print modal or go directly to execute.
+    const proceedToSendOrder = (pin) => {
+        setValidatedPinForOrder(pin);
+        if (cartNeedsPrinting()) {
+            // Delay slightly to allow PinPadModal's history.back() to complete before pushing new state
+            setTimeout(() => setShowPrintConfirm(true), 100);
+        } else {
+            executeSendOrder(pin, false);
+        }
+    };
+
     const sendOrder = async () => {
         if (cart.length === 0) return;
         setOrderError(null);
 
         if (user?.requirePinPrompt) {
+            // Step 1: Show PIN pad. Flow continues in handlePinConfirm -> proceedToSendOrder
             setPinError('');
             setShowPinPad(true);
             return;
         }
 
-        if (printingEnabled && cartNeedsPrinting()) {
-            setShowPrintConfirm(true);
-        } else {
-            await executeSendOrder(null, false);
-        }
+        // No PIN required: go directly to step 2
+        proceedToSendOrder(null);
     };
 
     const cartNeedsPrinting = () => {
@@ -1105,7 +1115,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             if (!item.productId) return true; // Combos/Promos usually print
             const p = products.find(prod => prod.id === item.productId);
             if (p) {
-                // If it is NOT a Terminado (isStockManaged=true & requiresPreparation=false), it needs printing
+                // Exclude ONLY "Productos Terminados" (isStockManaged=true & requiresPreparation=false)
                 if (!(p.isStockManaged && !p.requiresPreparation)) {
                     return true;
                 }
@@ -1119,18 +1129,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const handlePinConfirm = async (enteredPin) => {
         setPinError('');
         try {
-            // Validate PIN first
+            // Step 1b: Validate PIN
             const res = await axios.post('/api/validate-pin', { pin: enteredPin });
             if (res.data.success) {
                 setShowPinPad(false);
-                setValidatedPinForOrder(enteredPin);
-                
-                if (cartNeedsPrinting()) {
-                    // Delay slightly to allow PinPadModal's history.back() to complete before pushing new state
-                    setTimeout(() => setShowPrintConfirm(true), 100);
-                } else {
-                    await executeSendOrder(enteredPin, false);
-                }
+                // Step 2: Same path as non-PIN flow
+                proceedToSendOrder(enteredPin);
             }
         } catch (err) {
             console.error('Validate PIN Error:', err);
@@ -1148,10 +1152,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const handlePrintConfirmDialog = async (wantsPrint) => {
+        // Step 3: User responded to print modal
         setShowPrintConfirm(false);
         await executeSendOrder(validatedPinForOrder, wantsPrint);
         setValidatedPinForOrder(null);
     };
+
 
     const executeSendOrder = async (authorPin = null, printComanda = false) => {
         if (isSendingOrder || isSendingRef.current) return false;
