@@ -1092,7 +1092,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return;
         }
 
-        if (printingEnabled) {
+        if (printingEnabled && cartNeedsPrinting()) {
             setShowPrintConfirm(true);
         } else {
             await executeSendOrder(null, false);
