@@ -22,9 +22,9 @@ const logFile    = path.join(__dirname, 'print-agent.log');
 const AGENT_VERSION = "1.0.0";
 
 // Backoff settings for when server is unreachable
-const POLL_INTERVAL_OK    = 1000;   // 1s when server OK
-const POLL_INTERVAL_ERR   = 1000;   // 1s on first error
-const POLL_INTERVAL_MAX   = 5000;   // max 5s backoff
+const POLL_INTERVAL_OK    = 0;     // reconnect immediately — long-poll already provides the throttle
+const POLL_INTERVAL_ERR   = 1000;  // 1s on first error
+const POLL_INTERVAL_MAX   = 5000;  // max 5s backoff
 let   currentPollInterval = POLL_INTERVAL_OK;
 
 // Log to both console and file (max 500KB, then truncate)
