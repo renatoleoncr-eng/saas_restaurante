@@ -1087,6 +1087,7 @@ router.post('/orders', async (req, res) => {
                 return res.status(400).json({ error: 'PIN incorrecto o usuario inactivo' });
             }
             userId = pinUser.id; // Override order creator with the actual mozo
+            req.auditUserId = pinUser.id; // Set for the audit log
         }
 
 
@@ -1286,8 +1287,9 @@ router.post('/orders', async (req, res) => {
                         if (item.productId) {
                             const p = await Product.findByPk(item.productId);
                             if (p) {
-                                // Exclude products that do not require preparation (e.g., beers, sodas)
-                                if (p.requiresPreparation === false) {
+                                // Exclude ONLY "Productos Terminados" (isStockManaged: true, requiresPreparation: false)
+                                // "Productos Libres" (isStockManaged: false, requiresPreparation: false) SHOULD print
+                                if (p.isStockManaged === true && p.requiresPreparation === false) {
                                     continue;
                                 }
                                 type = p.type;
