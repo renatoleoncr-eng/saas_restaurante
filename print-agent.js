@@ -19,7 +19,10 @@ const os    = require('os');
 const serverUrl  = process.argv[2] || 'https://makala.maksuites.com.pe';
 const scriptPath = path.join(__dirname, 'server', 'utils', 'print_raw.ps1');
 const logFile    = path.join(__dirname, 'print-agent.log');
+// Bump this version ONLY when print-agent.js has changes that require reinstalling the service.
+// The server reads this value directly from this file to know what version to expect.
 const AGENT_VERSION = "1.2.0";
+
 
 // Backoff settings for when server is unreachable
 const POLL_INTERVAL_OK    = 0;     // reconnect immediately — long-poll already provides the throttle

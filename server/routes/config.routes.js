@@ -8,7 +8,17 @@ setTimeout(cleanupOldPrintJobs, 5000);
 // Also run daily cleanup
 setInterval(cleanupOldPrintJobs, 24 * 60 * 60 * 1000);
 
-const LATEST_AGENT_VERSION = "1.2.0";
+// Read expected agent version from print-agent.js — single source of truth.
+// Bump AGENT_VERSION inside print-agent.js when a reinstall is needed.
+const LATEST_AGENT_VERSION = (() => {
+    try {
+        const fs = require('fs');
+        const agentPath = require('path').join(__dirname, '../../print-agent.js');
+        const content = fs.readFileSync(agentPath, 'utf8');
+        const match = content.match(/AGENT_VERSION\s*=\s*["']([^"']+)["']/);
+        return match ? match[1] : '1.0.0';
+    } catch (_) { return '1.0.0'; }
+})();
 
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
