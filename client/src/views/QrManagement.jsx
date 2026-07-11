@@ -750,7 +750,7 @@ export default function QrManagement() {
                                 onClick={openQrCreate}
                                 className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-semibold my-2"
                             >
-                                <Plus className="w-4 h-4" /> + Agregar QR
+                                <Plus className="w-4 h-4" /> QR
                             </button>
                         )}
                     </div>

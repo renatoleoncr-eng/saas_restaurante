@@ -250,181 +250,65 @@ export default function QrDisplay() {
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 flex flex-row overflow-hidden m-0 p-0 select-none cursor-none relative">
+    <div className="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center overflow-hidden m-0 p-8 select-none cursor-none relative">
       
-      {/* LEFT AREA: ADS & ROULETTE */}
-      <div className="flex-1 h-full relative overflow-hidden">
-        {/* ROULETTE MODE OVERLAY */}
-        {showRoulette && rouletteConfig && (
-           <RouletteDisplay 
-              config={rouletteConfig.config || rouletteConfig} 
-              onComplete={(winner) => {
-                 console.log("Roulette spin completed, reporting winner:", winner);
-                 if (socket) {
-                     socket.emit('report_roulette_winner', {
-                         winnerName: winner.name,
-                         winnerIcon: winner.icon,
-                         accountId: rouletteConfig.accountId,
-                         prize: winner
-                     });
-                 }
-              }}
-           />
-        )}
-
-        {/* ADS / SLIDESHOW MODE */}
-        <div className="w-full h-full relative overflow-hidden bg-slate-950">
+      {activeQr ? (
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-slate-800/50 p-12 rounded-[48px] shadow-2xl flex flex-col items-center max-w-3xl w-full relative animate-in zoom-in-95 duration-700">
           
-          {/* PROJECTION CARD OVERLAY */}
-          {projection ? (
-             <div className="w-full h-full animate-in zoom-in-95 duration-700">
-                {projection.type === 'group' ? (
-                    // Group slideshow cycling view
-                    <div className="w-full h-full relative">
-                        {projection.images.map((img, idx) => (
-                            <div key={img.id} className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentProjImageIndex ? 'opacity-100' : 'opacity-0'}`}>
-                                {isVideo(img.url) ? (
-                                    <video src={getMediaUrl(img.url)} className="w-full h-full object-cover" autoPlay={idx === currentProjImageIndex} loop muted playsInline />
-                                ) : (
-                                    <img src={getMediaUrl(img.url)} alt={img.name} className="w-full h-full object-cover" />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    // Individual slide view
-                    <>
-                        {isVideo(projection.promoUrl) ? (
-                            <video 
-                                src={getMediaUrl(projection.promoUrl)} 
-                                className="w-full h-full object-cover" 
-                                autoPlay loop muted playsInline 
-                            />
-                        ) : (
-                            <img 
-                                src={getMediaUrl(projection.promoUrl)} 
-                                alt={projection.promoName} 
-                                className="w-full h-full object-cover" 
-                            />
-                        )}
-                    </>
-                )}
-                
-                {/* Visual projection floating countdown timer */}
-                <div className="absolute top-8 right-8 bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-2xl animate-in slide-in-from-top-4 duration-500">
-                    <div className="flex flex-col text-left">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 leading-none mb-1">
-                            {projection.type === 'group' ? 'PROYECTANDO GRUPO' : 'PROYECCIÓN ACTIVA'}
-                        </span>
-                        <span className="text-2xl font-mono font-bold tabular-nums text-slate-100">{formatTime(projectionTimer)}</span>
-                    </div>
-                    <div className="w-10 h-10 rounded-full border-2 border-emerald-500/30 flex items-center justify-center relative">
-                        <div className="absolute inset-0 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    </div>
-                </div>
-             </div>
-          ) : (
-            <>
-              {promotions.length > 0 ? (
-                <div className="w-full h-full">
-                  {promotions.map((promo, index) => (
-                    <div 
-                      key={promo.id}
-                      className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentPromoIndex ? 'opacity-100' : 'opacity-0'}`}
-                    >
-                      {isVideo(promo.imageUrl) ? (
-                        <video 
-                            src={getMediaUrl(promo.imageUrl)} 
-                            className="w-full h-full object-cover" 
-                            autoPlay={index === currentPromoIndex} 
-                            loop muted playsInline 
-                        />
-                      ) : (
-                        <img 
-                            src={getMediaUrl(promo.imageUrl)} 
-                            alt={promo.name} 
-                            className="w-full h-full object-cover" 
-                        />
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    </div>
-                  ))}
-                  
-                  {/* Rotating visual progression indicators */}
-                  <div className="absolute bottom-8 right-12 flex gap-2">
-                    {promotions.map((_, i) => (
-                        <div key={i} className={`h-2 transition-all duration-500 rounded-full ${i === currentPromoIndex ? 'w-10 bg-emerald-500' : 'w-3 bg-white/20'}`} />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-600/30 gap-4">
-                  <span className="text-5xl font-black uppercase tracking-[0.25em] animate-pulse">
-                     GESTION RESTAURANTE
-                  </span>
-                  <p className="text-xs uppercase tracking-[0.3em] font-semibold text-slate-700">Pantalla del Cliente</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+          <h2 className="text-5xl font-black text-white uppercase italic tracking-wider mb-3 text-center">
+             Pago con <span className="text-emerald-400">QR</span>
+          </h2>
+          <p className="text-slate-400 text-2xl font-medium mb-10 text-center">{activeQr.name}</p>
 
-      {/* RIGHT AREA: PERMANENT QR DISPLAY */}
-      {activeQr && (
-        <div className="w-[420px] h-full bg-slate-950 border-l border-slate-800 flex flex-col items-center justify-center p-8 shadow-2xl relative z-20">
-          
-          <div className="w-full flex flex-col items-center">
-            <h2 className="text-3xl font-black text-white uppercase italic tracking-wider mb-2 text-center">
-               Pago <span className="text-emerald-400">QR</span>
-            </h2>
-            <p className="text-slate-400 text-base font-medium mb-8 text-center">{activeQr.name}</p>
-
-            {activeQr.imageUrl ? (
-              isVideo(activeQr.imageUrl) ? (
-                 <video 
-                     src={getMediaUrl(activeQr.imageUrl)} 
-                     className="w-full max-h-[350px] object-contain rounded-3xl mb-8" 
-                     autoPlay loop muted playsInline 
-                 />
-              ) : (
-                 <img 
-                     src={getMediaUrl(activeQr.imageUrl)} 
-                     alt={activeQr.name} 
-                     className="w-full max-h-[350px] object-contain rounded-3xl mb-8 shadow-lg transition-all duration-700"
-                     onError={(e) => {
-                         console.error("Failed to load QR image:", activeQr.imageUrl);
-                         e.target.style.display = 'none';
-                         e.target.parentElement.innerHTML = '<div class="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-2xl h-48 w-full"><div class="flex flex-col items-center">❗<br/>Código no disponible</div></div>';
-                     }}
-                 />
-              )
+          {activeQr.imageUrl ? (
+            isVideo(activeQr.imageUrl) ? (
+               <video 
+                   src={getMediaUrl(activeQr.imageUrl)} 
+                   className="w-full max-h-[500px] object-contain rounded-3xl mb-10 shadow-2xl" 
+                   autoPlay loop muted playsInline 
+               />
             ) : (
-               <div className="flex items-center justify-center p-8 bg-slate-900 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-3xl h-64 w-full mb-8">
-                 <div className="flex flex-col items-center">❗<br/>Código no disponible</div>
-               </div>
-            )}
+               <img 
+                   src={getMediaUrl(activeQr.imageUrl)} 
+                   alt={activeQr.name} 
+                   className="w-full max-h-[500px] object-contain rounded-3xl mb-10 shadow-2xl transition-all duration-700"
+                   onError={(e) => {
+                       console.error("Failed to load QR image:", activeQr.imageUrl);
+                       e.target.style.display = 'none';
+                       e.target.parentElement.innerHTML = '<div class="flex items-center justify-center p-12 bg-slate-900/50 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-3xl h-64 w-full"><div class="flex flex-col items-center text-xl">❗<br/>Código no disponible</div></div>';
+                   }}
+               />
+            )
+          ) : (
+             <div className="flex items-center justify-center p-12 bg-slate-900/50 text-slate-500 text-center border-2 border-dashed border-slate-700 rounded-3xl h-64 w-full mb-10">
+               <div className="flex flex-col items-center text-xl">❗<br/>Código no disponible</div>
+             </div>
+          )}
 
-            <div className="w-full bg-slate-900/60 border border-slate-800 p-5 rounded-2xl text-center">
-              <p className="text-slate-300 font-bold text-sm leading-none mb-3">
-                 {getRemainingCaption(activeQr)}
-              </p>
-              {activeQr.phoneNumber && (
-                <div className="bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 mt-2 shadow-inner">
-                  <p className="text-slate-400 text-[11px] uppercase tracking-[0.2em] mb-1">Número de Celular</p>
-                  <p className="text-emerald-400 font-mono text-2xl tracking-widest font-bold">
-                    {activeQr.phoneNumber}
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-8 flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-               <span className="text-xs uppercase font-black tracking-widest text-slate-500">Transacción Segura</span>
-            </div>
+          <div className="w-full bg-slate-950/80 border border-slate-800/50 p-8 rounded-3xl text-center shadow-inner">
+
+            {activeQr.phoneNumber && (
+              <div className="mt-4 flex flex-col items-center">
+                <p className="text-slate-500 text-sm uppercase tracking-[0.3em] mb-2">Número de Celular</p>
+                <p className="text-emerald-400 font-mono text-5xl tracking-widest font-black drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]">
+                  {activeQr.phoneNumber}
+                </p>
+              </div>
+            )}
           </div>
+          
+          <div className="mt-12 flex items-center gap-3 bg-slate-950/50 px-6 py-3 rounded-full border border-slate-800/50">
+             <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+             <span className="text-sm uppercase font-black tracking-widest text-slate-400">Transacción Segura</span>
+          </div>
+
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-slate-700/50 gap-6">
+           <span className="text-6xl font-black uppercase tracking-[0.25em] animate-pulse">
+              GESTION RESTAURANTE
+           </span>
+           <p className="text-lg uppercase tracking-[0.4em] font-semibold text-slate-600">Pantalla del Cliente</p>
         </div>
       )}
       
