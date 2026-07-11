@@ -8,7 +8,7 @@ setTimeout(cleanupOldPrintJobs, 5000);
 // Also run daily cleanup
 setInterval(cleanupOldPrintJobs, 24 * 60 * 60 * 1000);
 
-const LATEST_AGENT_VERSION = "1.1.0";
+const LATEST_AGENT_VERSION = "1.2.0";
 
 // Get generic restaurant config
 router.get('/config', async (req, res) => {
