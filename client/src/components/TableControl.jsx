@@ -2837,9 +2837,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 const name = comboSelection.length === 2
                                     ? `${comboSelection[0].name} + ${comboSelection[1].name}`
                                     : comboSelection[0].name;
-                                const subItems = comboSelection
-                                    .filter(s => s.type !== 'free' && s.linkedProductId)
-                                    .map(s => ({ productId: s.linkedProductId, quantity: 1, name: s.name }));
+                                // Always include drinkItemId so the backend can look up DrinkItemRecipe
+                                // for 'prepared' type items and deduct ingredient stock correctly
+                                const subItems = comboSelection.map(s => ({
+                                    drinkItemId: s.id,           // ID of DrinkPromotionItem (for ingredient deduction)
+                                    productId: s.linkedProductId || null, // Legacy link to Product (for 'finished' type)
+                                    type: s.type,
+                                    quantity: 1,
+                                    name: s.name
+                                }));
                                 const isActualCombo = comboSelection.length === 2;
                                 setCart(prev => [...prev, {
                                     productId: null,

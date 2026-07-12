@@ -287,14 +287,49 @@ const restoreOrderStock = async (order, tenantId) => {
 
                     // A. Restore Menu Config Stock (Virtual Limit)
                     if (sub.menuItemId) {
-                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, false, req.tenant.id);
+                        await updateDailyMenuStock(sub.menuItemId, totalSubQty, false, tenantId); // Fixed: was req.tenant.id
                         console.log(`[Stock] Restored DailyMenu stock for item ${sub.menuItemId} by ${totalSubQty}`);
                     }
 
-                    // B. Restore Physical Inventory (if linked)
+                    // B. Restore Physical Inventory (if linked via productId)
                     if (sub.productId) {
                         await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, tenantId);
                         console.log(`[Stock] Restored physical stock for sub-product ${sub.productId} by ${totalSubQty}`);
+                    }
+
+                    // C. Restore Ingredient Stock for 2x1 'prepared' items via DrinkItemRecipe
+                    if (sub.drinkItemId) {
+                        try {
+                            const { DrinkPromotionItem, DrinkItemRecipe, Ingredient, IngredientMovement } = getModels();
+                            const drinkItem = await DrinkPromotionItem.findByPk(sub.drinkItemId, {
+                                include: [{ model: DrinkItemRecipe, include: [Ingredient] }]
+                            });
+                            if (drinkItem && drinkItem.DrinkItemRecipes && drinkItem.DrinkItemRecipes.length > 0) {
+                                for (const recipe of drinkItem.DrinkItemRecipes) {
+                                    if (recipe.Ingredient) {
+                                        const amount = parseFloat(recipe.quantity) * totalSubQty;
+                                        const previousStock = parseFloat(recipe.Ingredient.stock || 0);
+                                        await recipe.Ingredient.increment('stock', { by: amount });
+                                        await recipe.Ingredient.reload();
+                                        const newStockVal = parseFloat(recipe.Ingredient.stock);
+                                        console.log(`[Stock] 2x1 Ingredient restored: ${recipe.Ingredient.name} ${previousStock} -> ${newStockVal}`);
+                                        await IngredientMovement.create({
+                                            IngredientId: recipe.Ingredient.id,
+                                            type: 'add',
+                                            amount: amount,
+                                            reason: `Restauración 2x1: ${drinkItem.name} x${totalSubQty}`,
+                                            previousStock,
+                                            newStock: newStockVal,
+                                            UserId: order.UserId,
+                                            AccountId: order.AccountId || null,
+                                            TenantId: tenantId
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error(`[Stock] Error restoring DrinkItemRecipe stock for drinkItemId ${sub.drinkItemId}:`, e);
+                        }
                     }
                 }
             }
@@ -303,6 +338,7 @@ const restoreOrderStock = async (order, tenantId) => {
         console.error(`[Stock] Error restoring stock for order ${order.id}:`, e);
     }
 };
+
 
 // Close Account (Modified for Multipart/Upload of multiple files)
 router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res) => {
@@ -1138,9 +1174,51 @@ router.post('/orders', async (req, res) => {
                 // Deduct stock for sub-items (linked products)
                 if (item.subItems && Array.isArray(item.subItems)) {
                     for (const sub of item.subItems) {
+                        const subQty = (sub.quantity || 1) * (item.quantity || 1);
+
+                        // A. Finished/direct stock item via linkedProductId
                         if (sub.productId) {
-                            const subQty = (sub.quantity || 1) * (item.quantity || 1);
                             await processStockChange(sub.productId, subQty, true, null, t, userId, accountId, req.tenant.id);
+                        }
+
+                        // B. Prepared item via DrinkItemRecipe (ingredient-based)
+                        if (sub.drinkItemId) {
+                            const { DrinkPromotionItem, DrinkItemRecipe, Ingredient, IngredientMovement } = getModels();
+                            const drinkItem = await DrinkPromotionItem.findByPk(sub.drinkItemId, {
+                                include: [{ model: DrinkItemRecipe, include: [Ingredient] }]
+                            });
+                            if (drinkItem && drinkItem.DrinkItemRecipes && drinkItem.DrinkItemRecipes.length > 0) {
+                                console.log(`[Stock] Processing DrinkItemRecipes for 2x1 item: ${drinkItem.name} (ID: ${drinkItem.id})`);
+                                for (const recipe of drinkItem.DrinkItemRecipes) {
+                                    if (recipe.Ingredient) {
+                                        const amount = parseFloat(recipe.quantity) * subQty;
+                                        await recipe.Ingredient.reload({ transaction: t, lock: true });
+                                        const currentStock = parseFloat(recipe.Ingredient.stock || 0);
+                                        if (currentStock < amount) {
+                                            throw new Error(`Stock insuficiente de ingrediente: ${recipe.Ingredient.name} (Req: ${amount}, Disp: ${currentStock})`);
+                                        }
+                                        const previousStock = currentStock;
+                                        const newStockVal = currentStock - amount;
+                                        recipe.Ingredient.stock = newStockVal;
+                                        await recipe.Ingredient.save({ transaction: t });
+                                        await recipe.Ingredient.reload({ transaction: t });
+
+                                        console.log(`[Stock] 2x1 Ingredient deducted: ${recipe.Ingredient.name} ${previousStock} -> ${newStockVal}`);
+
+                                        await IngredientMovement.create({
+                                            IngredientId: recipe.Ingredient.id,
+                                            type: 'sale',
+                                            amount: amount,
+                                            reason: `Venta 2x1: ${drinkItem.name} x${subQty}`,
+                                            previousStock,
+                                            newStock: newStockVal,
+                                            UserId: userId,
+                                            AccountId: accountId || null,
+                                            TenantId: req.tenant.id
+                                        }, { transaction: t });
+                                    }
+                                }
+                            }
                         }
                     }
                 }
