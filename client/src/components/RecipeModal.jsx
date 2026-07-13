@@ -8,10 +8,13 @@ const SearchableSelect = ({ ingredients, value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
     const wrapperRef = useRef(null);
+    const portalRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+            const inWrapper = wrapperRef.current && wrapperRef.current.contains(event.target);
+            const inPortal = portalRef.current && portalRef.current.contains(event.target);
+            if (!inWrapper && !inPortal) {
                 setIsOpen(false);
             }
         };
@@ -36,6 +39,7 @@ const SearchableSelect = ({ ingredients, value, onChange }) => {
 
             {isOpen && createPortal(
                 <div 
+                    ref={portalRef}
                     className="fixed inset-0 z-[10000] bg-slate-900/60 flex items-center justify-center p-4"
                     onClick={() => setIsOpen(false)}
                 >
