@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { 
-    Calendar, ChevronDown, ChevronUp, DollarSign, FileText, User, 
-    X, Calculator, AlertCircle, CheckCircle, List, Package, 
-    Coffee, Utensils, Sparkles, Clock, Receipt, Printer 
-} from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Clock, User, Download, Receipt, FileText, LayoutGrid, CalendarRange, Filter } from 'lucide-react';
+import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from './AccountDetailsModal';
@@ -291,7 +288,14 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             method: p.method || 'efectivo',
             time: p.createdAt,
             user: p.User ? (p.User.displayName || p.User.username) : '-',
-            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar',
+            reference: (
+                <div className="flex flex-col">
+                    <span className="font-bold text-gray-800 text-sm">{p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'}</span>
+                    <span className="text-[10px] text-gray-400">
+                        {p.method?.toUpperCase()} • {p.User ? (p.User.displayName || p.User.username) : 'Staff'} • {new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </span>
+                </div>
+            ),
             accountId: p.AccountId || p.Account?.id
         }));
 

@@ -24,7 +24,7 @@ router.get('/sessions/current', async (req, res) => {
             include: [
                 {
                     model: Account,
-                    include: [{ model: Table }]
+                    include: [{ model: Table, include: [require('../models').Area] }]
                 },
                 {
                     model: User,
@@ -187,7 +187,7 @@ router.get('/sessions/:id/details', async (req, res) => {
             include: [
                 {
                     model: Account,
-                    include: [{ model: Table }]
+                    include: [{ model: Table, include: [require('../models').Area] }]
                 },
                 {
                     model: User,
@@ -350,7 +350,8 @@ router.post('/sessions/open', async (req, res) => {
         // Audit log
         await logAction(req, 'OPEN_SHIFT', 'CashSession', newSession.id, { userId, openingCash: openingCash || 0 });
 
-        // Print opening ticket in background
+        // Print opening ticket in background (Disabled per user request)
+        /*
         (async () => {
             try {
                 const { triggerAperturaPrint } = require('../utils/printer');
@@ -360,6 +361,7 @@ router.post('/sessions/open', async (req, res) => {
                 console.error("Error printing opening session ticket:", pErr);
             }
         })();
+        */
 
         // Mark tenant onboarding as completed on first shift open
         if (!req.tenant.onboardingCompleted) {
@@ -434,14 +436,15 @@ router.post('/sessions/close', async (req, res) => {
         // Audit log
         await logAction(req, 'CLOSE_SHIFT', 'CashSession', session.id, { userId, closingNotes, sessionId });
 
-        // Print closing report in background
+        // Print closing report in background (Disabled per user request)
+        /*
         (async () => {
             try {
                 const parsedDetails = typeof session.closingDetails === 'string' ? JSON.parse(session.closingDetails) : session.closingDetails;
                 
                 const payments = await Payment.findAll({
                     where: { CashSessionId: session.id },
-                    include: [{ model: Account, include: [{ model: Table }] }]
+                    include: [{ model: Account, include: [{ model: Table, include: [require('../models').Area] }] }]
                 });
 
                 const expenses = await Expense.findAll({
@@ -510,6 +513,7 @@ router.post('/sessions/close', async (req, res) => {
                 console.error("Error printing closing session report:", pErr);
             }
         })();
+        */
 
         res.json({ success: true, session });
     } catch (error) {
@@ -552,7 +556,7 @@ router.post('/sessions/:id/print', async (req, res) => {
 
         const payments = await Payment.findAll({
             where: { CashSessionId: session.id },
-            include: [{ model: Account, include: [{ model: Table }] }]
+            include: [{ model: Account, include: [{ model: Table, include: [require('../models').Area] }] }]
         });
 
         const expenses = await Expense.findAll({

@@ -1352,8 +1352,8 @@ router.post('/orders', async (req, res) => {
         if (req.body.printComanda) {
             (async () => {
                 try {
-                    const { Table, Product, User } = getModels();
-                    const tableObj = await Table.findByPk(account.TableId);
+                    const { Table, Product, User, Area } = getModels();
+                    const tableObj = await Table.findByPk(account.TableId, { include: [{ model: Area }] });
                     
                     const cocinaItems = [];
                     const barraItems = [];
@@ -1907,7 +1907,7 @@ router.post('/accounts/:id/print-pre-cuenta', async (req, res) => {
         const account = await Account.findOne({
             where: { id, TenantId: req.tenant.id },
             include: [
-                { model: Table },
+                { model: Table, include: [getModels().Area] },
                 {
                     model: Order,
                     where: { status: { [require('sequelize').Op.notIn]: ['cancelled'] } },

@@ -15,8 +15,8 @@ export const formatTableName = (table, area = null) => {
     }
 
     if (areaName.length === 1) {
-        return `${areaName}${table.number}`;
+        return `Mesa ${areaName}${table.number}`;
     }
 
-    return `${areaName} ${table.number}`.trim();
+    return `Mesa ${areaName} ${table.number}`.trim();
 };

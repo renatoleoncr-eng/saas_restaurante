@@ -171,6 +171,19 @@ function formatLine(left, right, width = 42) {
     return left + ' '.repeat(spacesNeeded) + right;
 }
 
+// Helper to format table name exactly as frontend formatTableName
+function formatPrinterTable(table) {
+    if (!table) return 'N/A';
+    const areaName = table.Area ? table.Area.name : (table.areaName || table.areaname || '');
+    if (!areaName || areaName.trim() === '') {
+        return `MESA: ${table.number || table.id}`;
+    }
+    if (areaName.length === 1) {
+        return `MESA: ${areaName}${table.number || table.id}`;
+    }
+    return `MESA: ${areaName} ${table.number || table.id}`.trim();
+}
+
 
 // Fetch Printer Config from settings
 
@@ -439,7 +452,7 @@ async function triggerPreCuentaPrint(account, table, orders, payments, user) {
     
     builder.doubleSize().bold().line("PRE-CUENTA").doubleSize(false).bold(false).feed(1);
     builder.alignLeft();
-    builder.line(`Mesa: ${table ? (table.number || table.id) : `Mesa #${account.TableId}`}`);
+    builder.line(table ? formatPrinterTable(table).replace('MESA: ', 'Mesa: ') : `Mesa: #${account.TableId}`);
     builder.line(`Cuenta: #${account.id}`);
     builder.line(`Fecha: ${formatPrinterDate(new Date())}`);
     builder.line(`Atendido por: ${user ? user.displayName : 'Staff'}`);
@@ -519,7 +532,7 @@ async function triggerComandaPrint(table, items, type, user) {
     builder.doubleSize().bold().line(`COMANDA ${type.toUpperCase()}`).doubleSize(false).bold(false).feed(1);
     
     // Large Table Number
-    builder.doubleSize().bold().line(`MESA: ${table ? (table.number || table.id) : 'N/A'}`).doubleSize(false).bold(false);
+    builder.doubleSize().bold().line(formatPrinterTable(table)).doubleSize(false).bold(false);
     builder.feed(1);
     
     builder.alignLeft();

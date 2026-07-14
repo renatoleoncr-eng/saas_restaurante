@@ -4,6 +4,7 @@ import axios from 'axios';
 import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft, ChevronDown, ChevronUp, Receipt, List, Coffee, MinusCircle, Printer } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import { formatTableName } from '../utils/tableUtils';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
     const { printingEnabled, refreshTenantInfo } = useRestaurant();
@@ -52,7 +53,14 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             method: p.method || 'efectivo',
             time: p.createdAt,
             user: p.User?.displayName || p.User?.username || 'N/A',
-            reference: p.Account?.Table?.number ? `Mesa ${p.Account.Table.number}` : 'Caja/Llevar'
+            reference: (
+            <div className="flex flex-col">
+                <span className="font-bold text-gray-800 text-sm">{p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'}</span>
+                <span className="text-[10px] text-gray-400">
+                    {p.method?.toUpperCase()} • {p.User?.displayName || 'Staff'} • {new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </span>
+            </div>
+        )
         }));
 
         const expensesList = (sessionData.expenses || []).map(e => ({
@@ -507,7 +515,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                                             {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
                                                                                 <li key={p.id} className="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
                                                                                     <span className="font-semibold text-gray-700">
-                                                                                        Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
+                                                                                        {p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'}
                                                                                         {p.User && (
                                                                                             <span className="text-[10px] text-gray-400 font-normal ml-1.5">
                                                                                                 ({p.User.displayName || p.User.username})
@@ -594,7 +602,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                             {sessionData.payments.filter(p => (p.method || 'efectivo').toLowerCase() === m).map(p => (
                                                                 <li key={p.id} className="flex justify-between items-center text-[10px] bg-white p-2 rounded border border-gray-100 shadow-sm">
                                                                     <span className="font-semibold text-gray-700">
-                                                                        Mesa {p.Account?.Table?.number || 'Caja/Llevar'}
+                                                                        {p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'}
                                                                         {p.User && (
                                                                             <span className="text-[9px] text-gray-400 font-normal ml-1.5">
                                                                                 ({p.User.displayName || p.User.username})
