@@ -226,7 +226,7 @@ const AccountDetailsModal = ({
                                                 </div>
                                                 <div className="text-xs text-gray-400 mt-2">
                                                     {new Date(ord.createdAt || new Date()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    {displayNotes && <span className="italic block mt-1 text-gray-500">Nota: "{displayNotes}"</span>}
+                                                    {displayNotes && <span className="italic block mt-1 text-gray-500">{displayNotes}</span>}
                                                 </div>
                                             </div>
                                             <div className="font-bold text-orange-600 text-sm whitespace-nowrap">

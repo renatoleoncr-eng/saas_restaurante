@@ -493,7 +493,7 @@ async function triggerPreCuentaPrint(account, table, orders, payments, user) {
         if (g.presentation) desc += ` (${g.presentation})`;
         builder.line(formatLine(desc, `S/ ${total.toFixed(2)}`));
         if (g.notes) {
-            builder.line(`  * Nota: ${g.notes}`);
+            builder.line(`  * ${g.notes}`);
         }
     });
 
@@ -545,8 +545,8 @@ async function triggerComandaPrint(table, items, type, user) {
         if (item.presentation) desc += ` (${item.presentation})`;
         
         builder.bold().line(desc).bold(false);
-        if (item.notes) {
-            builder.line(`  * NOTA: ${item.notes}`);
+        if (item.notes && !item.notes.startsWith('Combo:')) {
+            builder.line(`  * ${item.notes}`);
         }
         
         // If combo sub-items exist, list them
