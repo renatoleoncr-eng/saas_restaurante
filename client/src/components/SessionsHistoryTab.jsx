@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Clock, User, Download, Receipt, FileText, LayoutGrid, CalendarRange, Filter } from 'lucide-react';
+import { 
+    Calendar, ChevronDown, ChevronUp, DollarSign, FileText, User, 
+    X, Calculator, AlertCircle, CheckCircle, List, Package, 
+    Coffee, Utensils, Sparkles, Clock, Receipt, Printer, ChevronRight, Download, LayoutGrid, CalendarRange, Filter
+} from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
