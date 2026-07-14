@@ -452,7 +452,7 @@ export default function QrManagement() {
         if (!socket) return;
         socket.emit('set_client_screen_mode', { mode });
         setClientScreenMode(mode);
-        showAlert(`Pantalla del cliente cambiada a: ${mode === 'ads' ? 'Publicidad' : mode === 'qr_fixed' ? 'QR Fijo' : 'QR con Contador'}`);
+        showAlert(`Pantalla de Gestión QR cambiada a: ${mode === 'ads' ? 'Publicidad' : mode === 'qr_fixed' ? 'QR Fijo' : 'QR con Contador'}`);
     };
 
     const triggerQrFlash = () => {
@@ -675,10 +675,10 @@ export default function QrManagement() {
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                 <div>
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <Tv className="w-5 h-5 text-blue-600 shrink-0" /> Pantalla del Cliente
+                        <Tv className="w-5 h-5 text-blue-600 shrink-0" /> Gestión QR
                     </h1>
                     <p className="text-gray-500 text-xs mt-0.5">
-                        Gestión integrada de cuentas de pago QR rotativas, banners promocionales y ruleta interactiva de lealtad.
+                        Gestión integrada de cuentas de pago QR rotativas.
                     </p>
                 </div>
                 <a
@@ -687,7 +687,7 @@ export default function QrManagement() {
                     rel="noreferrer"
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all text-sm font-semibold shadow-sm"
                 >
-                    <Eye className="w-4 h-4" /> Abrir Pantalla del Cliente
+                    <Eye className="w-4 h-4" /> Abrir Pantalla de Gestión QR
                     <ChevronRight className="w-4 h-4" />
                 </a>
             </div>
@@ -695,7 +695,7 @@ export default function QrManagement() {
             {/* Main tabs: Gestión QR / Publicidad / Ruleta */}
             <div className="bg-white border-b border-gray-200 px-6">
                 <div className="flex">
-                    {[{id:'qr',label:'Gestión QR'},{id:'ads',label:'Publicidad'},{id:'roulette',label:'Ruleta'}]
+                    {[{id:'qr',label:'Gestión QR'}]
                         .filter(t => user?.role === 'admin' || user?.role === 'cashier' || t.id === 'qr')
                         .map(t => (
                         <button

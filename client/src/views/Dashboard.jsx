@@ -417,7 +417,7 @@ export default function Dashboard() {
                                         onClick={() => { setCurrentView('qr_management'); setShowUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <Tv size={16} /> Pantalla Cliente
+                                        <Tv size={16} /> Gestión QR
                                     </button>
                                 )}
                                 <button
@@ -457,7 +457,7 @@ export default function Dashboard() {
                          currentView === 'reports' ? 'Caja / Reportes' :
                          currentView === 'accounts' ? 'Historial Cuentas' :
                          currentView === 'drink_promos' ? 'Promociones 2x1' :
-                         currentView === 'qr_management' ? 'Pantalla Cliente' :
+                         currentView === 'qr_management' ? 'Gestión QR' :
                          currentView === 'audit' ? 'Auditoría' : 'Makala'}
                     </span>
                     <div className="relative" ref={mobileMenuRef}>
@@ -490,7 +490,7 @@ export default function Dashboard() {
                                         onClick={() => { setCurrentView('qr_management'); setShowMobileUserMenu(false); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                     >
-                                        <Tv size={16} /> Pantalla Cliente
+                                        <Tv size={16} /> Gestión QR
                                     </button>
                                 )}
                                 <button
