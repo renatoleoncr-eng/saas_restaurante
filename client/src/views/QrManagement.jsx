@@ -692,27 +692,6 @@ export default function QrManagement() {
                 </a>
             </div>
 
-            {/* Main tabs: Gestión QR / Publicidad / Ruleta */}
-            <div className="bg-white border-b border-gray-200 px-6">
-                <div className="flex">
-                    {[{id:'qr',label:'Gestión QR'}]
-                        .filter(t => user?.role === 'admin' || user?.role === 'cashier' || t.id === 'qr')
-                        .map(t => (
-                        <button
-                            key={t.id}
-                            onClick={() => setActiveTab(t.id)}
-                            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
-                                activeTab === t.id
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            }`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {activeTab === 'qr' && (
                 <div className="flex flex-col flex-1">
                     {/* Sub-tabs row: Configuración / Movimientos + Agregar QR button */}
