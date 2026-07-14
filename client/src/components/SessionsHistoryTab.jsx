@@ -70,10 +70,20 @@ export default function SessionsHistoryTab() {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleString('es-ES', {
-            day: '2-digit', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
+        const d = new Date(dateStr);
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dayName = dayNames[d.getDay()];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = String(d.getFullYear()).slice(-2);
+        
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        
+        return `${dayName} ${day}/${month}/${year}, ${String(hours).padStart(2, '0')}:${mins} ${ampm}`;
     };
 
     return (
@@ -239,10 +249,20 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleString('es-ES', {
-            day: '2-digit', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
+        const d = new Date(dateStr);
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dayName = dayNames[d.getDay()];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = String(d.getFullYear()).slice(-2);
+        
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        
+        return `${dayName} ${day}/${month}/${year}, ${String(hours).padStart(2, '0')}:${mins} ${ampm}`;
     };
 
     const parseClosingDetails = (detailsStr) => {
