@@ -1491,7 +1491,7 @@ router.delete('/orders/:id', async (req, res) => {
             } catch (bgErr) {
                 console.error("ERROR RESTORING STOCK IN BACKGROUND:", bgErr);
             }
-        })();
+        });
 
     } catch (err) {
         console.error("ERROR DELETING ORDER:", err);

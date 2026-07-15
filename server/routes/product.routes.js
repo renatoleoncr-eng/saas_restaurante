@@ -16,7 +16,10 @@ router.get('/products', async (req, res) => {
                 { model: Recipe, include: [Ingredient] },
                 { model: ProductVariant }
             ],
-            order: [['name', 'ASC']]
+            order: [
+                ['name', 'ASC'],
+                [ProductVariant, 'sortIndex', 'ASC']
+            ]
         });
         res.json(products);
     } catch (err) {
@@ -97,14 +100,15 @@ router.post('/products', async (req, res) => {
             const seen = new Set();
             for (const p of presentationsList) {
                 const variantName = p.name || p.size || 'Estándar';
-                const uniqueKey = `${variantName.trim().toLowerCase()}_${parseFloat(p.price).toFixed(2)}`;
+                const uniqueKey = variantName.trim().toLowerCase();
                 if (seen.has(uniqueKey)) {
                     await t.rollback();
-                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}") y el mismo precio (S/ ${p.price}).` });
+                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}"). Deben tener nombres distintos (ej. "${variantName} 30" y "${variantName} 40") para que sus recetas sean independientes.` });
                 }
                 seen.add(uniqueKey);
             }
-            for (const p of presentationsList) {
+            for (let idx = 0; idx < presentationsList.length; idx++) {
+                const p = presentationsList[idx];
                 await ProductVariant.create({
                     ProductId: product.id,
                     name: p.name || p.size || 'Estándar',
@@ -113,6 +117,7 @@ router.post('/products', async (req, res) => {
                     happyHourPrice: p.happyHourPrice || null,
                     happyHourStart: p.happyHourStart || null,
                     happyHourEnd: p.happyHourEnd || null,
+                    sortIndex: idx,
                     TenantId: req.tenant.id
                 }, { transaction: t });
             }
@@ -255,10 +260,10 @@ router.put('/products/:id', async (req, res) => {
             const seen = new Set();
             for (const p of parsedPresentations) {
                 const variantName = p.name || p.size || String(p.price);
-                const uniqueKey = `${variantName.trim().toLowerCase()}_${parseFloat(p.price).toFixed(2)}`;
+                const uniqueKey = variantName.trim().toLowerCase();
                 if (seen.has(uniqueKey)) {
                     await t.rollback();
-                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}") y el mismo precio (S/ ${p.price}).` });
+                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}"). Deben tener nombres distintos (ej. "${variantName} 30" y "${variantName} 40") para que sus recetas e inventarios sean independientes.` });
                 }
                 seen.add(uniqueKey);
             }
@@ -271,7 +276,8 @@ router.put('/products/:id', async (req, res) => {
                 await variant.destroy({ transaction: t });
             }
 
-            for (const p of parsedPresentations) {
+            for (let idx = 0; idx < parsedPresentations.length; idx++) {
+                const p = parsedPresentations[idx];
                 const variantName = p.name || p.size || String(p.price);
                 let match = p.id ? existingVariants.find(ev => ev.id == p.id) : null;
 
@@ -281,7 +287,8 @@ router.put('/products/:id', async (req, res) => {
                         name: p.name || match.name,
                         happyHourPrice: p.happyHourPrice || null,
                         happyHourStart: p.happyHourStart || null,
-                        happyHourEnd: p.happyHourEnd || null
+                        happyHourEnd: p.happyHourEnd || null,
+                        sortIndex: idx
                     }, { transaction: t });
                 } else {
                     await ProductVariant.create({
@@ -292,6 +299,7 @@ router.put('/products/:id', async (req, res) => {
                         happyHourPrice: p.happyHourPrice || null,
                         happyHourStart: p.happyHourStart || null,
                         happyHourEnd: p.happyHourEnd || null,
+                        sortIndex: idx,
                         TenantId: req.tenant.id
                     }, { transaction: t });
                 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
-import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Save, X, ChefHat, Layers, Minus, TrendingUp, TrendingDown, History, Zap, Search, ChevronDown, ChevronUp, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import IngredientManager from './IngredientManager';
 import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
@@ -1059,14 +1059,48 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     )}
                                                                 </div>
 
-                                                                <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                                                                <div className="sm:col-span-1 flex justify-end sm:justify-center gap-1">
+                                                                    <div className="flex flex-col gap-0.5 mr-1">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (idx === 0) return;
+                                                                                const newList = [...editForm.presentationsList];
+                                                                                const temp = newList[idx - 1];
+                                                                                newList[idx - 1] = newList[idx];
+                                                                                newList[idx] = temp;
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                            disabled={idx === 0}
+                                                                            className={`p-1 rounded transition-colors ${idx === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                                                                            title="Subir"
+                                                                        >
+                                                                            <ArrowUp size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (idx === variants.length - 1) return;
+                                                                                const newList = [...editForm.presentationsList];
+                                                                                const temp = newList[idx + 1];
+                                                                                newList[idx + 1] = newList[idx];
+                                                                                newList[idx] = temp;
+                                                                                setEditForm({ ...editForm, presentationsList: newList });
+                                                                            }}
+                                                                            disabled={idx === variants.length - 1}
+                                                                            className={`p-1 rounded transition-colors ${idx === variants.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                                                                            title="Bajar"
+                                                                        >
+                                                                            <ArrowDown size={14} />
+                                                                        </button>
+                                                                    </div>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
                                                                             const newList = editForm.presentationsList.filter((_, i) => i !== idx);
                                                                             setEditForm({ ...editForm, presentationsList: newList });
                                                                         }}
-                                                                        className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
+                                                                        className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors h-fit self-center"
                                                                         title="Eliminar Variante"
                                                                     >
                                                                         <Trash2 size={16} />

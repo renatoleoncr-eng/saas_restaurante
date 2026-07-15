@@ -576,6 +576,10 @@ const ProductVariant = sequelize.define('ProductVariant', {
     happyHourEnd: {
         type: DataTypes.TIME, // e.g., '17:00:00'
         allowNull: true
+    },
+    sortIndex: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, { paranoid: true });
 

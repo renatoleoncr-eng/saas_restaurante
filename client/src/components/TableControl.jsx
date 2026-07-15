@@ -2128,7 +2128,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <div className="p-6">
                                     <p className="text-sm text-gray-500 mb-4">Selecciona las cantidades para cada presentación:</p>
                                     <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                                        {pendingVariantProduct.parsedVariants.map((v, idx) => {
+                                        {pendingVariantProduct.parsedVariants
+                                            .filter(v => {
+                                                const isManaged = pendingVariantProduct.isStockManaged || pendingVariantProduct.requiresPreparation || pendingVariantProduct.type === 'menu';
+                                                return !isManaged || v.stock === undefined || v.stock > 0;
+                                            })
+                                            .map((v, idx) => {
                                             const currentQty = variantQuantities[v.name] || 0;
                                             const qtyInCart = cart.reduce((acc, item) => 
                                                 (item.productId === pendingVariantProduct.id && item.presentation === v.name) ? acc + item.quantity : acc
