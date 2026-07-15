@@ -925,10 +925,23 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Presentaciones / Variantes (Múltiples)</h4>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setEditForm({
-                                                            ...editForm,
-                                                            presentationsList: [...variants, { name: '', price: '0.00', stock: 0 }]
-                                                        })}
+                                                        onClick={() => {
+                                                            setEditForm(prev => {
+                                                                const currentList = prev.presentationsList || [];
+                                                                return {
+                                                                    ...prev,
+                                                                    presentationsList: [...currentList, { tempId: crypto.randomUUID(), name: '', price: '0.00', stock: 0 }]
+                                                                };
+                                                            });
+                                                            setTimeout(() => {
+                                                                const inputs = document.querySelectorAll('.variant-name-input');
+                                                                if (inputs.length > 0) {
+                                                                    const lastInput = inputs[inputs.length - 1];
+                                                                    lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                    lastInput.focus();
+                                                                }
+                                                            }, 100);
+                                                        }}
                                                         className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-md hover:bg-blue-100 font-bold flex items-center gap-1 border border-blue-100 transition-colors"
                                                     >
                                                         <Plus size={12} /> Agregar Variante
@@ -951,12 +964,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     <input
                                                                         type="text"
                                                                         placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
-                                                                        className="w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white animate-in"
+                                                                        className="variant-name-input w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white animate-in"
                                                                         value={p.name}
                                                                         onChange={e => {
-                                                                            const newList = [...editForm.presentationsList];
-                                                                            newList[idx].name = e.target.value;
-                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                            setEditForm(prev => {
+                                                                                const newList = [...(prev.presentationsList || [])];
+                                                                                newList[idx] = { ...newList[idx], name: e.target.value };
+                                                                                return { ...prev, presentationsList: newList };
+                                                                            });
                                                                         }}
                                                                     />
                                                                 </div>
@@ -969,10 +984,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                         placeholder="0.00"
                                                                         className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-white"
                                                                         value={p.price}
+                                                                        onFocus={(e) => e.target.select()}
                                                                         onChange={e => {
-                                                                            const newList = [...editForm.presentationsList];
-                                                                            newList[idx].price = e.target.value;
-                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                            setEditForm(prev => {
+                                                                                const newList = [...(prev.presentationsList || [])];
+                                                                                newList[idx] = { ...newList[idx], price: e.target.value };
+                                                                                return { ...prev, presentationsList: newList };
+                                                                            });
                                                                         }}
                                                                     />
                                                                 </div>
@@ -988,11 +1006,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                     disabled={!!p.id}
                                                                                     className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${!!p.id ? 'bg-gray-100 text-gray-500 cursor-not-allowed font-medium' : 'bg-white font-medium'}`}
                                                                                     value={p.stock || ''}
+                                                                                    onFocus={(e) => e.target.select()}
                                                                                     onChange={e => {
                                                                                         if (!p.id) {
-                                                                                            const newList = [...editForm.presentationsList];
-                                                                                            newList[idx].stock = e.target.value;
-                                                                                            setEditForm({ ...editForm, presentationsList: newList });
+                                                                                            setEditForm(prev => {
+                                                                                                const newList = [...(prev.presentationsList || [])];
+                                                                                                newList[idx] = { ...newList[idx], stock: e.target.value };
+                                                                                                return { ...prev, presentationsList: newList };
+                                                                                            });
                                                                                         }
                                                                                     }}
                                                                                 />
