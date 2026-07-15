@@ -333,18 +333,28 @@ router.post('/sessions/open', async (req, res) => {
     try {
         const { openingCash, userId } = req.body;
 
-        // Check if there's already an open session for this tenant
-        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
-        if (activeSession) {
-            return res.status(400).json({ error: 'Ya existe una sesión abierta' });
-        }
+        // Wrap in transaction to avoid race conditions (double clicks)
+        const sequelize = require('../config/db');
+        const { Tenant } = require('../models');
+        const newSession = await sequelize.transaction(async (t) => {
+            // Lock the tenant record to prevent concurrent session creations for the same tenant
+            await Tenant.findByPk(req.tenant.id, { lock: t.LOCK.UPDATE, transaction: t });
 
-        const newSession = await CashSession.create({
-            openingCash: openingCash || 0,
-            openedBy: userId,
-            status: 'open',
-            openedAt: new Date(),
-            TenantId: req.tenant.id
+            const activeSession = await CashSession.findOne({ 
+                where: { status: 'open', TenantId: req.tenant.id },
+                transaction: t
+            });
+            if (activeSession) {
+                throw new Error('Ya existe una sesión abierta');
+            }
+
+            return await CashSession.create({
+                openingCash: openingCash || 0,
+                openedBy: userId,
+                status: 'open',
+                openedAt: new Date(),
+                TenantId: req.tenant.id
+            }, { transaction: t });
         });
 
         // Audit log

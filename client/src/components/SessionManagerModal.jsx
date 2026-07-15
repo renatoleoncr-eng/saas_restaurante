@@ -18,6 +18,7 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
     const [justOpened, setJustOpened] = useState(false);
     const [selectedMethodFilter, setSelectedMethodFilter] = useState('todos');
+    const [isOpening, setIsOpening] = useState(false);
 
     // Expense Modal states
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -104,6 +105,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
     }, []);
 
     const handleOpenSession = async () => {
+        if (isOpening) return;
+        setIsOpening(true);
         try {
             const userString = localStorage.getItem('user');
             const user = userString ? JSON.parse(userString) : null;
@@ -117,6 +120,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             fetchCurrentSession();
         } catch (err) {
             alert(err.response?.data?.error || "Error al abrir sesión");
+        } finally {
+            setIsOpening(false);
         }
     };
 
@@ -273,9 +278,12 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
 
                             <button 
                                 onClick={handleOpenSession}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-blue-200 hover:shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-95 duration-200"
+                                disabled={isOpening}
+                                className={`w-full text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 transform duration-200 ${
+                                    isOpening ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-xl active:scale-95'
+                                }`}
                             >
-                                <CheckCircle size={20} /> Abrir Turno de Salón
+                                <CheckCircle size={20} /> {isOpening ? 'Abriendo Turno...' : 'Abrir Turno de Salón'}
                             </button>
                         </div>
                     ) : justOpened ? (
