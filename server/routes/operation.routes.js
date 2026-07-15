@@ -1673,7 +1673,8 @@ router.get('/reports/daily', async (req, res) => {
                 createdAt: {
                     [Op.between]: [start, end]
                 },
-                TenantId: req.tenant.id
+                TenantId: req.tenant.id,
+                method: { [Op.ne]: 'qr_adjustment' }
             },
             include: [
                 { model: getModels().User, attributes: ['username', 'displayName'] },
