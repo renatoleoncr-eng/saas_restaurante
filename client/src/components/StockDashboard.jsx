@@ -308,6 +308,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                 const parsedPrice = parseFloat(editForm.price);
                 if (editForm.price === undefined || editForm.price === '' || isNaN(parsedPrice) || parsedPrice <= 0) {
                     alert("Debe ingresar un Precio Unitario válido (mayor a 0) para la opción de menú.");
+                    setIsSaving(false);
+                    return;
+                }
+                
+                // Enforce linking for finished products in menu
+                if (editForm.isStockManaged && !editForm.linkedProductId) {
+                    alert("Debe vincular un producto terminado del inventario. El menú no es el espacio para crear productos terminados nuevos.");
+                    setIsSaving(false);
                     return;
                 }
             }
@@ -1235,24 +1243,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                     {creatingSection === 'entries' && (
                                         <div className="bg-purple-50 p-3 rounded border border-purple-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
                                             <div className="font-bold text-sm text-purple-900 mb-1">{editForm.id ? 'Editar Entrada' : 'Nueva Entrada'}</div>
-                                            <div className="flex gap-2 items-center">
-                                                {(editForm.isStockManaged || editForm.requiresPreparation) ? (
-                                                    <SearchableProductSelect
-                                                        products={products}
-                                                        requiresPreparation={editForm.requiresPreparation}
-                                                        isStockManaged={editForm.isStockManaged}
-                                                        value={editForm.linkedProductId}
-                                                        onChange={prod => {
-                                                            if (prod) {
-                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prod.id, stock: 0 });
-                                                            } else {
-                                                                setEditForm({ ...editForm, name: '', linkedProductId: null, stock: 0 });
-                                                            }
-                                                        }}
-                                                        colorTheme="purple"
-                                                        placeholder={editForm.requiresPreparation ? 'Buscar receta/plato...' : 'Buscar producto terminado...'}
-                                                    />
-                                                ) : (
+                                            <div className="flex flex-col w-full gap-2">
+                                                <div className="flex gap-2 items-center">
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre de la Entrada"
@@ -1282,6 +1274,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                     />
                                                                 </div>
 
+                                                                {editForm.isStockManaged && editForm.linkedProductId && (
+                                                                    <div className="flex items-center justify-center gap-1 border border-purple-200 bg-purple-100 rounded px-2 shrink-0 h-9" title="El stock se gestiona en el producto vinculado del inventario">
+                                                                        <span className="text-purple-700 text-[10px] font-bold uppercase truncate">
+                                                                            Stock en Inv.
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+
                                                                 <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors shrink-0">
                                                                     <input type="checkbox" checked={editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined} onChange={e => {
                                                                         if (e.target.checked) setEditForm({ ...editForm, happyHourPrice: editForm.price || '', happyHourStart: '10:00', happyHourEnd: '17:00' });
@@ -1307,6 +1307,33 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 )}
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                                {(editForm.isStockManaged || editForm.requiresPreparation) && (
+                                                    <div className="w-full mt-1 border-t border-dashed border-purple-200 pt-3 animate-in fade-in">
+                                                        <label className="text-[11px] text-purple-600 font-bold uppercase mb-1.5 flex items-center gap-1">
+                                                            <Info size={12} /> Vincular con {editForm.isStockManaged ? 'Producto Terminado' : 'Receta / Plato Base'} {editForm.isStockManaged ? '(Obligatorio)' : '(Opcional)'}
+                                                        </label>
+                                                        <SearchableProductSelect
+                                                            products={products}
+                                                            requiresPreparation={editForm.requiresPreparation}
+                                                            isStockManaged={editForm.isStockManaged}
+                                                            value={editForm.linkedProductId}
+                                                            onChange={prod => {
+                                                                if (prod) {
+                                                                    setEditForm({
+                                                                        ...editForm,
+                                                                        name: editForm.name || prod.name,
+                                                                        linkedProductId: prod.id,
+                                                                        stock: editForm.isStockManaged ? (editForm.stock || 0) : 0
+                                                                    });
+                                                                } else {
+                                                                    setEditForm({ ...editForm, linkedProductId: null });
+                                                                }
+                                                            }}
+                                                            colorTheme="purple"
+                                                            placeholder={editForm.requiresPreparation ? 'Buscar receta/plato base para vincular...' : 'Buscar producto terminado para vincular...'}
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
@@ -1417,24 +1444,8 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                     {creatingSection === 'mains' && (
                                         <div className="bg-pink-50 p-3 rounded border border-pink-200 flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
                                             <div className="font-bold text-sm text-pink-900 mb-1">{editForm.id ? 'Editar Segundo' : 'Nuevo Segundo'}</div>
-                                            <div className="flex gap-2 items-center">
-                                                {(editForm.isStockManaged || editForm.requiresPreparation) ? (
-                                                    <SearchableProductSelect
-                                                        products={products}
-                                                        requiresPreparation={editForm.requiresPreparation}
-                                                        isStockManaged={editForm.isStockManaged}
-                                                        value={editForm.linkedProductId}
-                                                        onChange={prod => {
-                                                            if (prod) {
-                                                                setEditForm({ ...editForm, name: prod.name, linkedProductId: prod.id, stock: 0 });
-                                                            } else {
-                                                                setEditForm({ ...editForm, name: '', linkedProductId: null, stock: 0 });
-                                                            }
-                                                        }}
-                                                        colorTheme="pink"
-                                                        placeholder={editForm.requiresPreparation ? 'Buscar receta/plato...' : 'Buscar producto terminado...'}
-                                                    />
-                                                ) : (
+                                            <div className="flex flex-col w-full gap-2">
+                                                <div className="flex gap-2 items-center">
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
                                                         <input
                                                             placeholder="Nombre del Segundo"
@@ -1461,8 +1472,16 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                                 setEditForm({ ...editForm, price: '' });
                                                                             }
                                                                         }}
-                                                                    />
+                                                                />
                                                                 </div>
+
+                                                                {editForm.isStockManaged && editForm.linkedProductId && (
+                                                                    <div className="flex items-center justify-center gap-1 border border-pink-200 bg-pink-100 rounded px-2 shrink-0 h-9" title="El stock se gestiona en el producto vinculado del inventario">
+                                                                        <span className="text-pink-700 text-[10px] font-bold uppercase truncate">
+                                                                            Stock en Inv.
+                                                                        </span>
+                                                                    </div>
+                                                                )}
 
                                                                 <label className="flex items-center gap-1.5 text-xs text-yellow-800 font-bold cursor-pointer bg-yellow-50 px-2 py-1.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors shrink-0">
                                                                     <input type="checkbox" checked={editForm.happyHourPrice !== null && editForm.happyHourPrice !== undefined} onChange={e => {
@@ -1489,6 +1508,33 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 )}
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                                {(editForm.isStockManaged || editForm.requiresPreparation) && (
+                                                    <div className="w-full mt-1 border-t border-dashed border-pink-200 pt-3 animate-in fade-in">
+                                                        <label className="text-[11px] text-pink-600 font-bold uppercase mb-1.5 flex items-center gap-1">
+                                                            <Info size={12} /> Vincular con {editForm.isStockManaged ? 'Producto Terminado' : 'Receta / Plato Base'} {editForm.isStockManaged ? '(Obligatorio)' : '(Opcional)'}
+                                                        </label>
+                                                        <SearchableProductSelect
+                                                            products={products}
+                                                            requiresPreparation={editForm.requiresPreparation}
+                                                            isStockManaged={editForm.isStockManaged}
+                                                            value={editForm.linkedProductId}
+                                                            onChange={prod => {
+                                                                if (prod) {
+                                                                    setEditForm({
+                                                                        ...editForm,
+                                                                        name: editForm.name || prod.name,
+                                                                        linkedProductId: prod.id,
+                                                                        stock: editForm.isStockManaged ? (editForm.stock || 0) : 0
+                                                                    });
+                                                                } else {
+                                                                    setEditForm({ ...editForm, linkedProductId: null });
+                                                                }
+                                                            }}
+                                                            colorTheme="pink"
+                                                            placeholder={editForm.requiresPreparation ? 'Buscar receta/plato base para vincular...' : 'Buscar producto terminado para vincular...'}
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
