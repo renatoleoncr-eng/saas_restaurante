@@ -123,9 +123,10 @@ router.delete('/accounts/:id', async (req, res) => {
         // Restore stock for all non-cancelled orders in this account before deleting
         if (account.Orders && account.Orders.length > 0) {
             const operationRoutes = require('./operation.routes');
+            const actionUserId = req.body?.userId || req.query?.userId || null;
             for (const order of account.Orders) {
                 if (order.status !== 'cancelled') {
-                    await operationRoutes.restoreOrderStock(order, req.tenant.id);
+                    await operationRoutes.restoreOrderStock(order, req.tenant.id, actionUserId);
                 }
             }
         }

@@ -271,12 +271,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Helper to restore stock for an order
-const restoreOrderStock = async (order, tenantId) => {
+const restoreOrderStock = async (order, tenantId, actionUserId = null) => {
     try {
+        const effectiveUserId = actionUserId || order.UserId;
         // Models are used in sub-functions, but logic here calls them.
         console.log(`[Stock] restoreOrderStock called for Order ${order.id} | Product: ${order.ProductId} | Qty: ${order.quantity} | Pres: ${order.presentation}`);
         // 1. Restore Stock for Main Product
-        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, order.UserId, order.AccountId, tenantId);
+        await processStockChange(order.ProductId, order.quantity, false, order.presentation, null, effectiveUserId, order.AccountId, tenantId);
 
         // 2. Restore Stock for SubItems
         if (order.subItemsData) {
@@ -293,7 +294,7 @@ const restoreOrderStock = async (order, tenantId) => {
 
                     // B. Restore Physical Inventory (if linked via productId)
                     if (sub.productId) {
-                        await processStockChange(sub.productId, totalSubQty, false, null, null, order.UserId, order.AccountId, tenantId);
+                        await processStockChange(sub.productId, totalSubQty, false, null, null, effectiveUserId, order.AccountId, tenantId);
                         console.log(`[Stock] Restored physical stock for sub-product ${sub.productId} by ${totalSubQty}`);
                     }
 
@@ -320,7 +321,7 @@ const restoreOrderStock = async (order, tenantId) => {
                                             reason: `Restauración 2x1: ${drinkItem.name} x${totalSubQty}`,
                                             previousStock,
                                             newStock: newStockVal,
-                                            UserId: order.UserId,
+                                            UserId: effectiveUserId,
                                             AccountId: order.AccountId || null,
                                             TenantId: tenantId
                                         });
@@ -523,9 +524,10 @@ router.post('/accounts/:id/cancel', async (req, res) => {
         // Restore stock for ALL orders in this account before cancelling
         if (account.Orders && account.Orders.length > 0) {
             console.log(`[Cancel] Restoring stock for ${account.Orders.length} orders in Account ${id}`);
+            const actionUserId = req.body?.userId || req.query?.userId || null;
             for (const order of account.Orders) {
                 if (order.status !== 'cancelled') {
-                    await restoreOrderStock(order, req.tenant.id);
+                    await restoreOrderStock(order, req.tenant.id, actionUserId);
                     order.status = 'cancelled';
                     await order.save();
                 }
@@ -1478,9 +1480,9 @@ router.delete('/orders/:id', async (req, res) => {
         res.json({ success: true, message: 'Pedido eliminado. Restaurando stock en segundo plano...' });
 
         // 5. Background: Restore Stock & Notify
-        (async () => {
+        setImmediate(async () => {
             try {
-                await restoreOrderStock(order, req.tenant.id);
+                await restoreOrderStock(order, req.tenant.id, cancelOrderUserId);
                 const io = req.app.get('io');
                 if (io && account) {
                     io.emit('new_order', { accountId: account.id, tableId: account.TableId });
@@ -1887,7 +1889,51 @@ router.delete('/payments/:id', async (req, res) => {
                 if (account.paymentEvidence === payment.evidence) {
                     account.paymentEvidence = null;
                 }
+
+                // Recalculate total paid
+                const allPayments = await Payment.findAll({ where: { AccountId: account.id } });
+                const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                
+                // If the account was closed but is no longer fully paid, reopen it
+                if (totalPaid < Number(account.total) && account.status === 'closed') {
+                    account.status = 'open';
+                    account.closedAt = null;
+                    
+                    // Verificamos si la mesa ya tiene otra cuenta abierta actualmente
+                    if (account.TableId) {
+                        const { Op } = require('sequelize');
+                        const existingOpen = await Account.findOne({
+                            where: { 
+                                TableId: account.TableId, 
+                                status: 'open', 
+                                TenantId: account.TenantId,
+                                id: { [Op.ne]: account.id }
+                            }
+                        });
+                        
+                        if (existingOpen) {
+                            console.log(`[Payment] Table ${account.TableId} already has an open account (${existingOpen.id}). Detaching account ${account.id} to avoid conflict.`);
+                            account.TableId = null; // Desvinculamos de la mesa física
+                        }
+                    }
+
+                    console.log(`[Payment] Account ${account.id} reopened because payment was deleted and totalPaid (${totalPaid}) < total (${account.total})`);
+                }
+
                 await account.save();
+
+                // If the account is now open, emit an event so the frontend updates the table view
+                if (account.status === 'open') {
+                    const io = req.app.get('io');
+                    if (io) {
+                        if (account.TableId) {
+                            io.emit('table_updated', { tableId: account.TableId, status: 'occupied' });
+                        } else {
+                            // Trigger a generic refresh if it was detached
+                            io.emit('product_updated'); 
+                        }
+                    }
+                }
             }
         }
 

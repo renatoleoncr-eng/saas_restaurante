@@ -94,6 +94,16 @@ router.post('/products', async (req, res) => {
         console.timeEnd('PRODUCT_CREATE_ENDPOINT');
 
         if (presentationsList && presentationsList.length > 0) {
+            const seen = new Set();
+            for (const p of presentationsList) {
+                const variantName = p.name || p.size || 'Estándar';
+                const uniqueKey = `${variantName.trim().toLowerCase()}_${parseFloat(p.price).toFixed(2)}`;
+                if (seen.has(uniqueKey)) {
+                    await t.rollback();
+                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}") y el mismo precio (S/ ${p.price}).` });
+                }
+                seen.add(uniqueKey);
+            }
             for (const p of presentationsList) {
                 await ProductVariant.create({
                     ProductId: product.id,
@@ -242,6 +252,16 @@ router.put('/products/:id', async (req, res) => {
         }, { transaction: t });
 
         if (parsedPresentations && Array.isArray(parsedPresentations)) {
+            const seen = new Set();
+            for (const p of parsedPresentations) {
+                const variantName = p.name || p.size || String(p.price);
+                const uniqueKey = `${variantName.trim().toLowerCase()}_${parseFloat(p.price).toFixed(2)}`;
+                if (seen.has(uniqueKey)) {
+                    await t.rollback();
+                    return res.status(400).json({ error: `No pueden existir dos variantes con el mismo nombre ("${variantName}") y el mismo precio (S/ ${p.price}).` });
+                }
+                seen.add(uniqueKey);
+            }
             const existingVariants = await ProductVariant.findAll({ where: { ProductId: id }, transaction: t });
             
             // Reconcile deletion: Find variants in DB that are no longer in the request payload
@@ -253,7 +273,7 @@ router.put('/products/:id', async (req, res) => {
 
             for (const p of parsedPresentations) {
                 const variantName = p.name || p.size || String(p.price);
-                let match = p.id ? existingVariants.find(ev => ev.id == p.id) : existingVariants.find(ev => ev.name === variantName);
+                let match = p.id ? existingVariants.find(ev => ev.id == p.id) : null;
 
                 if (match) {
                     await match.update({
