@@ -855,6 +855,7 @@ const BillingConfigModal = ({ onClose }) => {
             return;
         }
 
+        if (loading) return;
         setLoading(true);
         try {
             const res = await axios.post('/api/billing/invoices', newInvoice);
@@ -1120,6 +1121,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                                         {inv.status !== 'anulado' && (
                                                                             <button
                                                                                 onClick={async () => {
+                                                                                    if (loading) return;
                                                                                     try {
                                                                                         setLoading(true);
                                                                                         await axios.post(`/api/billing/invoices/${inv.id}/print`);
@@ -1130,7 +1132,8 @@ const BillingConfigModal = ({ onClose }) => {
                                                                                         setLoading(false);
                                                                                     }
                                                                                 }}
-                                                                                className="p-2 text-orange-500 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200"
+                                                                                disabled={loading}
+                                                                                className="p-2 text-orange-500 hover:bg-white hover:shadow-sm rounded-xl transition-all border border-transparent hover:border-gray-200 disabled:opacity-50"
                                                                                 title="Imprimir Ticket Térmico"
                                                                             >
                                                                                 <Printer size={16} />

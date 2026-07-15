@@ -16,6 +16,7 @@ export default function AdminLayoutManager({ onGoToSection }) {
     const [showSessionModal, setShowSessionModal] = useState(false);
     const [activeSession, setActiveSession] = useState(null);
     const [isCreatingArea, setIsCreatingArea] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Mobile Tabs State
     const [activeAreaId, setActiveAreaId] = useState(null);
@@ -196,11 +197,17 @@ export default function AdminLayoutManager({ onGoToSection }) {
                                 <div className="flex gap-2 justify-end">
                                     <button
                                         onClick={async () => {
-                                            if (!newAreaName.trim()) return;
-                                            await handleCreateArea();
-                                            setIsCreatingArea(false);
+                                            if (!newAreaName.trim() || isSubmitting) return;
+                                            setIsSubmitting(true);
+                                            try {
+                                                await handleCreateArea();
+                                                setIsCreatingArea(false);
+                                            } finally {
+                                                setIsSubmitting(false);
+                                            }
                                         }}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs"
+                                        disabled={isSubmitting}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs disabled:opacity-50"
                                     >
                                         Crear
                                     </button>
@@ -209,7 +216,8 @@ export default function AdminLayoutManager({ onGoToSection }) {
                                             setNewAreaName('');
                                             setIsCreatingArea(false);
                                         }}
-                                        className="bg-white hover:bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-lg border text-xs"
+                                        disabled={isSubmitting}
+                                        className="bg-white hover:bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-lg border text-xs disabled:opacity-50"
                                     >
                                         Cancelar
                                     </button>

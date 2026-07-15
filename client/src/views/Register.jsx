@@ -124,6 +124,7 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (loading) return;
         setError('');
         setLoading(true);
         setLoadingStep(0);

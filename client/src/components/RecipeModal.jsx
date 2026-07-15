@@ -97,6 +97,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
 
     // Form states per section (keyed by presentation name or "Base")
     const [forms, setForms] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Resolve API paths: custom paths override defaults
     const getRecipesUrl = recipeGetPath || `${apiBase}/recipes/${product.id}`;
@@ -175,6 +176,8 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
             return;
         }
 
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.post(postRecipeUrl, {
                 productId: product.id,
@@ -189,15 +192,21 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
             loadData();
         } catch (err) {
             console.error(err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const removeIngredient = async (id) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.delete(deleteRecipeUrl(id));
             loadData();
         } catch (err) {
             console.error(err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -274,7 +283,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                                                     <td className="py-2">{r.Ingredient?.name}</td>
                                                                     <td className="py-2 font-bold whitespace-nowrap">{r.quantity} {r.Ingredient?.unit}</td>
                                                                     <td className="py-2 text-right">
-                                                                        <button onClick={() => removeIngredient(r.id)} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors">
+                                                                        <button onClick={() => removeIngredient(r.id)} disabled={isSubmitting} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors">
                                                                             <Trash2 size={16} />
                                                                         </button>
                                                                     </td>
@@ -308,6 +317,7 @@ export default function RecipeModal({ product, onClose, apiBase = '/api/stock', 
                                                     />
                                                     <button
                                                         onClick={() => addIngredient(section)}
+                                                        disabled={isSubmitting}
                                                         className="bg-orange-600 hover:bg-orange-700 text-white p-1.5 rounded transition-colors flex items-center justify-center min-w-[36px]"
                                                     >
                                                         <Plus size={18} />

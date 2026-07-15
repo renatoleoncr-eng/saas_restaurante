@@ -42,7 +42,11 @@ export default function AttendanceView() {
         }
     };
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleCheckIn = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.post('/api/attendance/check-in', { userId: user.id });
             alert('Has marcado entrada exitosamente.');
@@ -50,10 +54,14 @@ export default function AttendanceView() {
             loadHistory();
         } catch (err) {
             alert(err.response?.data?.error || 'Error al marcar entrada');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleCheckOut = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.post('/api/attendance/check-out', { userId: user.id });
             alert('Has marcado salida exitosamente.');
@@ -61,6 +69,8 @@ export default function AttendanceView() {
             loadHistory();
         } catch (err) {
             alert(err.response?.data?.error || 'Error al marcar salida');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -87,7 +97,8 @@ export default function AttendanceView() {
                             </div>
                             <button
                                 onClick={handleCheckOut}
-                                className="w-full py-6 bg-red-500 hover:bg-red-600 text-white rounded-2xl shadow-lg transform transition active:scale-95 flex flex-col items-center gap-2"
+                                disabled={isSubmitting}
+                                className="w-full py-6 bg-red-500 hover:bg-red-600 text-white rounded-2xl shadow-lg transform transition active:scale-95 flex flex-col items-center gap-2 disabled:bg-red-300 disabled:transform-none"
                             >
                                 <XCircle size={48} />
                                 <span className="text-2xl font-bold">MARCAR SALIDA</span>
@@ -96,7 +107,8 @@ export default function AttendanceView() {
                     ) : (
                         <button
                             onClick={handleCheckIn}
-                            className="w-full py-6 bg-green-500 hover:bg-green-600 text-white rounded-2xl shadow-lg transform transition active:scale-95 flex flex-col items-center gap-2"
+                            disabled={isSubmitting}
+                            className="w-full py-6 bg-green-500 hover:bg-green-600 text-white rounded-2xl shadow-lg transform transition active:scale-95 flex flex-col items-center gap-2 disabled:bg-green-300 disabled:transform-none"
                         >
                             <CheckCircle size={48} />
                             <span className="text-2xl font-bold">MARCAR ENTRADA</span>

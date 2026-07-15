@@ -18,6 +18,7 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
     // Adjustment State
     const [adjustmentItem, setAdjustmentItem] = useState(null); // { id, name, type: 'add'|'remove' }
     const [adjustmentForm, setAdjustmentForm] = useState({ amount: '', reason: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Fetch data
     useEffect(() => {
@@ -53,6 +54,8 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
 
     const handleSave = async () => {
         if (!editForm.name) return alert("Nombre requerido");
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             const isEditing = !!editForm.id;
             const res = await axios.post('/api/stock/ingredients', { ...editForm, unit: 'Unidades' });
@@ -72,16 +75,22 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
             console.error(err);
             const msg = err.response?.data?.error || "Error al guardar ingrediente";
             alert(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
         if (!confirm("Eliminar ingrediente?")) return;
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.delete(`/api/stock/ingredients/${id}`);
             loadIngredients();
         } catch (err) {
             console.error(err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -93,7 +102,8 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
 
     const handleAdjustmentSubmit = async () => {
         if (!adjustmentForm.amount || parseFloat(adjustmentForm.amount) <= 0) return alert("Cantidad inválida");
-
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.post(`/api/stock/ingredients/${adjustmentItem.id}/movement`, {
                 type: adjustmentItem.type,
@@ -108,6 +118,8 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
         } catch (err) {
             console.error(err);
             alert("Error ajustando stock");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -168,8 +180,8 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={handleSave} disabled={editForm.id} className="bg-orange-600 text-white px-4 py-2 md:py-0 rounded hover:bg-orange-700 font-bold flex items-center justify-center gap-2 flex-1 md:flex-none">
-                                            <Save size={18} /> Guardar
+                                        <button onClick={handleSave} disabled={isSubmitting} className="bg-orange-600 text-white px-4 py-2 md:py-0 rounded hover:bg-orange-700 font-bold flex items-center justify-center gap-2 flex-1 md:flex-none">
+                                            <Save size={18} /> {isSubmitting ? 'Guardando...' : 'Guardar'}
                                         </button>
                                         <button onClick={() => setShowCreateForm(false)} className="bg-gray-200 text-gray-600 px-4 py-2 md:py-0 rounded hover:bg-gray-300 font-bold flex items-center justify-center gap-2">
                                             <X size={18} />
@@ -197,7 +209,7 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                                 <td className="p-3"><input className="border p-1 w-full rounded" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} /></td>
                                                 <td className="p-3"><span className="text-gray-400 text-sm">Use +/- para ajustar</span></td>
                                                 <td className="p-3 text-right">
-                                                    <button onClick={handleSave} className="text-green-600 mr-2 hover:bg-green-50 p-1 rounded"><Save size={18} /></button>
+                                                    <button onClick={handleSave} disabled={isSubmitting} className="text-green-600 mr-2 hover:bg-green-50 p-1 rounded"><Save size={18} /></button>
                                                     <button onClick={() => { setIsEditing(null); setEditForm({}); }} className="text-gray-500 hover:bg-gray-100 p-1 rounded"><X size={18} /></button>
                                                 </td>
                                             </>
@@ -228,8 +240,8 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                                                 <Minus size={14} /> Eliminar
                                                             </button>
                                                             {/* Edit/Delete */}
-                                                            <button onClick={() => { setIsEditing(item.id); setEditForm(item); }} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded"><Edit2 size={16} /></button>
-                                                            <button onClick={() => handleDelete(item.id)} className="text-red-400 hover:bg-red-50 p-1.5 rounded"><Trash2 size={16} /></button>
+                                                            <button onClick={() => { setIsEditing(item.id); setEditForm(item); }} disabled={isSubmitting} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded"><Edit2 size={16} /></button>
+                                                            <button onClick={() => handleDelete(item.id)} disabled={isSubmitting} className="text-red-400 hover:bg-red-50 p-1.5 rounded"><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
                                                 )}
@@ -364,10 +376,12 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
 
                             <button
                                 onClick={handleAdjustmentSubmit}
-                                className={`w-full py-3 rounded-xl font-bold text-white shadow-lg mt-2
+                                disabled={isSubmitting}
+                                className={`w-full py-3 rounded-xl font-bold text-white shadow-lg mt-2 transition-opacity
+                                    ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}
                                     ${adjustmentItem.type === 'add' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                             >
-                                Confirmar {adjustmentItem.type === 'add' ? 'Ingreso' : 'Salida'}
+                                {isSubmitting ? 'Procesando...' : `Confirmar ${adjustmentItem.type === 'add' ? 'Ingreso' : 'Salida'}`}
                             </button>
                         </div>
                     </div>

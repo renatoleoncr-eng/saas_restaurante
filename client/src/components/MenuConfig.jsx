@@ -21,6 +21,7 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
     ]);
     const [activeGroupId, setActiveGroupId] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [products, setProducts] = useState([]); // Real products for linking
 
     const [activeTab, setActiveTab] = useState(() => {
@@ -170,6 +171,8 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
     };
 
     const handleSave = async () => {
+        if (isSaving) return;
+        setIsSaving(true);
         try {
             // Flatten groups into a single list for storage
             // Schema: { name, stock, groupName, category, linkId }
@@ -217,6 +220,8 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
         } catch (error) {
             console.error("Error saving menu:", error);
             alert('Error guardando configuración');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -405,9 +410,10 @@ export default function MenuConfig({ forcedTab = null, showTabs = true }) {
                             <div className="mt-8 flex justify-end pt-4 border-t">
                                 <button
                                     onClick={handleSave}
-                                    className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95"
+                                    disabled={isSaving}
+                                    className={`w-full md:w-auto bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <Save size={20} /> Guardar Cambios
+                                    <Save size={20} /> {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
                         </div>

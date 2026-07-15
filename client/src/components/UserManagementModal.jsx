@@ -17,6 +17,7 @@ export default function UserManagementModal({ onClose }) {
 
     // Form State
     const [formData, setFormData] = useState({ username: '', password: '', displayName: '', role: 'waiter', pin: '', requirePinPrompt: false });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Handle back button for nested showForm modal
     useModalBackHandler(showForm, () => {
@@ -51,20 +52,28 @@ export default function UserManagementModal({ onClose }) {
 
     const handleDelete = async (id) => {
         if (!confirm('¿Desactivar este usuario?')) return;
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.delete(`/api/users/${id}`, { data: { userId: user?.id } });
             loadUsers();
         } catch (err) {
             alert('Error desactivando usuario');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleReactivate = async (id) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.put(`/api/users/${id}/reactivate`, { userId: user?.id });
             loadUsers();
         } catch (err) {
             alert('Error reactivando usuario');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -78,6 +87,9 @@ export default function UserManagementModal({ onClose }) {
                 return;
             }
         }
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
         try {
             if (editingUser) {
@@ -99,6 +111,8 @@ export default function UserManagementModal({ onClose }) {
             loadUsers();
         } catch (err) {
             alert(err.response?.data?.error || 'Error guardando usuario');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -255,7 +269,7 @@ export default function UserManagementModal({ onClose }) {
                                                 >
                                                     Cancelar
                                                 </button>
-                                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">Guardar</button>
+                                                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">{isSubmitting ? 'Guardando...' : 'Guardar'}</button>
                                             </div>
                                         </form>
                                     </div>
@@ -316,6 +330,7 @@ export default function UserManagementModal({ onClose }) {
                                                         <>
                                                             <button
                                                                 onClick={() => setPasswordModalTarget(u)}
+                                                                disabled={isSubmitting}
                                                                 title="Cambiar Contraseña"
                                                                 className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded"
                                                             >
@@ -323,6 +338,7 @@ export default function UserManagementModal({ onClose }) {
                                                             </button>
                                                             <button
                                                                 onClick={() => startEdit(u)}
+                                                                disabled={isSubmitting}
                                                                 title="Editar"
                                                                 className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
                                                             >
@@ -330,6 +346,7 @@ export default function UserManagementModal({ onClose }) {
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDelete(u.id)}
+                                                                disabled={isSubmitting}
                                                                 title="Desactivar"
                                                                 className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                                                             >
@@ -339,6 +356,7 @@ export default function UserManagementModal({ onClose }) {
                                                     ) : (
                                                         <button
                                                             onClick={() => handleReactivate(u.id)}
+                                                            disabled={isSubmitting}
                                                             title="Reactivar"
                                                             className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
                                                         >

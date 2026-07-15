@@ -63,9 +63,16 @@ const AccountDetailsModal = ({
         }
     };
 
+    const [isPrinting, setIsPrinting] = useState(false);
+
     const handlePrintPreCuenta = async () => {
+        if (isPrinting) return;
+        setIsPrinting(true);
         const id = accountId || (account && account.id);
-        if (!id) return;
+        if (!id) {
+            setIsPrinting(false);
+            return;
+        }
         try {
             const res = await axios.post(`/api/accounts/${id}/print-pre-cuenta`);
             if (res.data.success) {
@@ -76,6 +83,8 @@ const AccountDetailsModal = ({
         } catch (err) {
             alert(err.response?.data?.error || "Error al imprimir consumos");
             console.error(err);
+        } finally {
+            setIsPrinting(false);
         }
     };
 
@@ -154,7 +163,12 @@ const AccountDetailsModal = ({
                                     e.stopPropagation();
                                     handlePrintPreCuenta();
                                 }}
-                                className="relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                                disabled={isPrinting}
+                                className={`relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors border ${
+                                    isPrinting 
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'
+                                }`}
                             >
                                 <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
                                 <span className="hidden sm:inline">Imprimir Consumos</span>

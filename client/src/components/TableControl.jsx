@@ -23,6 +23,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false); // New State for Transfer
     const [isSendingOrder, setIsSendingOrder] = useState(false); // Prevent double-clicks
+    const [isActionInProgress, setIsActionInProgress] = useState(false);
     const isSendingRef = useRef(false); // Synchronous flag to prevent double-clicks
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
@@ -1209,7 +1210,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const handlePrintPreCuenta = async (accountId) => {
-        if (!accountId) return;
+        if (!accountId || isActionInProgress) return;
+        setIsActionInProgress(true);
         try {
             const res = await axios.post(`/api/accounts/${accountId}/print-pre-cuenta`);
             if (res.data.success) {
@@ -1220,6 +1222,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         } catch (err) {
             alert(err.response?.data?.error || "Error al imprimir la pre-cuenta");
             console.error(err);
+        } finally {
+            setIsActionInProgress(false);
         }
     };
 
@@ -1233,6 +1237,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     const handleDeleteOrder = async (orderId) => {
+        if (isActionInProgress) return;
         setDeleteConfirmId(null); // Clear inline confirmation
         const order = account?.Orders?.find(o => o.id === orderId);
         if (order) {
@@ -1246,6 +1251,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             }
         }
+        setIsActionInProgress(true);
         try {
             await axios.delete(`/api/orders/${orderId}?userId=${user?.id}`);
             // Force reload manually to see price update immediately
@@ -1259,10 +1265,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         } catch (err) {
             alert("Error eliminando pedido");
             console.error(err);
+        } finally {
+            setIsActionInProgress(false);
         }
     };
 
     const handleDecrementOrder = async (orderId) => {
+        if (isActionInProgress) return;
         const order = account?.Orders?.find(o => o.id === orderId);
         if (order) {
             const orderPrice = parseFloat(order.priceAtOrder || 0);
@@ -1274,6 +1283,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             }
         }
+        setIsActionInProgress(true);
         try {
             await axios.put(`/api/orders/${orderId}/decrement`, { userId: user?.id });
             // Force reload manually to see price update immediately
@@ -1287,59 +1297,67 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         } catch (err) {
             alert("Error reduciendo cantidad de pedido");
             console.error(err);
+        } finally {
+            setIsActionInProgress(false);
         }
     };
 
     const handleCloseClick = async () => {
-        if (!account) {
-            if (tableData && tableData.status !== 'free') {
-                try {
-                    await axios.put(`/api/tables/${tableId}`, { status: 'free' });
-                    refreshData();
-                } catch (e) { }
-            }
-            onClose();
-            return;
-        }
-
-        // Case: Liberar Mesa (No orders or explicit release)
-        if (!account.Orders || account.Orders.length === 0) {
-            if (!confirm("¿Liberar mesa y cancelar cuenta vacía?")) return;
-            try {
-                await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id, checkEmpty: true });
-                // Refresh table status in background or just close
-                onClose();
-            } catch (e) {
-                alert(e.response?.data?.error || "Error liberando mesa");
-            }
-            return;
-        }
-
-        if (account.accountType === 'staff' && parseFloat(account.total) === 0) {
-            if (!confirm("¿Cerrar consumo de personal? (Total S/ 0.00)")) return;
-            try {
-                const formData = new FormData();
-                formData.append('paymentMethod', 'consumo_interno');
-                if (user?.id) {
-                    formData.append('userId', user.id);
+        if (isActionInProgress) return;
+        setIsActionInProgress(true);
+        try {
+            if (!account) {
+                if (tableData && tableData.status !== 'free') {
+                    try {
+                        await axios.put(`/api/tables/${tableId}`, { status: 'free' });
+                        refreshData();
+                    } catch (e) { }
                 }
-                await axios.post(`/api/accounts/${account.id}/close`, formData);
                 onClose();
-                refreshData();
-            } catch (e) {
-                alert("Error al cerrar consumo de personal");
+                return;
             }
-            return;
+
+            // Case: Liberar Mesa (No orders or explicit release)
+            if (!account.Orders || account.Orders.length === 0) {
+                if (!confirm("¿Liberar mesa y cancelar cuenta vacía?")) return;
+                try {
+                    await axios.post(`/api/accounts/${account.id}/cancel`, { userId: user?.id, checkEmpty: true });
+                    // Refresh table status in background or just close
+                    onClose();
+                } catch (e) {
+                    alert(e.response?.data?.error || "Error liberando mesa");
+                }
+                return;
+            }
+
+            if (account.accountType === 'staff' && parseFloat(account.total) === 0) {
+                if (!confirm("¿Cerrar consumo de personal? (Total S/ 0.00)")) return;
+                try {
+                    const formData = new FormData();
+                    formData.append('paymentMethod', 'consumo_interno');
+                    if (user?.id) {
+                        formData.append('userId', user.id);
+                    }
+                    await axios.post(`/api/accounts/${account.id}/close`, formData);
+                    onClose();
+                    refreshData();
+                } catch (e) {
+                    alert("Error al cerrar consumo de personal");
+                }
+                return;
+            }
+
+            const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
+            const remaining = Math.max(0, Math.round((parseFloat(account.total) - totalPaid) * 100) / 100);
+            setPayAmount(remaining.toString());
+
+            setShowPaymentModal(true);
+            setIsConfirmingPayment(false); // Reset confirmation state
+            setIssueInvoice(false); // ALWAYS start disabled
+            setInvoiceType(clientForm.dni && clientForm.dni.length === 11 ? 'factura' : 'boleta');
+        } finally {
+            setIsActionInProgress(false);
         }
-
-        const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
-        const remaining = Math.max(0, Math.round((parseFloat(account.total) - totalPaid) * 100) / 100);
-        setPayAmount(remaining.toString());
-
-        setShowPaymentModal(true);
-        setIsConfirmingPayment(false); // Reset confirmation state
-        setIssueInvoice(false); // ALWAYS start disabled
-        setInvoiceType(clientForm.dni && clientForm.dni.length === 11 ? 'factura' : 'boleta');
     };
 
     const confirmPayment = async () => {

@@ -616,9 +616,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [docNumber]);
 
-    // Submit Invoice
     const handleSubmit = async () => {
-        if (selectedItems.length === 0) return;
+        if (loading || selectedItems.length === 0) return;
         if (!customerName) return;
 
         // Validar RUC para Facturas
@@ -686,7 +685,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     };
 
     const confirmAnnul = async () => {
-        if (!annulTarget || !annulReason) return;
+        if (!annulTarget || !annulReason || loading) return;
         
         setLoading(true);
         try {

@@ -64,7 +64,7 @@ export default function TableTransferModal({ account, currentTable, onClose, onS
     }, [currentTable]);
 
     const handleTransfer = async () => {
-        if (!selectedTableId) return;
+        if (!selectedTableId || loading) return;
         setLoading(true);
         setError('');
 

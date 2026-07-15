@@ -25,6 +25,7 @@ export default function QrManagement() {
     
     // Notifications State
     const [alert, setAlert] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // --- Tab 1: QRs State ---
     const [qrs, setQrs] = useState([]);
@@ -261,6 +262,8 @@ export default function QrManagement() {
 
     const saveQr = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         
         const data = new FormData();
         data.append('name', qrFormData.name);
@@ -290,6 +293,8 @@ export default function QrManagement() {
         } catch (error) {
             console.error('Error saving QR:', error);
             showAlert('Error al guardar la cuenta QR', 'danger');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -345,9 +350,12 @@ export default function QrManagement() {
 
     const submitAdjustment = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         const value = parseFloat(adjustmentData.amount || 0);
         if (isNaN(value) || value <= 0) {
             showAlert('Monto inválido', 'danger');
+            setIsSubmitting(false);
             return;
         }
 
@@ -366,6 +374,8 @@ export default function QrManagement() {
         } catch (error) {
             console.error('Error submitting balance adjustment:', error);
             showAlert('Error al registrar el ajuste', 'danger');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -392,6 +402,8 @@ export default function QrManagement() {
 
     const saveGroup = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             if (editingGroup) {
                 await axios.put(`/api/promotions/groups/${editingGroup.id}`, groupFormData);
@@ -405,6 +417,8 @@ export default function QrManagement() {
         } catch (error) {
             console.error('Error saving banner group:', error);
             showAlert('Error al guardar el grupo', 'danger');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -473,8 +487,11 @@ export default function QrManagement() {
 
     const saveSlides = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         if (!slideFormData.imageFiles || slideFormData.imageFiles.length === 0) {
             showAlert('Por favor seleccione al menos una imagen o video', 'danger');
+            setIsSubmitting(false);
             return;
         }
 
@@ -497,6 +514,8 @@ export default function QrManagement() {
         } catch (error) {
             console.error('Error uploading slides:', error);
             showAlert('Error al subir banners', 'danger');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -588,14 +607,18 @@ export default function QrManagement() {
     };
 
     const saveRouletteConfig = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         if (rouletteConfig.categories.length < 2 || rouletteConfig.categories.length > 6) {
             showAlert('La ruleta debe tener entre 2 y 6 categorías.', 'danger');
+            setIsSubmitting(false);
             return;
         }
 
         const totalWeight = rouletteConfig.categories.reduce((sum, c) => sum + (c.weight || 0), 0);
         if (totalWeight <= 0) {
             showAlert('El peso total de las categorías debe ser mayor a 0.', 'danger');
+            setIsSubmitting(false);
             return;
         }
 
@@ -606,6 +629,8 @@ export default function QrManagement() {
         } catch (error) {
             console.error('Error saving roulette config:', error);
             showAlert('Error al guardar la ruleta', 'danger');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1397,7 +1422,8 @@ export default function QrManagement() {
                         </div>
                         <button
                             onClick={saveRouletteConfig}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-bold"
+                            disabled={isSubmitting}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-bold disabled:opacity-50"
                         >
                             <Save className="w-4 h-4" /> Guardar Cambios
                         </button>
@@ -1765,7 +1791,8 @@ export default function QrManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex items-center gap-1 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md"
+                                    disabled={isSubmitting}
+                                    className="flex items-center gap-1 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md disabled:opacity-50"
                                 >
                                     <Save className="w-4 h-4" /> Guardar Cuenta
                                 </button>
@@ -1860,7 +1887,8 @@ export default function QrManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md animate-pulse"
+                                    disabled={isSubmitting}
+                                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md animate-pulse disabled:opacity-50"
                                 >
                                     <Save className="w-4 h-4" /> Aplicar Ajuste
                                 </button>
@@ -1933,7 +1961,8 @@ export default function QrManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md"
+                                    disabled={isSubmitting}
+                                    className="px-4.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md disabled:opacity-50"
                                 >
                                     Guardar
                                 </button>
@@ -1994,7 +2023,8 @@ export default function QrManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md animate-bounce"
+                                    disabled={isSubmitting}
+                                    className="px-4.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md animate-bounce disabled:opacity-50"
                                 >
                                     Subir Archivos
                                 </button>

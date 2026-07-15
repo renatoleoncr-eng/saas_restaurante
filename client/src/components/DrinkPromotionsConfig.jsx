@@ -201,6 +201,7 @@ function EditItemRow({ item, onSave, onCancel, onOpenRecipe }) {
 export default function DrinkPromotionsConfig() {
     const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Promo being edited (id, name, price)
     const [editingPromo, setEditingPromo] = useState(null);
@@ -243,23 +244,35 @@ export default function DrinkPromotionsConfig() {
     // ── PROMO CRUD ──────────────────────────────────────────────
     const createPromo = async () => {
         if (!newPromoForm.name.trim() || !newPromoForm.price) return;
-        await axios.post('/api/drink-promotions', {
-            name: newPromoForm.name.trim(),
-            price: parseFloat(newPromoForm.price)
-        });
-        setNewPromoForm({ name: '', price: '' });
-        setShowNewPromoForm(false);
-        loadData();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await axios.post('/api/drink-promotions', {
+                name: newPromoForm.name.trim(),
+                price: parseFloat(newPromoForm.price)
+            });
+            setNewPromoForm({ name: '', price: '' });
+            setShowNewPromoForm(false);
+            loadData();
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const saveEditPromo = async () => {
         if (!editingPromo) return;
-        await axios.put(`/api/drink-promotions/${editingPromo.id}`, {
-            name: editingPromo.name,
-            price: parseFloat(editingPromo.price)
-        });
-        setEditingPromo(null);
-        loadData();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await axios.put(`/api/drink-promotions/${editingPromo.id}`, {
+                name: editingPromo.name,
+                price: parseFloat(editingPromo.price)
+            });
+            setEditingPromo(null);
+            loadData();
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const deletePromo = async (promo) => {
@@ -268,30 +281,52 @@ export default function DrinkPromotionsConfig() {
             return;
         }
         if (!window.confirm(`¿Seguro que desea eliminar la categoría "${promo.name}"?`)) return;
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await axios.delete(`/api/drink-promotions/${promo.id}`);
             loadData();
         } catch (err) {
             alert(err.response?.data?.error || "Error al eliminar categoría");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     // ── ITEM CRUD ───────────────────────────────────────────────
     const createItem = async (promoId, data) => {
-        await axios.post(`/api/drink-promotions/${promoId}/items`, data);
-        setAddingItemTo(null);
-        loadData();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await axios.post(`/api/drink-promotions/${promoId}/items`, data);
+            setAddingItemTo(null);
+            loadData();
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const saveEditItem = async (itemId, data) => {
-        await axios.put(`/api/drink-promotions/items/${itemId}`, data);
-        setEditingItem(null);
-        loadData();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await axios.put(`/api/drink-promotions/items/${itemId}`, data);
+            setEditingItem(null);
+            loadData();
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const deleteItem = async (itemId) => {
-        await axios.delete(`/api/drink-promotions/items/${itemId}`);
-        loadData();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await axios.delete(`/api/drink-promotions/items/${itemId}`);
+            loadData();
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // ────────────────────────────────────────────────────────────
