@@ -1309,10 +1309,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                {(editForm.isStockManaged || editForm.requiresPreparation) && (
+                                                {editForm.isStockManaged && (
                                                     <div className="w-full mt-1 border-t border-dashed border-purple-200 pt-3 animate-in fade-in">
                                                         <label className="text-[11px] text-purple-600 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                            <Info size={12} /> Vincular con {editForm.isStockManaged ? 'Producto Terminado' : 'Receta / Plato Base'} {editForm.isStockManaged ? '(Obligatorio)' : '(Opcional)'}
+                                                            <Info size={12} /> Vincular con Producto Terminado (Obligatorio)
                                                         </label>
                                                         <SearchableProductSelect
                                                             products={products}
@@ -1332,7 +1332,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 }
                                                             }}
                                                             colorTheme="purple"
-                                                            placeholder={editForm.requiresPreparation ? 'Buscar receta/plato base para vincular...' : 'Buscar producto terminado para vincular...'}
+                                                            placeholder="Buscar producto terminado para vincular..."
                                                         />
                                                     </div>
                                                 )}
@@ -1510,10 +1510,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                {(editForm.isStockManaged || editForm.requiresPreparation) && (
+                                                {editForm.isStockManaged && (
                                                     <div className="w-full mt-1 border-t border-dashed border-pink-200 pt-3 animate-in fade-in">
                                                         <label className="text-[11px] text-pink-600 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                            <Info size={12} /> Vincular con {editForm.isStockManaged ? 'Producto Terminado' : 'Receta / Plato Base'} {editForm.isStockManaged ? '(Obligatorio)' : '(Opcional)'}
+                                                            <Info size={12} /> Vincular con Producto Terminado (Obligatorio)
                                                         </label>
                                                         <SearchableProductSelect
                                                             products={products}
@@ -1533,7 +1533,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                                                                 }
                                                             }}
                                                             colorTheme="pink"
-                                                            placeholder={editForm.requiresPreparation ? 'Buscar receta/plato base para vincular...' : 'Buscar producto terminado para vincular...'}
+                                                            placeholder="Buscar producto terminado para vincular..."
                                                         />
                                                     </div>
                                                 )}
