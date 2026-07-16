@@ -120,7 +120,7 @@ const syncQrSum = async (qrId, transaction = null) => {
 };
 
 // HELPER FUNCTION: Consume QR limit
-const consumeQrLimit = async (amount, transaction = null) => {
+const consumeQrLimit = async (amount, tenantId, transaction = null) => {
     try {
         const now = new Date();
         const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
