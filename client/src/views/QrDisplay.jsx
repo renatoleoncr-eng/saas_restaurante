@@ -250,7 +250,7 @@ export default function QrDisplay() {
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center overflow-hidden m-0 p-8 select-none cursor-none relative">
+    <div className="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center overflow-hidden m-0 p-8 select-none relative">
       
       {activeQr ? (
         <div className="bg-slate-900/80 backdrop-blur-2xl border border-slate-800/50 p-12 rounded-[48px] shadow-2xl flex flex-col items-center max-w-3xl w-full relative animate-in zoom-in-95 duration-700">
