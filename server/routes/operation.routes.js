@@ -1090,8 +1090,18 @@ router.post('/orders', async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-        const { accountId, products, authorPin } = req.body;
+        const { accountId, products, authorPin, batchId } = req.body;
         let { userId } = req.body; // userId optional
+
+        // Idempotency check: if batchId is provided, verify it hasn't been processed
+        if (batchId) {
+            const existingOrder = await Order.findOne({ where: { batchId, TenantId: req.tenant.id }, transaction: t });
+            if (existingOrder) {
+                console.log(`[Orders] Idempotency match for batchId ${batchId}. Ignoring duplicate submission.`);
+                await t.rollback();
+                return res.json({ message: 'Pedido procesado correctamente', orders: [] });
+            }
+        }
 
         // Sanitize userId: Ensure it's a valid integer or null
         if (userId !== null && userId !== undefined) {
@@ -1170,7 +1180,8 @@ router.post('/orders', async (req, res) => {
                     priceAtOrderAtCreation: originalComboPrice,
                     subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
                     UserId: userId,
-                    TenantId: req.tenant.id
+                    TenantId: req.tenant.id,
+                    batchId: batchId || null
                 }, { transaction: t });
 
                 // Deduct stock for sub-items (linked products)
@@ -1303,7 +1314,8 @@ router.post('/orders', async (req, res) => {
                 priceAtOrderAtCreation: originalResolvedPrice,
                 subItemsData: item.subItems ? JSON.stringify(item.subItems) : null,
                 UserId: userId,
-                TenantId: req.tenant.id
+                TenantId: req.tenant.id,
+                batchId: batchId || null
             }, { transaction: t });
 
             // 1. Deduct Stock for Main Product

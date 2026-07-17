@@ -25,6 +25,12 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [isSendingOrder, setIsSendingOrder] = useState(false); // Prevent double-clicks
     const [isActionInProgress, setIsActionInProgress] = useState(false);
     const isSendingRef = useRef(false); // Synchronous flag to prevent double-clicks
+    const idempotencyKeyRef = useRef(null); // Prevents duplicate orders due to network retries
+
+    useEffect(() => {
+        // Reset idempotency key when cart changes
+        idempotencyKeyRef.current = null;
+    }, [cart]);
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
@@ -1180,12 +1186,19 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 targetAccountId = newAccount.id;
             }
 
+            if (!idempotencyKeyRef.current) {
+                // Generate a unique batch ID for this cart attempt
+                idempotencyKeyRef.current = Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+            }
+            const currentBatchId = idempotencyKeyRef.current;
+
             await axios.post('/api/orders', {
                 accountId: targetAccountId,
                 products: cart,
                 userId: user?.id || null,
                 authorPin: authorPin,
-                printComanda: printComanda
+                printComanda: printComanda,
+                batchId: currentBatchId
             });
             setCart([]);
 

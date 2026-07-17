@@ -262,6 +262,11 @@ const Order = sequelize.define('Order', {
     priceAtOrderAtCreation: { // Store original resolved price (snapshot at creation)
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
+    },
+    batchId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Idempotency key for preventing duplicate order submissions due to network issues'
     }
 });
 
