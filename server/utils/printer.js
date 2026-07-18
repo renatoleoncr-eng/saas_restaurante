@@ -256,27 +256,25 @@ async function sendToPrinter(printerKey, printerConfig, hexData) {
         }
     }
 
-    return new Promise((resolve) => {
-        const scriptPath = path.join(__dirname, 'print_raw.ps1');
-        const args = [
-            '-NoProfile', '-ExecutionPolicy', 'Bypass',
-            '-File', scriptPath,
-            '-PrinterType', printerConfig.type,
-            '-PrinterPath', printerConfig.path || '',
-            '-PrinterName', printerConfig.printerName || '',
-            '-HexData', hexData
-        ];
+    const scriptPath = path.join(__dirname, 'print_raw.ps1');
+    const args = [
+        '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        '-PrinterType', printerConfig.type,
+        '-PrinterPath', printerConfig.path || '',
+        '-PrinterName', printerConfig.printerName || '',
+        '-HexData', hexData
+    ];
 
-        execFile('powershell.exe', args, (error, stdout, stderr) => {
-            if (error) {
-                console.error("[Printer Service] Execution Error:", error, stderr);
-                resolve({ success: false, error, stderr });
-            } else {
-                console.log("[Printer Service] Output:", stdout);
-                resolve({ success: true, stdout });
-            }
-        });
+    execFile('powershell.exe', args, (error, stdout, stderr) => {
+        if (error) {
+            console.error("[Printer Service] Execution Error:", error, stderr);
+        } else {
+            console.log("[Printer Service] Output:", stdout);
+        }
     });
+
+    return { success: true, queued: true };
 }
 
 // Global print handler that automatically routes to printers
