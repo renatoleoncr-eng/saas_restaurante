@@ -25,8 +25,12 @@ if ($PrinterType -eq "usb") {
 
     # Load C# helper class if not already loaded
     if (-not ([System.Management.Automation.PSTypeName]"UsbDirectPrinter").Type) {
+        $dllPath = Join-Path $PSScriptRoot "UsbDirectPrinter.dll"
         try {
-            Add-Type -TypeDefinition @"
+            if (Test-Path $dllPath) {
+                Add-Type -Path $dllPath
+            } else {
+                Add-Type -TypeDefinition @"
             using System;
             using System.Runtime.InteropServices;
             using Microsoft.Win32.SafeHandles;
@@ -47,7 +51,9 @@ if ($PrinterType -eq "usb") {
                 public const uint OPEN_EXISTING = 3;
                 public const uint FILE_SHARE_RW = 3;
             }
-"@
+"@ -OutputAssembly $dllPath
+                Add-Type -Path $dllPath
+            }
         } catch {
             Write-Error "Error loading UsbDirectPrinter class: $_"
             exit 1
@@ -94,8 +100,12 @@ elseif ($PrinterType -eq "windows_print") {
 
     # Load C# Spooler class if not already loaded
     if (-not ([System.Management.Automation.PSTypeName]"RawPrinterHelper").Type) {
+        $dllPath = Join-Path $PSScriptRoot "RawPrinterHelper.dll"
         try {
-            Add-Type -TypeDefinition @"
+            if (Test-Path $dllPath) {
+                Add-Type -Path $dllPath
+            } else {
+                Add-Type -TypeDefinition @"
             using System;
             using System.Runtime.InteropServices;
 
@@ -151,7 +161,9 @@ elseif ($PrinterType -eq "windows_print") {
                     return bSuccess;
                 }
             }
-"@
+"@ -OutputAssembly $dllPath
+                Add-Type -Path $dllPath
+            }
         } catch {
             Write-Error "Error loading RawPrinterHelper class: $_"
             exit 1
