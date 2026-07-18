@@ -13,6 +13,25 @@ function getModels() {
     return require('../models');
 }
 
+// ── In-memory caches to avoid redundant DB queries on every print ──
+// Printer config: changes rarely (only when admin edits settings)
+const _printerConfigCache = new Map(); // key: tenantId|'global' → { value, expiresAt }
+const PRINTER_CONFIG_TTL = 30 * 1000; // 30 seconds
+
+// Restaurant header: changes very rarely (name, RUC, address)
+const _headerCache = new Map(); // key: tenantId|'global' → { value, expiresAt }
+const HEADER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Invalidates the printer config cache for a tenant.
+ * Call this after saving printer settings.
+ */
+function invalidatePrinterConfigCache(tenantId) {
+    const key = tenantId ? String(tenantId) : 'global';
+    _printerConfigCache.delete(key);
+    console.log(`[PrinterCache] Invalidated printer config cache for tenant '${key}'.`);
+}
+
 
 const formatPrinterDate = (date) => {
     if (!date) return '';
@@ -188,7 +207,18 @@ function formatPrinterTable(table) {
 // Fetch Printer Config from settings
 
 async function getPrintersConfig(tenantId) {
+    const cacheKey = tenantId ? String(tenantId) : 'global';
+    const cached = _printerConfigCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.value;
+    }
+
     const { Setting } = getModels();
+    let result = {
+        caja: { type: 'disabled', path: '', printerName: '' },
+        cocina: { type: 'disabled', path: '', printerName: '' },
+        barra: { type: 'disabled', path: '', printerName: '' }
+    };
     try {
         const key = tenantId ? `printer_config_${tenantId}` : 'printer_config';
         let setting = await Setting.findByPk(key);
@@ -199,17 +229,14 @@ async function getPrintersConfig(tenantId) {
         }
 
         if (setting) {
-            return JSON.parse(setting.value);
+            result = JSON.parse(setting.value);
         }
     } catch (err) {
         console.error("Error reading printer_config setting:", err);
     }
-    // Default fallback (disabled)
-    return {
-        caja: { type: 'disabled', path: '', printerName: '' },
-        cocina: { type: 'disabled', path: '', printerName: '' },
-        barra: { type: 'disabled', path: '', printerName: '' }
-    };
+
+    _printerConfigCache.set(cacheKey, { value: result, expiresAt: Date.now() + PRINTER_CONFIG_TTL });
+    return result;
 }
 
 async function sendToPrinter(printerKey, printerConfig, hexData) {
@@ -404,7 +431,14 @@ async function triggerCierrePrint(session, expected, countedDetails, user) {
 }
 
 // Helper to get restaurant header info (name, RUC, address) from BillingConfig or RestaurantConfig
+// Results are cached for 5 minutes since this data changes very rarely.
 async function getRestaurantHeader(tenantId) {
+    const cacheKey = tenantId ? String(tenantId) : 'global';
+    const cached = _headerCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.value;
+    }
+
     const { RestaurantConfig, BillingConfig } = getModels();
     let rName = 'MI RESTAURANTE';
     let rRuc = '';
@@ -433,7 +467,10 @@ async function getRestaurantHeader(tenantId) {
             }
         } catch (__) {}
     }
-    return { name: rName, ruc: rRuc, address: rAddress };
+
+    const result = { name: rName, ruc: rRuc, address: rAddress };
+    _headerCache.set(cacheKey, { value: result, expiresAt: Date.now() + HEADER_CACHE_TTL });
+    return result;
 }
 
 // 3. Pre-cuenta (Table consumption detail)
@@ -859,6 +896,7 @@ module.exports = {
     getPendingJobsForPrinters,
     ackPrintJob,
     cleanupOldPrintJobs,
-    printEvent
+    printEvent,
+    invalidatePrinterConfigCache
 };
 

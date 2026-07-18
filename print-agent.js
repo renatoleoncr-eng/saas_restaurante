@@ -21,7 +21,10 @@ const scriptPath = path.join(__dirname, 'server', 'utils', 'print_raw.ps1');
 const logFile    = path.join(__dirname, 'print-agent.log');
 // Bump this version ONLY when print-agent.js has changes that require reinstalling the service.
 // The server reads this value directly from this file to know what version to expect.
-const AGENT_VERSION = "1.2.0";
+// v1.3.0 — print_raw.ps1: DLL caching for Add-Type (eliminates 4-6s first-print delay),
+//           TCP timeout 5s for Ethernet printers (prevents 75s hangs if printer off),
+//           stream.Flush() for reliable data delivery.
+const AGENT_VERSION = "1.3.0";
 
 
 // Backoff settings for when server is unreachable

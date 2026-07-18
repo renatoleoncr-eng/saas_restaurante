@@ -199,9 +199,20 @@ elseif ($PrinterType -eq "ethernet" -or $PrinterType -eq "network") {
     Write-Host "Sending print job directly to TCP socket $($ip):$($port)"
     $client = New-Object System.Net.Sockets.TcpClient
     try {
-        $client.Connect($ip, $port)
+        # Use async connect with 5s timeout to avoid hanging if printer is off
+        $connectTask = $client.ConnectAsync($ip, $port)
+        if (-not $connectTask.Wait(5000)) {
+            $client.Close()
+            Write-Error "Error: Timeout (5s) connecting to $($ip):$($port). Impresora apagada o IP incorrecta."
+            exit 1
+        }
+        if (-not $client.Connected) {
+            Write-Error "Error: No se pudo conectar a $($ip):$($port)."
+            exit 1
+        }
         $stream = $client.GetStream()
         $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush()
         $stream.Close()
         Write-Host "Success: Sent raw bytes directly to Ethernet printer at $($ip):$($port)."
         exit 0
@@ -212,6 +223,7 @@ elseif ($PrinterType -eq "ethernet" -or $PrinterType -eq "network") {
         $client.Close()
     }
 }
+
 
 else {
     Write-Error "Error: Invalid PrinterType '$PrinterType'. Must be 'usb', 'windows_print' or 'ethernet'."

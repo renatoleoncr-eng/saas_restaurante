@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { RestaurantConfig, Setting } = require('../models');
-const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent, formatPrinterDate } = require('../utils/printer');
+const { EscPosBuilder, sendToPrinter, getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent, formatPrinterDate, invalidatePrinterConfigCache } = require('../utils/printer');
 
 // Run cleanup on startup
 setTimeout(cleanupOldPrintJobs, 5000);
@@ -93,6 +93,9 @@ router.post('/config/printers', async (req, res) => {
             value: JSON.stringify(config),
             description: 'Thermal printer configuration (Caja, Cocina, Barra)'
         });
+
+        // Invalidate the in-memory cache so next print reads fresh config from DB
+        invalidatePrinterConfigCache(req.tenant.id);
 
         res.json({ success: true });
     } catch (err) {

@@ -1367,7 +1367,19 @@ router.post('/orders', async (req, res) => {
             (async () => {
                 try {
                     const { Table, Product, User, Area } = getModels();
-                    const tableObj = await Table.findByPk(account.TableId, { include: [{ model: Area }] });
+                    const { Op } = require('sequelize');
+                    
+                    // Batch load: table + user + products in parallel (3 queries instead of N+3)
+                    const productIds = products.filter(i => i.productId).map(i => i.productId);
+                    const [tableObj, placingUser, productMap] = await Promise.all([
+                        Table.findByPk(account.TableId, { include: [{ model: Area }] }),
+                        userId ? User.findByPk(userId) : Promise.resolve(null),
+                        productIds.length > 0
+                            ? Product.findAll({ where: { id: { [Op.in]: productIds } } })
+                                .then(rows => rows.reduce((m, p) => { m[p.id] = p; return m; }, {}))
+                            : Promise.resolve({})
+                    ]);
+
                     
                     const cocinaItems = [];
                     const barraItems = [];
@@ -1377,10 +1389,9 @@ router.post('/orders', async (req, res) => {
                         let name = item.productName || '';
                         
                         if (item.productId) {
-                            const p = await Product.findByPk(item.productId);
+                            const p = productMap[item.productId];
                             if (p) {
                                 // Terminado = isStockManaged=true → no comanda needed
-                                // (requiresPreparation may be stale in old records, don't rely on it)
                                 if (p.isStockManaged) {
                                     continue;
                                 }
@@ -1409,19 +1420,18 @@ router.post('/orders', async (req, res) => {
                     }
                     
                     const { triggerComandaPrint } = require('../utils/printer');
-                    const placingUser = userId ? await User.findByPk(userId) : null;
                     
-                    if (cocinaItems.length > 0) {
-                        await triggerComandaPrint(tableObj, cocinaItems, 'Cocina', placingUser);
-                    }
-                    if (barraItems.length > 0) {
-                        await triggerComandaPrint(tableObj, barraItems, 'Barra', placingUser);
-                    }
+                    // Run both prints in parallel (they queue independently to DB)
+                    await Promise.all([
+                        cocinaItems.length > 0 ? triggerComandaPrint(tableObj, cocinaItems, 'Cocina', placingUser) : Promise.resolve(),
+                        barraItems.length > 0  ? triggerComandaPrint(tableObj, barraItems,  'Barra',  placingUser) : Promise.resolve()
+                    ]);
                 } catch (printErr) {
                     console.error("Error printing comanda in background:", printErr);
                 }
             })();
         }
+
 
         // Audit log – log after commit so entityId is valid
         try {
