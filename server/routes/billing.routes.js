@@ -158,8 +158,13 @@ router.post('/billing/invoices', async (req, res) => {
         const config = await BillingConfig.findOne({ where: { TenantId: req.tenant.id } });
         if (!config) return res.status(400).json({ error: 'Configuración no encontrada' });
 
-        const { tipo, clienteDocumento, clienteNombre, clienteDireccion, items, userId, accountId } = req.body;
+        let { tipo, clienteDocumento, clienteNombre, clienteDireccion, observaciones, items, userId, accountId } = req.body;
         if (!tipo || !items?.length) return res.status(400).json({ error: 'tipo e items son requeridos' });
+        
+        // For Boletas (DNI), the address is generally empty/unnecessary per user requirements
+        if (tipo !== 'factura') {
+            clienteDireccion = '-';
+        }
         
         // Validar RUC para Facturas (Exactamente 11 dígitos numéricos que comiencen con 10, 15, 17, 20)
         if (tipo === 'factura') {
@@ -332,7 +337,7 @@ router.post('/billing/invoices', async (req, res) => {
 
         // Crear registro local
         const invoice = await Invoice.create({
-            tipo, serie, correlativo, clienteDocumento, clienteNombre, clienteDireccion,
+            tipo, serie, correlativo, clienteDocumento, clienteNombre, clienteDireccion, observaciones,
             subtotal: finalTotalBase, igv: finalTotalIgv, total: finalTotalPay,
             items: JSON.stringify(items),
             UserId: validatedUserId,

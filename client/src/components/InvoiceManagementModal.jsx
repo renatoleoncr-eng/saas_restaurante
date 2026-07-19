@@ -101,6 +101,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [customerName, setCustomerName] = useState('');
     const [customerAddress, setCustomerAddress] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
+    const [observaciones, setObservaciones] = useState('');
     const [series, setSeries] = useState('B002');
 
     // Toggle between Boleta (DNI) and Factura (RUC)
@@ -700,6 +701,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 clienteDocumento: docNumber,
                 clienteNombre: customerName,
                 clienteDireccion: customerAddress || '-',
+                observaciones: observaciones || '',
                 tipo: docType === '01' ? 'factura' : 'boleta'
             };
 
@@ -993,6 +995,16 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             <div className="relative">
                                  <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
                             </div>
+                        </div>
+                        {docType === '01' && (
+                            <div className="col-span-2 space-y-2">
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Dirección Legal</label>
+                                <input type="text" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Dirección para la Factura" />
+                            </div>
+                        )}
+                        <div className="col-span-2 space-y-2">
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Observaciones (Opcional)</label>
+                            <input type="text" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Notas internas o para el cliente..." />
                         </div>
                     </div>
 
