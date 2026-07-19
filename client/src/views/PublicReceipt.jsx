@@ -251,17 +251,32 @@ export default function PublicReceipt() {
                 </div>
 
                 {/* Totales */}
-                <div style={{ borderTop: '1px dashed #9ca3af', paddingTop: '2mm', marginBottom: '4mm', textAlign: 'right' }}>
-                    {invoice.tipo === 'factura' && (
-                        <>
-                            <div>OP. GRAVADA: S/ {parseFloat(invoice.subtotal).toFixed(2)}</div>
-                            <div>OP. INAFECTA: S/ 0.00</div>
-                            <div>I.G.V. ({config?.igvTasa || 18}%): S/ {parseFloat(invoice.igv).toFixed(2)}</div>
-                        </>
-                    )}
-                    <div style={{ fontWeight: 'bold', fontSize: '12px', marginTop: '2px' }}>
-                        TOTAL A PAGAR: S/ {parseFloat(invoice.total).toFixed(2)}
-                    </div>
+                {/* Totales */}
+                <div style={{ borderTop: '1px dashed #9ca3af', paddingTop: '2mm', marginBottom: '4mm' }}>
+                    <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                        <tbody>
+                            <tr>
+                                <td style={{ textAlign: 'left', paddingBottom: '2px' }}>Op. Gravada</td>
+                                <td style={{ textAlign: 'right', paddingBottom: '2px' }}>S/ {parseFloat(invoice.subtotal).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ textAlign: 'left', paddingBottom: '2px' }}>Op. Exonerada</td>
+                                <td style={{ textAlign: 'right', paddingBottom: '2px' }}>S/ 0.00</td>
+                            </tr>
+                            <tr>
+                                <td style={{ textAlign: 'left', paddingBottom: '2px' }}>Op. Inafecta</td>
+                                <td style={{ textAlign: 'right', paddingBottom: '2px' }}>S/ 0.00</td>
+                            </tr>
+                            <tr>
+                                <td style={{ textAlign: 'left', paddingBottom: '2px' }}>I.G.V. ({config?.igvTasa || 18}%)</td>
+                                <td style={{ textAlign: 'right', paddingBottom: '2px' }}>S/ {parseFloat(invoice.igv).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ textAlign: 'left', fontWeight: 'bold', paddingTop: '4px', fontSize: '12px' }}>IMPORTE TOTAL</td>
+                                <td style={{ textAlign: 'right', fontWeight: 'bold', paddingTop: '4px', fontSize: '12px' }}>S/ {parseFloat(invoice.total).toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 {/* Estado */}
