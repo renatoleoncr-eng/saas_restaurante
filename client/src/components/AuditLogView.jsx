@@ -82,7 +82,7 @@ const ENTITY_LABELS = {
 
 const DETAIL_KEY_LABELS = {
     userId: 'ID Usuario',
-    tableId: 'Número de Mesa',
+    tableId: 'Res#',
     accountId: 'ID Cuenta',
     productId: 'ID Producto',
     openingCash: 'Efectivo Inicial',
@@ -163,7 +163,7 @@ function formatReference(log) {
         case 'CREATE_ORDER':
         case 'CANCEL_ORDER': {
             const parts = [];
-            if (details.tableId) parts.push(`Mesa ${details.tableId}`);
+            if (details.tableId) parts.push(`Res# ${details.tableId}`);
             if (details.items) parts.push(String(details.items));
             return parts.join(' · ') || 'Detalles de pedido';
         }
@@ -222,7 +222,7 @@ function formatReference(log) {
     const parts = [];
     
     if (details.tableId) {
-        parts.push(`Mesa ${details.tableId}`);
+        parts.push(`Res# ${details.tableId}`);
     }
 
     Object.entries(details).forEach(([k, v]) => {
