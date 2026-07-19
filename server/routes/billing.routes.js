@@ -240,10 +240,33 @@ router.post('/billing/invoices', async (req, res) => {
         const correlativo = (lastInvoice?.correlativo || 0) + 1;
 
         // Desglose SUNAT (Lógica Gestion Mak)
+        // SUNAT does not accept negative PriceAmount values (UBL format restriction).
+        // When a DESCUENTO item is present (negative amount), distribute it proportionally
+        // across the positive items before building the Hub payload.
+        // The original items (with the discount line) are still saved to DB for display purposes.
+        const positiveItems = items.filter(it => parseFloat(it.amount || 0) >= 0);
+        const totalDiscount = items
+            .filter(it => parseFloat(it.amount || 0) < 0)
+            .reduce((sum, it) => sum + Math.abs(parseFloat(it.amount || 0)), 0);
+        const grossPositiveTotal = positiveItems.reduce((sum, it) => sum + parseFloat(it.amount || 0), 0);
+
+        // Build adjusted items: reduce each positive item proportionally by the discount
+        const adjustedItems = positiveItems.map(it => {
+            const originalAmount = parseFloat(it.amount || 0);
+            if (totalDiscount > 0 && grossPositiveTotal > 0) {
+                const ratio = originalAmount / grossPositiveTotal;
+                const discountShare = parseFloat((totalDiscount * ratio).toFixed(2));
+                return { ...it, amount: parseFloat((originalAmount - discountShare).toFixed(2)) };
+            }
+            return it;
+        });
+
+        // Recalculate finalTotalPay from adjusted items to ensure it matches net total
+        // (small rounding differences can occur; this guarantees SUNAT totals are consistent)
         let total_base = 0;
         let total_igv = 0;
 
-        const hubItems = items.map((item, i) => {
+        const hubItems = adjustedItems.map((item, i) => {
             const lineTotal = parseFloat(item.amount || item.subtotal || 0);
             const qty = parseInt(item.quantity || item.qty || 1);
             const unitTotal = lineTotal / qty;
@@ -275,6 +298,7 @@ router.post('/billing/invoices', async (req, res) => {
 
         const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
         const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+
 
         // Payload para el Hub
         const hubPayload = {
