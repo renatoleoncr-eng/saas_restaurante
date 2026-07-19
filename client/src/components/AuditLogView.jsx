@@ -106,7 +106,8 @@ const DETAIL_KEY_LABELS = {
     clientDni: 'DNI / RUC',
     clientAddress: 'Dirección',
     accountType: 'Tipo de Cuenta',
-    category: 'Categoría'
+    category: 'Categoría',
+    type: 'Tipo de Producto'
 };
 
 const ENTITIES = [
@@ -184,6 +185,33 @@ function formatReference(log) {
                 return parts.length > 0 ? parts.join(', ') : 'Actualización sin cambios detallados';
             }
             return 'Usuario editado';
+        }
+        case 'CREATE_PRODUCT': {
+            const parts = [];
+            if (details.name) parts.push(`Nombre: ${details.name}`);
+            if (details.type) parts.push(`Tipo: ${details.type}`);
+            if (details.stock !== undefined) parts.push(`Stock: ${details.stock}`);
+            return parts.join(' · ');
+        }
+        case 'DELETE_PRODUCT': {
+            const parts = [];
+            if (details.name) parts.push(`Nombre: ${details.name}`);
+            if (details.type) parts.push(`Sección: ${details.type}`);
+            return parts.length > 0 ? parts.join(' · ') : 'Producto eliminado';
+        }
+        case 'UPDATE_PRODUCT': {
+            if (details.changes) {
+                const parts = [];
+                if (details.name) parts.push(`Producto: ${details.name}`);
+                Object.entries(details.changes).forEach(([k, v]) => {
+                    const label = DETAIL_KEY_LABELS[k] || k;
+                    let oldVal = v.old !== undefined && v.old !== null ? v.old : '-';
+                    let newVal = v.new !== undefined && v.new !== null ? v.new : '-';
+                    parts.push(`${label}: ${oldVal} → ${newVal}`);
+                });
+                return parts.join(' · ');
+            }
+            return `Producto editado: ${details.name || '-'}`;
         }
         default:
             break;

@@ -135,9 +135,20 @@ router.post('/products', async (req, res) => {
             }
         }
 
+        let productTypeStr = 'Terminado';
+        if (type === 'daily_entry' || type === 'daily_main' || type === 'daily_option' || type === 'menu') {
+            productTypeStr = 'Libre';
+        } else if (finalRequiresPreparation) {
+            productTypeStr = 'Preparado';
+        }
+
         console.time('LOG_AND_COMMIT_ENDPOINT');
         await t.commit();
-        await logAction(req, 'CREATE_PRODUCT', 'Product', product.id, { name, stock });
+        await logAction(req, 'CREATE_PRODUCT', 'Product', product.id, { 
+            name, 
+            stock: productTypeStr === 'Terminado' ? Math.max(0, stock || 0) : undefined,
+            type: productTypeStr
+        });
         console.timeEnd('LOG_AND_COMMIT_ENDPOINT');
 
         console.time('FETCH_NEW_PRODUCT_ENDPOINT');
@@ -320,7 +331,25 @@ router.put('/products/:id', async (req, res) => {
         }
 
         await t.commit();
-        await logAction(req, 'UPDATE_PRODUCT', 'Product', id, { userId: req.body.userId || null, name: req.body.name });
+        
+        const changes = {};
+        if (name && name !== product.name) changes.name = { old: product.name, new: name };
+        if (actualPrice !== product.price) changes.price = { old: product.price, new: actualPrice };
+        
+        const getProductTypeStr = (prodType, requiresPrep) => {
+            if (prodType === 'daily_entry' || prodType === 'daily_main' || prodType === 'daily_option' || prodType === 'menu') return 'Libre';
+            if (requiresPrep) return 'Preparado';
+            return 'Terminado';
+        };
+        
+        const oldTypeStr = getProductTypeStr(product.type, product.requiresPreparation);
+        const newTypeStr = getProductTypeStr(actualType, finalRequiresPreparation);
+        if (oldTypeStr !== newTypeStr) changes.type = { old: oldTypeStr, new: newTypeStr };
+
+        await logAction(req, 'UPDATE_PRODUCT', 'Product', id, { 
+            name: name || product.name, 
+            changes: Object.keys(changes).length > 0 ? changes : undefined 
+        });
 
         const updatedProduct = await Product.findByPk(id, {
             include: [{ model: ProductVariant }, { model: Recipe, include: [Ingredient] }]
@@ -363,10 +392,19 @@ router.delete('/products/:id', async (req, res) => {
         await Recipe.destroy({ where: { ProductId: id, TenantId: req.tenant.id } });
         await ProductVariant.destroy({ where: { ProductId: id, TenantId: req.tenant.id } });
 
+        const productToDelete = await Product.findByPk(id);
+        const getProductTypeStr = (prodType, requiresPrep) => {
+            if (prodType === 'daily_entry' || prodType === 'daily_main' || prodType === 'daily_option' || prodType === 'menu') return 'Libre';
+            if (requiresPrep) return 'Preparado';
+            return 'Terminado';
+        };
+        const typeStr = productToDelete ? getProductTypeStr(productToDelete.type, productToDelete.requiresPreparation) : 'Desconocido';
+        const prodName = productToDelete ? productToDelete.name : `ID: ${id}`;
+
         const deletedCount = await Product.destroy({ where: { id, TenantId: req.tenant.id } });
         console.log(`[DEBUG] Product ID ${id} deleted count: ${deletedCount}`);
 
-        await logAction(req, 'DELETE_PRODUCT', 'Product', id, null);
+        await logAction(req, 'DELETE_PRODUCT', 'Product', id, { name: prodName, type: typeStr });
         res.json({ success: true });
     } catch (err) {
         console.error("[DEBUG] Delete Error in product.routes.js:", err);
