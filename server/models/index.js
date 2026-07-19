@@ -726,7 +726,7 @@ const Invoice = sequelize.define('Invoice', {
     total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     items: { type: DataTypes.TEXT, defaultValue: '[]' }, // JSON string
     status: { type: DataTypes.ENUM('emitido', 'anulado'), defaultValue: 'emitido' },
-    sunatResponse: { type: DataTypes.TEXT, allowNull: true }, // JSON response del Hub
+    sunatResponse: { type: DataTypes.TEXT('medium'), allowNull: true }, // JSON response del Hub (MEDIUMTEXT for large XML responses)
     notaCredito: { type: DataTypes.STRING, allowNull: true }, // Referencia a nota de credito si existe
     notaCreditoUrl: { type: DataTypes.STRING, allowNull: true }, // URL de nota de credito
     emitidoAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

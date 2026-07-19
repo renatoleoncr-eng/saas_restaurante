@@ -508,9 +508,17 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
                     status: 'anulado',
                     notaCredito: finalNoteId,
                     notaCreditoUrl: ticketUrl,
+                    // Store only compact summary of the credit note — NOT the full Hub response
+                    // (full responses can include base64 XMLs that overflow the TEXT column)
                     sunatResponse: JSON.stringify({
                         ...JSON.parse(invoice.sunatResponse || '{}'),
-                        noteResponse: sunatResponse
+                        noteResponse: {
+                            success: sunatResponse.success,
+                            fileName: sunatResponse.fileName || sunatResponse.file_name || null,
+                            url: ticketUrl || null,
+                            hash: sunatResponse.hash || null,
+                            cdrStatus: sunatResponse.cdrStatus || sunatResponse.cdr_status || null
+                        }
                     })
                 });
 
