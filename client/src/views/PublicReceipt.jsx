@@ -132,7 +132,7 @@ export default function PublicReceipt() {
 
     return (
         <div style={{
-            minHeight: '100vh',
+            height: '100vh',
             backgroundColor: '#e2e8f0',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
