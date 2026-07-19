@@ -5,6 +5,7 @@ import {
     ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
     RefreshCw, X, AlertCircle
 } from 'lucide-react';
+import AccountDetailsModal from './AccountDetailsModal';
 
 const ACTION_COLORS = {
     // Cancellations / deletions → red
@@ -252,7 +253,32 @@ function formatReference(log) {
     return parts.join(' · ') || (typeof log.details === 'string' && log.details.startsWith('{') ? 'Detalles de operación' : String(log.details || '-'));
 }
 
-function TableRow({ log }) {
+function TableRow({ log, onOpenAccount }) {
+    const accountId = log.entity === 'Account' ? log.entityId : log.details?.accountId;
+
+    const refText = formatReference(log);
+
+    const renderWithLinks = (text) => {
+        if (!accountId || typeof text !== 'string') return text;
+        const resRegex = /(Res# [\w\d-]+)/g;
+        const parts = text.split(resRegex);
+        return parts.map((part, index) => {
+            if (part.match(/Res# [\w\d-]+/)) {
+                return (
+                    <span 
+                        key={index} 
+                        onClick={() => onOpenAccount(accountId)} 
+                        className="text-blue-600 cursor-pointer hover:underline hover:text-blue-800 font-semibold inline-flex items-center gap-1"
+                        title="Ver detalle de cuenta"
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <tr className="hover:bg-gray-50 transition-colors border-b border-gray-100">
             <td className="p-3 text-xs text-gray-500 whitespace-nowrap">
@@ -279,8 +305,8 @@ function TableRow({ log }) {
                 {ENTITY_LABELS[log.entity] || log.entity}
                 {log.entityId && <span className="text-xs text-gray-400 ml-1">#{log.entityId}</span>}
             </td>
-            <td className="p-3 text-xs text-gray-600 font-medium max-w-[300px] sm:max-w-none truncate sm:whitespace-normal" title={formatReference(log)}>
-                {formatReference(log)}
+            <td className="p-3 text-xs text-gray-600 font-medium max-w-[300px] sm:max-w-none truncate sm:whitespace-normal" title={refText}>
+                {renderWithLinks(refText)}
             </td>
         </tr>
     );
@@ -292,6 +318,7 @@ export default function AuditLogView() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
+    const [selectedAccountId, setSelectedAccountId] = useState(null);
 
     // Filter state
     const [users, setUsers] = useState([]);
@@ -531,7 +558,7 @@ export default function AuditLogView() {
                             ) : logs.length === 0 ? (
                                 <tr><td colSpan={6} className="p-10 text-center text-gray-400 text-sm">No se encontraron registros con los filtros aplicados.</td></tr>
                             ) : (
-                                logs.map(log => <TableRow key={log.id} log={log} />)
+                                logs.map(log => <TableRow key={log.id} log={log} onOpenAccount={setSelectedAccountId} />)
                             )}
                         </tbody>
                     </table>
@@ -562,6 +589,13 @@ export default function AuditLogView() {
                     </div>
                 )}
             </div>
+            {/* Account Details Modal */}
+            {selectedAccountId && (
+                <AccountDetailsModal
+                    accountId={selectedAccountId}
+                    onClose={() => setSelectedAccountId(null)}
+                />
+            )}
         </div>
     );
 }
