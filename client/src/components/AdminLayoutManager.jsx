@@ -127,8 +127,60 @@ export default function AdminLayoutManager({ onGoToSection }) {
 
     return (
         <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Gestionar Salon</h2>
+            <div className="flex justify-between items-center mb-6 gap-2 flex-wrap">
+                <div className="flex-1">
+                    {activeSession && (
+                        <div className="inline-block">
+                            {!isCreatingArea ? (
+                                <button
+                                    onClick={() => setIsCreatingArea(true)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all transform active:scale-95 text-sm"
+                                >
+                                    <Plus size={16} /> Crear Área
+                                </button>
+                            ) : (
+                                <div className="flex flex-col sm:flex-row gap-2 bg-gray-50 border p-2 rounded-xl max-w-md animate-in fade-in duration-200">
+                                    <input
+                                        type="text"
+                                        value={newAreaName}
+                                        onChange={e => setNewAreaName(e.target.value)}
+                                        placeholder="Nombre Nueva Fila"
+                                        className="border px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                        <button
+                                            onClick={async () => {
+                                                if (!newAreaName.trim() || isSubmitting) return;
+                                                setIsSubmitting(true);
+                                                try {
+                                                    await handleCreateArea();
+                                                    setIsCreatingArea(false);
+                                                } finally {
+                                                    setIsSubmitting(false);
+                                                }
+                                            }}
+                                            disabled={isSubmitting}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs disabled:opacity-50"
+                                        >
+                                            Crear
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setNewAreaName('');
+                                                setIsCreatingArea(false);
+                                            }}
+                                            disabled={isSubmitting}
+                                            className="bg-white hover:bg-gray-100 text-gray-600 font-bold px-3 py-1.5 rounded-lg border text-xs disabled:opacity-50"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
                 <button
                     onClick={() => setShowSessionModal(true)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold shadow-sm transition-all transform active:scale-95 ${activeSession
@@ -175,56 +227,7 @@ export default function AdminLayoutManager({ onGoToSection }) {
                 </div>
             ) : (
                 <>
-                    {/* Area Creation */}
-                    <div className="mb-6">
-                        {!isCreatingArea ? (
-                            <button
-                                onClick={() => setIsCreatingArea(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all transform active:scale-95 text-sm"
-                            >
-                                <Plus size={16} /> Crear Área
-                            </button>
-                        ) : (
-                            <div className="flex flex-col sm:flex-row gap-2 bg-gray-50 border p-3 rounded-xl max-w-md animate-in fade-in duration-200">
-                                <input
-                                    type="text"
-                                    value={newAreaName}
-                                    onChange={e => setNewAreaName(e.target.value)}
-                                    placeholder="Nombre Nueva Fila (ej. Terraza)"
-                                    className="border px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    autoFocus
-                                />
-                                <div className="flex gap-2 justify-end">
-                                    <button
-                                        onClick={async () => {
-                                            if (!newAreaName.trim() || isSubmitting) return;
-                                            setIsSubmitting(true);
-                                            try {
-                                                await handleCreateArea();
-                                                setIsCreatingArea(false);
-                                            } finally {
-                                                setIsSubmitting(false);
-                                            }
-                                        }}
-                                        disabled={isSubmitting}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs disabled:opacity-50"
-                                    >
-                                        Crear
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setNewAreaName('');
-                                            setIsCreatingArea(false);
-                                        }}
-                                        disabled={isSubmitting}
-                                        className="bg-white hover:bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-lg border text-xs disabled:opacity-50"
-                                    >
-                                        Cancelar
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+
 
             {/* Areas List */}
 
