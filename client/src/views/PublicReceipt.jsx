@@ -198,7 +198,7 @@ export default function PublicReceipt() {
                     <div><b>FECHA EMISIÓN:</b> {new Date(invoice.emitidoAt).toLocaleString('es-PE')}</div>
                     <div><b>SEÑOR(ES):</b> {invoice.clienteNombre?.toUpperCase() || '-'}</div>
                     <div><b>DNI/RUC:</b> {invoice.clienteDocumento || '-'}</div>
-                    {showDireccion && <div><b>DIRECCIÓN:</b> {direccion.toUpperCase()}</div>}
+                    {showDireccion && invoice.tipo === 'factura' && <div><b>DIRECCIÓN:</b> {direccion.toUpperCase()}</div>}
                     <div><b>MÉTODO PAGO:</b> EFECTIVO</div>
                     {invoice.observaciones && (
                         <div style={{ marginTop: '2mm', fontStyle: 'italic' }}><b>OBS:</b> {invoice.observaciones}</div>

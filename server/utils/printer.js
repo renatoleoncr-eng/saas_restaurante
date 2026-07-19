@@ -658,7 +658,11 @@ async function triggerInvoicePrint(invoice, account) {
     const tipoDocLabel = invoice.clienteDocumento && invoice.clienteDocumento.length === 11 ? 'RUC' : 'DNI';
     builder.line(`SENOR(ES): ${invoice.clienteNombre || 'CLIENTES VARIOS'}`);
     if (invoice.clienteDocumento) builder.line(`${tipoDocLabel}: ${invoice.clienteDocumento}`);
-    if (invoice.clienteDireccion) builder.line(`Direccion: ${invoice.clienteDireccion}`);
+    if (invoice.clienteDireccion && invoice.tipo === 'factura') builder.line(`Direccion: ${invoice.clienteDireccion}`);
+    if (invoice.observaciones) {
+        builder.line('');
+        builder.line(`OBS: ${invoice.observaciones}`);
+    }
     builder.line("-".repeat(42));
 
     // ─── ITEMS (con columnas: Cant | Descripcion | P.Unit | Total) ─────────────
