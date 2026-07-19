@@ -683,19 +683,27 @@ async function triggerInvoicePrint(invoice, account) {
     itemsList.forEach(it => {
         const qty       = parseInt(it.qty || it.quantity || 1);
         const lineTotal = Number(it.amount || 0);
-        const unitPrice = qty > 0 ? (lineTotal / qty) : lineTotal;
         const desc      = String(it.description || it.name || '');
 
-        // Print first line
-        const row = padR(String(qty), cantW) + ' ' + padR(desc, descW) + ' ' + padL(unitPrice.toFixed(2), unitW) + ' ' + padL(lineTotal.toFixed(2), totW);
-        builder.line(row);
+        if (lineTotal < 0) {
+            // Discount line: print as full-width "DESCUENTO    -S/ XX.XX" without qty/unit columns
+            const discStr = `-S/ ${Math.abs(lineTotal).toFixed(2)}`;
+            const descTrunc = padR(desc, 42 - discStr.length - 1);
+            builder.line(descTrunc + ' ' + discStr);
+        } else {
+            const unitPrice = qty > 0 ? (lineTotal / qty) : lineTotal;
 
-        // Print overflow lines for long descriptions
-        if (desc.length > descW) {
-            let rest = desc.substring(descW);
-            while (rest.length > 0) {
-                builder.line(' '.repeat(cantW + 1) + rest.substring(0, descW));
-                rest = rest.substring(descW);
+            // Print first line
+            const row = padR(String(qty), cantW) + ' ' + padR(desc, descW) + ' ' + padL(unitPrice.toFixed(2), unitW) + ' ' + padL(lineTotal.toFixed(2), totW);
+            builder.line(row);
+
+            // Print overflow lines for long descriptions
+            if (desc.length > descW) {
+                let rest = desc.substring(descW);
+                while (rest.length > 0) {
+                    builder.line(' '.repeat(cantW + 1) + rest.substring(0, descW));
+                    rest = rest.substring(descW);
+                }
             }
         }
     });

@@ -194,12 +194,17 @@ router.post('/billing/invoices', async (req, res) => {
             
             if (account) {
                 let totalPossible = 0;
-                if (account.Orders) {
-                    for (const ord of account.Orders) {
-                        const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) 
-                            ? parseFloat(ord.priceAtOrder) 
-                            : (ord.Product?.price || 0);
-                        totalPossible += price * (ord.quantity || 1);
+                if (account.accountType === 'staff') {
+                    // For staff accounts, the real payable amount is account.total (already discounted)
+                    totalPossible = parseFloat(account.total || 0);
+                } else {
+                    if (account.Orders) {
+                        for (const ord of account.Orders) {
+                            const price = ord.priceAtOrder && !isNaN(ord.priceAtOrder) 
+                                ? parseFloat(ord.priceAtOrder) 
+                                : (ord.Product?.price || 0);
+                            totalPossible += price * (ord.quantity || 1);
+                        }
                     }
                 }
                 
@@ -213,6 +218,7 @@ router.post('/billing/invoices', async (req, res) => {
                 const remainingBalance = Math.max(0, totalPossible - totalAlreadyBilled);
                 
                 // Allow a small tolerance for floating point issues (e.g. 0.05)
+                // finalTotalPay includes the negative discount line, so it already reflects net amount
                 if (finalTotalPay > remainingBalance + 0.05) {
                     return res.status(400).json({ 
                         error: `El saldo pendiente de la cuenta es S/ ${remainingBalance.toFixed(2)}, no puede emitir un comprobante por S/ ${finalTotalPay.toFixed(2)}. Posible comprobante duplicado.` 

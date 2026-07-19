@@ -191,6 +191,17 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         return items;
     }, [account]);
 
+    // For staff accounts: compute the total discount to distribute proportionally across invoices
+    const staffDiscountInfo = useMemo(() => {
+        if (account.accountType !== 'staff' || account.status !== 'closed') return null;
+        const originalTotal = availableItems.reduce((sum, it) => sum + it.amount, 0);
+        const staffTotal = parseFloat(account.total || 0);
+        const totalDiscount = parseFloat((originalTotal - staffTotal).toFixed(2));
+        if (totalDiscount <= 0.01) return null;
+        return { originalTotal, totalDiscount };
+    }, [account, availableItems]);
+
+
     // Calculate totals for summary (excluding cancelled/anulado)
     const activeHistory = useMemo(() => history.filter(d => d.status !== 'anulado'), [history]);
 
@@ -217,7 +228,10 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             try {
                 const items = typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []);
                 items.forEach(i => {
-                    totalQtyBilled += parseInt(i.quantity || i.qty || 1);
+                    // Only count positive-amount items (skip discount lines)
+                    if (parseFloat(i.amount || 0) >= 0) {
+                        totalQtyBilled += parseInt(i.quantity || i.qty || 1);
+                    }
                 });
             } catch (e) {}
         });
@@ -226,6 +240,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         // This is more robust than matching by description string, which can change
         return availableItems.slice(totalQtyBilled);
     }, [availableItems, activeHistory]);
+
     
     // Unified Sync & Auto-Select Hook
     useEffect(() => {
@@ -262,10 +277,23 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     }, [pendingItems]);
 
     // Calculate totals
-    const totalSelected = selectedItems.reduce((acc, item) => acc + item.amount, 0);
+    // selectedItems only contains regular consumption items (no discount item)
+    const totalSelectedRaw = selectedItems.reduce((acc, item) => acc + item.amount, 0);
+    // For staff accounts: compute proportional discount on selected items
+    const proportionalDiscount = useMemo(() => {
+        if (!staffDiscountInfo || totalSelectedRaw <= 0) return 0;
+        const ratio = totalSelectedRaw / staffDiscountInfo.originalTotal;
+        return parseFloat((staffDiscountInfo.totalDiscount * ratio).toFixed(2));
+    }, [staffDiscountInfo, totalSelectedRaw]);
+    const totalSelected = parseFloat((totalSelectedRaw - proportionalDiscount).toFixed(2));
+
     const totalAlreadyBilled = useMemo(() => activeHistory.reduce((acc, doc) => acc + parseFloat(doc.total || 0), 0), [activeHistory]);
-    const totalPossible = availableItems.reduce((acc, item) => acc + item.amount, 0);
+    // For staff accounts, totalPossible is the real amount after discount; for standard accounts it's the sum of items
+    const totalPossible = staffDiscountInfo
+        ? parseFloat(account.total || 0)
+        : availableItems.reduce((acc, item) => acc + item.amount, 0);
     const remainingBalance = Math.max(0, totalPossible - totalAlreadyBilled);
+
 
     // Auto-select history if there is no pending balance
     useEffect(() => {
@@ -522,6 +550,15 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                         ${items.map(item => {
                             const qty = item.qty || item.quantity || 1;
                             const total = parseFloat(item.amount || item.subtotal || 0);
+                            if (total < 0) {
+                                // Discount row: spans columns, shown in red
+                                return `
+                                    <tr>
+                                        <td colspan="2" style="text-transform: uppercase; font-style: italic;">${item.description}</td>
+                                        <td class="text-right" colspan="2" style="color: #c0392b; font-weight: bold;">-S/ ${Math.abs(total).toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }
                             const pUnit = total / qty;
                             return `
                                 <tr>
@@ -640,14 +677,26 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
         setLoading(true);
         try {
+            // Build base items list from selection
+            const baseItems = selectedItems.map(i => ({
+                description: i.description,
+                amount: i.amount,
+                quantity: i.qty
+            }));
+
+            // For staff accounts: inject proportional discount line automatically
+            if (staffDiscountInfo && proportionalDiscount > 0.01) {
+                baseItems.push({
+                    description: 'DESCUENTO',
+                    amount: -proportionalDiscount,
+                    quantity: 1
+                });
+            }
+
             const payload = {
                 accountId: account.id,
                 userId: user?.id || null,
-                items: selectedItems.map(i => ({
-                    description: i.description,
-                    amount: i.amount,
-                    quantity: i.qty
-                })),
+                items: baseItems,
                 clienteDocumento: docNumber,
                 clienteNombre: customerName,
                 clienteDireccion: customerAddress || '-',
@@ -967,12 +1016,26 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                     <span className="text-[10px] font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
                                 </div>
                             ))}
+                            {/* Staff proportional discount row (informational, auto-applied) */}
+                            {staffDiscountInfo && proportionalDiscount > 0.01 && selectedItems.length > 0 && (
+                                <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
+                                    <span className="text-[10px] font-black text-red-500 italic">DESCUENTO <span className="font-normal">(proporcional)</span></span>
+                                    <span className="text-[10px] font-black text-red-600 shrink-0">-S/ {proportionalDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
                             {selectedItems.length === 0 && (
                                 <div className="py-8 text-center text-slate-200 text-[9px] font-bold uppercase tracking-widest border-2 border-dashed border-slate-50 flex flex-col gap-2 rounded-2xl">
                                     {isMobile ? 'Seleccione ítems arriba' : 'Seleccione ítems a la izquierda'}
                                 </div>
                             )}
                         </div>
+                        {/* Net total for this invoice */}
+                        {selectedItems.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Comprobante</span>
+                                <span className="text-sm font-black text-blue-700">S/ {totalSelected.toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
