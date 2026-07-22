@@ -164,7 +164,9 @@ function formatReference(log) {
         case 'CREATE_ORDER':
         case 'CANCEL_ORDER': {
             const parts = [];
-            if (details.tableId) parts.push(`Res# ${details.tableId}`);
+            const accId = log.entity === 'Account' ? log.entityId : details.accountId;
+            if (accId) parts.push(`Res# ${accId}`);
+            else if (details.tableId) parts.push(`Mesa ID: ${details.tableId}`);
             if (details.items) parts.push(String(details.items));
             return parts.join(' · ') || 'Detalles de pedido';
         }
@@ -222,8 +224,11 @@ function formatReference(log) {
     const excludedKeys = ['userId', 'username', 'id', 'createdAt', 'updatedAt', 'entityId', 'sessionId', 'changes'];
     const parts = [];
     
-    if (details.tableId) {
-        parts.push(`Res# ${details.tableId}`);
+    const accId = log.entity === 'Account' ? log.entityId : details.accountId;
+    if (accId) {
+        parts.push(`Res# ${accId}`);
+    } else if (details.tableId) {
+        parts.push(`Mesa ID: ${details.tableId}`);
     }
 
     Object.entries(details).forEach(([k, v]) => {
