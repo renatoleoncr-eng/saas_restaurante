@@ -8,11 +8,12 @@ import MobileTabMenu from './MobileTabMenu';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
-export default function StockDashboard({ readOnly = false, mode = 'full' }) {
+export default function StockDashboard({ readOnly = false, mode = 'full', viewMode = 'full' }) {
     const { user, refreshTrigger, socket, tenantInfo } = useRestaurant(); // Get socket and tenantInfo
     const isWaiter = user?.role === 'waiter';
     const [activeTab, setActiveTab] = useState(() => {
         if (mode === 'menu_only') return 'menu_options';
+        if (viewMode === 'insumos') return 'ingredients';
         return localStorage.getItem('stock_activeTab') || 'finished';
     });
     const [products, setProducts] = useState([]);
@@ -73,12 +74,12 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
         }
     }, [tenantInfo, hasSeenProductHelp]);
 
-    // Save active tabs to localStorage
+    // Save active tabs to localStorage (only in full viewMode to avoid polluting shared key)
     useEffect(() => {
-        if (mode !== 'menu_only') {
+        if (mode !== 'menu_only' && viewMode === 'full') {
             localStorage.setItem('stock_activeTab', activeTab);
         }
-    }, [activeTab, mode]);
+    }, [activeTab, mode, viewMode]);
 
     useEffect(() => {
         localStorage.setItem('stock_finishedTab', finishedTab);
@@ -156,17 +157,23 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
 
         if (currentTabHasMatches) return;
 
-        // Switch to the first tab that has matches
-        if (hasFinishedMatches) {
-            setActiveTab('finished');
-        } else if (hasPreparedMatches) {
-            setActiveTab('prepared');
-        } else if (hasFreeMatches) {
-            setActiveTab('free');
-        } else if (hasIngredientMatches) {
-            setActiveTab('ingredients');
+        // Switch to the first tab that has matches — but respect viewMode boundaries
+        if (viewMode === 'insumos') {
+            // Only search within ingredients tab
+            return;
+        } else if (viewMode === 'carta') {
+            // Only search within plato tabs (no ingredients)
+            if (hasFinishedMatches) setActiveTab('finished');
+            else if (hasPreparedMatches) setActiveTab('prepared');
+            else if (hasFreeMatches) setActiveTab('free');
+        } else {
+            // Full mode: search all tabs
+            if (hasFinishedMatches) setActiveTab('finished');
+            else if (hasPreparedMatches) setActiveTab('prepared');
+            else if (hasFreeMatches) setActiveTab('free');
+            else if (hasIngredientMatches) setActiveTab('ingredients');
         }
-    }, [searchQuery, products, ingredients, activeTab]);
+    }, [searchQuery, products, ingredients, activeTab, viewMode]);
 
     const loadProducts = async () => {
         try {
@@ -499,10 +506,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                             <div className="md:hidden w-full">
                                 <MobileTabMenu
                                     tabs={[
-                                        { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
-                                        { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
-                                        { id: 'free', label: `Libres (${countFree})`, icon: Zap },
-                                        { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                        ...(viewMode !== 'insumos' ? [
+                                            { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                                            { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
+                                            { id: 'free', label: `Libres (${countFree})`, icon: Zap },
+                                        ] : []),
+                                        ...(viewMode !== 'carta' ? [
+                                            { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                        ] : []),
                                     ]}
                                     activeTab={activeTab}
                                     onTabChange={setActiveTab}
@@ -513,30 +524,36 @@ export default function StockDashboard({ readOnly = false, mode = 'full' }) {
                         {/* DESKTOP TABS */}
                         {mode !== 'menu_only' && (
                             <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
-                                <button
-                                    onClick={() => setActiveTab('finished')}
-                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    Terminados ({countFinished})
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('prepared')}
-                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    Preparados ({countPrepared})
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('free')}
-                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    Libres ({countFree})
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('ingredients')}
-                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    Insumos ({countIngredients})
-                                </button>
+                                {viewMode !== 'insumos' && (
+                                    <>
+                                        <button
+                                            onClick={() => setActiveTab('finished')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Terminados ({countFinished})
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('prepared')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Preparados ({countPrepared})
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('free')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Libres ({countFree})
+                                        </button>
+                                    </>
+                                )}
+                                {viewMode !== 'carta' && (
+                                    <button
+                                        onClick={() => setActiveTab('ingredients')}
+                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    >
+                                        Insumos ({countIngredients})
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

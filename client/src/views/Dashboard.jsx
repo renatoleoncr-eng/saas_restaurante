@@ -22,7 +22,10 @@ export default function Dashboard() {
     const { user, logout, config, tenantInfo, isModuleEnabled } = useRestaurant();
     const navigate = useNavigate();
     const [currentView, setCurrentView] = useState(() => {
-        return localStorage.getItem('lastView') || 'main';
+        const saved = localStorage.getItem('lastView') || 'main';
+        // Migrate old 'stock' view to 'carta'
+        if (saved === 'stock') return 'carta';
+        return saved;
     });
 
     useEffect(() => {
@@ -34,7 +37,7 @@ export default function Dashboard() {
         const restrictedViews = {
             waiter: ['drink_promos', 'audit'],
             cashier: ['drink_promos', 'audit'], 
-            kitchen: ['stock', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit']
+            kitchen: ['carta', 'insumos', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit']
         };
 
         // Module-gated views: redirect if module is disabled
@@ -133,8 +136,11 @@ export default function Dashboard() {
     };
 
     const renderContent = () => {
-        if (currentView === 'stock') {
-            return <StockDashboard readOnly={user.role !== 'admin'} user={user} />;
+        if (currentView === 'carta') {
+            return <StockDashboard readOnly={user.role !== 'admin'} user={user} viewMode="carta" />;
+        }
+        if (currentView === 'insumos') {
+            return <StockDashboard readOnly={user.role !== 'admin'} user={user} viewMode="insumos" />;
         }
         if (currentView === 'menu') {
             return <MenuView />;
@@ -336,12 +342,24 @@ export default function Dashboard() {
                             </button>
                         )}
 
-                        {/* Inventory - Admin, Waiter, Cashier */}
+                        {/* Carta (Terminados, Preparados, Libres) - Admin, Waiter, Cashier */}
                         {['admin', 'waiter', 'cashier'].includes(user.role) && (
                             <button
-                                onClick={() => { setCurrentView('stock'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                onClick={() => { setCurrentView('carta'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Carta"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'carta' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <Utensils size={20} />
+                                {!isCollapsed && <span>Carta</span>}
+                            </button>
+                        )}
+
+                        {/* Inventario (Insumos) - Admin, Waiter, Cashier */}
+                        {['admin', 'waiter', 'cashier'].includes(user.role) && (
+                            <button
+                                onClick={() => { setCurrentView('insumos'); if (window.innerWidth < 768) setIsCollapsed(true); }}
                                 title="Inventario"
-                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'stock' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'insumos' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
                             >
                                 <Package size={20} />
                                 {!isCollapsed && <span>Inventario</span>}
@@ -453,7 +471,8 @@ export default function Dashboard() {
                     <span className="font-bold text-gray-800 capitalize text-sm">
                         {currentView === 'main' ? 'Salón' :
                          currentView === 'menu' ? 'Menú' :
-                         currentView === 'stock' ? 'Inventario' :
+                         currentView === 'carta' ? 'Carta' :
+                         currentView === 'insumos' ? 'Inventario' :
                          currentView === 'reports' ? 'Caja / Reportes' :
                          currentView === 'accounts' ? 'Historial Cuentas' :
                          currentView === 'drink_promos' ? 'Promociones 2x1' :
