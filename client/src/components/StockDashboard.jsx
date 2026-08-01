@@ -14,7 +14,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
     const [activeTab, setActiveTab] = useState(() => {
         if (mode === 'menu_only') return 'menu_options';
         if (viewMode === 'insumos') return 'ingredients';
-        return localStorage.getItem('stock_activeTab') || 'finished';
+        const saved = localStorage.getItem('stock_activeTab') || 'finished';
+        // If we're in carta mode, never start on ingredients tab (guard against stale localStorage)
+        if (viewMode === 'carta' && saved === 'ingredients') return 'finished';
+        return saved;
+
     });
     const [products, setProducts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
