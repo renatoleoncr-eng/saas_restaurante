@@ -749,7 +749,9 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
         return accumulateRequirements(product.linkedProductId, quantity, presentation, ingredientReqs, productReqs, variantReqs, tenantId);
     }
 
-    if (product.Recipes && product.Recipes.length > 0) {
+    // Only process recipes if the product actually requires preparation.
+    // Guards against orphan recipes left from a Preparado→Libre/Terminado type change.
+    if (product.Recipes && product.Recipes.length > 0 && product.requiresPreparation) {
         let targetRecipes = [];
         if (presentation) {
             targetRecipes = product.Recipes.filter(r => r.presentation === presentation);
@@ -822,7 +824,9 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
             return processStockChange(product.linkedProductId, quantity, isDeduction, presentation, transaction, userId, accountId, tenantId);
         }
 
-        if (product.Recipes && product.Recipes.length > 0) {
+        // Only process recipes if the product actually requires preparation.
+        // Guards against orphan recipes left from a Preparado→Libre/Terminado type change.
+        if (product.Recipes && product.Recipes.length > 0 && product.requiresPreparation) {
             console.log(`[Stock] Product ${product.name} has recipes.`);
             let targetRecipes = [];
 

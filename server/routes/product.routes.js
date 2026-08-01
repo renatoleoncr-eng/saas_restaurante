@@ -317,6 +317,10 @@ router.put('/products/:id', async (req, res) => {
             }
         }
 
+        // Recipes are PRESERVED in DB even when product changes to Libre/Terminado.
+        // The guard in operation.routes.js (requiresPreparation check) ensures they are
+        // only processed during sales when the product actually requires preparation.
+        // This way, if the product reverts to Preparado, recipes reactivate automatically.
         if (recipes) {
             await Recipe.destroy({ where: { ProductId: id, TenantId: req.tenant.id }, transaction: t });
             for (const r of recipes) {
