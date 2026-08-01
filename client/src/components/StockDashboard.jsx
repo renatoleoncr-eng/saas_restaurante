@@ -74,6 +74,15 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
         }
     }, [tenantInfo, hasSeenProductHelp]);
 
+    // Sync activeTab when viewMode changes
+    useEffect(() => {
+        if (viewMode === 'insumos') {
+            setActiveTab('ingredients');
+        } else if (viewMode === 'carta' && activeTab === 'ingredients') {
+            setActiveTab('finished');
+        }
+    }, [viewMode]);
+
     // Save active tabs to localStorage (only in full viewMode to avoid polluting shared key)
     useEffect(() => {
         if (mode !== 'menu_only' && viewMode === 'full') {
@@ -500,63 +509,59 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                 <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-3 md:mb-6'} gap-3 md:gap-6`}>
 
                     {/* TABS CONTROLLERS (Order 3 on mobile, Order 1 on desktop) */}
-                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
-                        {/* MOBILE TABS (TOP) */}
-                        {mode !== 'menu_only' && (
-                            <div className="md:hidden w-full">
-                                <MobileTabMenu
-                                    tabs={[
-                                        ...(viewMode !== 'insumos' ? [
+                    {viewMode !== 'insumos' && (
+                        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
+                            {/* MOBILE TABS (TOP) */}
+                            {mode !== 'menu_only' && (
+                                <div className="md:hidden w-full">
+                                    <MobileTabMenu
+                                        tabs={[
                                             { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
                                             { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
                                             { id: 'free', label: `Libres (${countFree})`, icon: Zap },
-                                        ] : []),
-                                        ...(viewMode !== 'carta' ? [
-                                            { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
-                                        ] : []),
-                                    ]}
-                                    activeTab={activeTab}
-                                    onTabChange={setActiveTab}
-                                />
-                            </div>
-                        )}
+                                            ...(viewMode === 'full' ? [
+                                                { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                            ] : []),
+                                        ]}
+                                        activeTab={activeTab}
+                                        onTabChange={setActiveTab}
+                                    />
+                                </div>
+                            )}
 
-                        {/* DESKTOP TABS */}
-                        {mode !== 'menu_only' && (
-                            <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
-                                {viewMode !== 'insumos' && (
-                                    <>
-                                        <button
-                                            onClick={() => setActiveTab('finished')}
-                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                        >
-                                            Terminados ({countFinished})
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('prepared')}
-                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                        >
-                                            Preparados ({countPrepared})
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('free')}
-                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                        >
-                                            Libres ({countFree})
-                                        </button>
-                                    </>
-                                )}
-                                {viewMode !== 'carta' && (
+                            {/* DESKTOP TABS */}
+                            {mode !== 'menu_only' && (
+                                <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
                                     <button
-                                        onClick={() => setActiveTab('ingredients')}
-                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        onClick={() => setActiveTab('finished')}
+                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                     >
-                                        Insumos ({countIngredients})
+                                        Terminados ({countFinished})
                                     </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                    <button
+                                        onClick={() => setActiveTab('prepared')}
+                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    >
+                                        Preparados ({countPrepared})
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('free')}
+                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    >
+                                        Libres ({countFree})
+                                    </button>
+                                    {viewMode === 'full' && (
+                                        <button
+                                            onClick={() => setActiveTab('ingredients')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Insumos ({countIngredients})
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* SEARCH AND ACTION BAR (Order 1 & 2 on mobile, Order 2 on desktop) */}
                     <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 items-center w-full md:w-auto order-1 md:order-2">
@@ -665,7 +670,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
             )}
 
             {/* CONTENT */}
-            {activeTab === 'ingredients' ? (
+            {(viewMode === 'insumos' || activeTab === 'ingredients') ? (
                 <IngredientManager readOnly={readOnly} user={user} searchQuery={searchQuery} />
             ) : (
                 <>
@@ -1629,69 +1634,81 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                         /* STANDARD TABLE FOR OTHER ABS */
                         <>
                             {activeTab === 'finished' && (
-                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
-                                    <button
-                                        onClick={() => setFinishedTab(finishedTab === 'stock' ? 'movements' : 'stock')}
-                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    >
-                                        {finishedTab === 'stock' ? (
-                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
-                                        ) : (
-                                            <><Package size={16} /> <span className="truncate">Productos</span></>
-                                        )}
-                                    </button>
-                                    {!readOnly && (
+                                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 w-full">
+                                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto">
+                                        <button
+                                            onClick={() => setFinishedTab('stock')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${finishedTab === 'stock' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <Package size={16} /> <span>Productos</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setFinishedTab('movements')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${finishedTab === 'movements' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <History size={16} /> <span>Movimientos</span>
+                                        </button>
+                                    </div>
+                                    {!readOnly && finishedTab === 'stock' && (
                                         <button
                                             onClick={() => handleCreate()}
-                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
                                         >
-                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                            <Plus size={16} /> <span>Nuevo Producto</span>
                                         </button>
                                     )}
                                 </div>
                             )}
 
                             {activeTab === 'prepared' && (
-                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
-                                    <button
-                                        onClick={() => setPreparedTab(preparedTab === 'stock' ? 'movements' : 'stock')}
-                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    >
-                                        {preparedTab === 'stock' ? (
-                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
-                                        ) : (
-                                            <><Package size={16} /> <span className="truncate">Productos</span></>
-                                        )}
-                                    </button>
-                                    {!readOnly && (
+                                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 w-full">
+                                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto">
+                                        <button
+                                            onClick={() => setPreparedTab('stock')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${preparedTab === 'stock' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <Package size={16} /> <span>Productos</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setPreparedTab('movements')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${preparedTab === 'movements' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <History size={16} /> <span>Movimientos</span>
+                                        </button>
+                                    </div>
+                                    {!readOnly && preparedTab === 'stock' && (
                                         <button
                                             onClick={() => handleCreate()}
-                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
                                         >
-                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                            <Plus size={16} /> <span>Nuevo Producto</span>
                                         </button>
                                     )}
                                 </div>
                             )}
 
                             {activeTab === 'free' && (
-                                <div className="grid grid-cols-2 md:flex gap-2 mb-4 w-full md:w-auto">
-                                    <button
-                                        onClick={() => setFreeTab(freeTab === 'stock' ? 'movements' : 'stock')}
-                                        className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    >
-                                        {freeTab === 'stock' ? (
-                                            <><History size={16} /> <span className="truncate">Movimientos</span></>
-                                        ) : (
-                                            <><Package size={16} /> <span className="truncate">Productos</span></>
-                                        )}
-                                    </button>
-                                    {!readOnly && (
+                                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 w-full">
+                                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto">
+                                        <button
+                                            onClick={() => setFreeTab('stock')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${freeTab === 'stock' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <Package size={16} /> <span>Productos</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setFreeTab('movements')}
+                                            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${freeTab === 'movements' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <History size={16} /> <span>Movimientos</span>
+                                        </button>
+                                    </div>
+                                    {!readOnly && freeTab === 'stock' && (
                                         <button
                                             onClick={() => handleCreate()}
-                                            className="px-4 py-3 md:py-2 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
+                                            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow text-white bg-blue-600 hover:bg-blue-700"
                                         >
-                                            <Plus size={16} /> <span className="truncate">Producto</span>
+                                            <Plus size={16} /> <span>Nuevo Producto</span>
                                         </button>
                                     )}
                                 </div>

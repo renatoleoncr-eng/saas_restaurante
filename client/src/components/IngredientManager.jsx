@@ -130,20 +130,20 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
         <div className="bg-white rounded-lg shadow p-2 md:p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-6 gap-4">
                 {/* Tabs - Full width on mobile */}
-                <div className="flex w-full md:w-auto bg-gray-100 p-1 rounded-lg">
+                <div className="flex w-full md:w-auto bg-gray-100 p-1 rounded-lg border border-gray-200">
                     {!isWaiter && (
                         <button
                             onClick={() => setActiveTab('stock')}
-                            className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-bold transition-all text-center ${activeTab === 'stock' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'stock' ? 'bg-white shadow-sm text-amber-800' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            Stock Actual
+                            <Package size={16} /> <span>Insumos</span>
                         </button>
                     )}
                     <button
                         onClick={() => setActiveTab('movements')}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-bold transition-all text-center ${activeTab === 'movements' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'movements' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     >
-                        Movimientos
+                        <History size={16} /> <span>Movimientos</span>
                     </button>
                 </div>
             </div>
