@@ -108,16 +108,41 @@ printerAgentRouter.post('/config/printers/ack', (req, res) => {
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : null;
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Peticiones sin origin (cURL, mobile apps, agente de impresión o mismo servidor)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins) {
+            if (allowedOrigins.indexOf(origin) !== -1) {
+                return callback(null, true);
+            }
+        } else {
+            // Por defecto: permitir localhost y subdominios de maksuites.com.pe
+            if (
+                /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+                /^https?:\/\/([a-z0-9-]+\.)?maksuites\.com\.pe$/.test(origin)
+            ) {
+                return callback(null, true);
+            }
+        }
+        callback(new Error('No permitido por la política CORS'));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+};
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*", // Allow all for dev
-        methods: ["GET", "POST", "PUT", "DELETE"]
-    }
+    cors: corsOptions
 });
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 

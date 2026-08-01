@@ -64,3 +64,6 @@ temp/
 local-printer-config.json
 local-printer-config.json.bak
 
+# Legacy debug & ad-hoc scripts
+server/scripts/legacy/
+
