@@ -50,6 +50,61 @@ const rouletteRoutes = require('./routes/roulette.routes');
 const tenantRoutes = require('./routes/tenant.routes');
 const superadminRoutes = require('./routes/superadmin.routes');
 
+// Router para rutas del agente de impresion (sin auth de usuario — proceso de sistema)
+const express_inner = require('express');
+const printerAgentRouter = express_inner.Router();
+const { getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs } = require('./utils/printer');
+const LATEST_AGENT_VERSION_INDEX = (() => {
+    try {
+        const fs = require('fs');
+        const content = fs.readFileSync(require('path').join(__dirname, '../print-agent.js'), 'utf8');
+        const match = content.match(/AGENT_VERSION\s*=\s*["']([^"']+)["']/);
+        return match ? match[1] : '1.0.0';
+    } catch (_) { return '1.0.0'; }
+})();
+
+global.connectedAgents = global.connectedAgents || {};
+
+printerAgentRouter.post('/config/printers/agent-ping', (req, res) => {
+    try {
+        const { agent, agentId, version, printers } = req.body;
+        if (agent === 'RestauranteAgentePrint') {
+            const id = agentId || 'Agente-Desconocido';
+            global.connectedAgents[id] = {
+                lastSeen: Date.now(),
+                version: version || '0.0.0',
+                printers: Array.isArray(printers) ? printers : []
+            };
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Agente no reconocido.' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+printerAgentRouter.get('/config/printers/pending', (req, res) => {
+    try {
+        const { agentId, printers } = req.query;
+        const printerList = printers ? printers.split(',') : [];
+        const jobs = getPendingJobsForPrinters(printerList, agentId);
+        res.json(jobs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+printerAgentRouter.post('/config/printers/ack', (req, res) => {
+    try {
+        const { jobId } = req.body;
+        ackPrintJob(jobId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
 
@@ -193,13 +248,14 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion 
 
 // =============================================
 // RUTAS DE TENANT PÚBLICAS (tenant requerido, sin auth)
-// Pantalla cliente, menú, layout de mesas
+// Pantalla cliente, menú, layout de mesas, agente de impresión
 // =============================================
 app.use('/api', requireTenant, layoutRoutes);         // layout de mesas — pantalla pública del restaurante
 app.use('/api', requireTenant, menuRoutes);           // menú digital — puede ser pública
 app.use('/api/qrs', requireTenant, qrRoutes);         // pantalla cliente QR — pública
 app.use('/api/promotions', requireTenant, promotionRoutes); // promociones para pantalla cliente
 app.use('/api/roulette', requireTenant, rouletteRoutes);    // ruleta para pantalla cliente
+app.use('/api', requireTenant, printerAgentRouter);   // agente de impresión local (proceso sistema, sin auth de usuario)
 
 // =============================================
 // RUTAS PROTEGIDAS (tenant + auth JWT requeridos)
