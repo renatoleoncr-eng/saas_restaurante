@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const { logAction } = require('../utils/audit');
 
@@ -110,22 +111,34 @@ router.put('/users/:id/reactivate', async (req, res) => {
 // CHANGE PASSWORD & PIN (Admin or Self) — scoped to tenant
 router.put('/users/:id/password', async (req, res) => {
     try {
-        const { currentPassword, newPassword, newPin, requesterRole, requesterId } = req.body;
+        const { currentPassword, newPassword, newPin } = req.body;
         const targetUserId = parseInt(req.params.id);
         const tenantId = req.tenant.id;
 
         const user = await User.findOne({ where: { id: targetUserId, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        const isAdmin = requesterRole === 'admin';
-        const isSelf = requesterId === targetUserId;
+        // El rol y el ID del solicitante vienen del JWT verificado, no del body del cliente
+        const isAdmin = req.user?.role === 'admin';
+        const isSelf = req.user?.id === targetUserId;
 
         if (!isAdmin && !isSelf) {
             return res.status(403).json({ error: 'No autorizado' });
         }
 
+        // Si es el propio usuario (no admin), verificar contraseña actual con bcrypt
         if (isSelf && !isAdmin) {
-            if (user.password !== currentPassword) {
+            if (!currentPassword) {
+                return res.status(400).json({ error: 'Contraseña actual requerida' });
+            }
+            let passwordMatch = false;
+            if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+                passwordMatch = await bcrypt.compare(currentPassword, user.password);
+            } else {
+                // Legacy plain-text (migración pendiente)
+                passwordMatch = (user.password === currentPassword);
+            }
+            if (!passwordMatch) {
                 return res.status(400).json({ error: 'Contraseña actual incorrecta' });
             }
         }
@@ -137,7 +150,8 @@ router.put('/users/:id/password', async (req, res) => {
         }
 
         if (newPassword) {
-            user.password = newPassword;
+            // Hashear nueva contraseña con bcrypt
+            user.password = await bcrypt.hash(newPassword, 10);
         }
 
         if (newPin !== undefined) {

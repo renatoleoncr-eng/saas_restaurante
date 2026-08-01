@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_restaurante_prod';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Auth middleware — verifies JWT token from Authorization header.
@@ -93,8 +93,8 @@ function generateToken(user, tenantId) {
             role: user.role,
             displayName: user.displayName,
             tenantId: tenantId,
-            requirePinPrompt: user.requirePinPrompt,
-            pin: user.pin
+            requirePinPrompt: user.requirePinPrompt
+            // PIN no viaja en el JWT — se devuelve solo en el /login y se guarda en el estado del cliente
         },
         JWT_SECRET,
         { expiresIn: '24h' }

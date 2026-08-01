@@ -8,6 +8,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
+// =============================================
+// FAIL-FAST: Variables de entorno requeridas
+// =============================================
+const requiredEnv = ['JWT_SECRET', 'SAAS_API_KEY'];
+const missingEnv = requiredEnv.filter(k => !process.env[k]);
+if (missingEnv.length > 0) {
+    console.error(`\u274C FATAL: Variables de entorno requeridas no definidas: ${missingEnv.join(', ')}`);
+    console.error('Asegúrate de que el archivo .env esté configurado en el servidor.');
+    process.exit(1);
+}
+
 const syncDB = require('./sync');
 const { Tenant } = require('./models');
 
@@ -172,7 +183,7 @@ appEmitter.on('check_active_qr', (tenantId) => {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // =============================================
-// PUBLIC ROUTES (No tenant or auth required)
+// RUTAS PÚBLICAS (No requieren tenant ni auth)
 // =============================================
 app.use('/api', authRoutes);                          // POST /api/login, POST /api/auth/refresh, GET /api/auth/me
 app.use('/api/tenants', tenantRoutes);                // POST /api/tenants/register, GET /api/tenants/check-slug/:slug
@@ -181,29 +192,32 @@ app.use('/api/superadmin', superadminRoutes);         // POST /api/superadmin/lo
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante SaaS' }));
 
 // =============================================
-// TENANT-SCOPED ROUTES (require valid tenant)
+// RUTAS DE TENANT PÚBLICAS (tenant requerido, sin auth)
+// Pantalla cliente, menú, layout de mesas
 // =============================================
-// All routes below require a valid tenant context (subdomain).
-// Auth is handled per-route or could be added as a second middleware layer.
-app.use('/api', requireTenant, layoutRoutes);
-app.use('/api', requireTenant, configRoutes);
-app.use('/api', requireTenant, billingRoutes);
-app.use('/api', requireTenant, operationRoutes);
-app.use('/api', requireTenant, productRoutes);
-app.use('/api', requireTenant, attendanceRoutes);
-app.use('/api', requireTenant, userRoutes);
-app.use('/api/reservations', requireTenant, reservationRoutes);
-app.use('/api/stock', requireTenant, recipeRoutes);
-app.use('/api', requireTenant, auditRoutes);
-app.use('/api', requireTenant, menuRoutes);
-app.use('/api', requireTenant, expenseRoutes);
-app.use('/api', requireTenant, accountRoutes);
-app.use('/api', requireTenant, drinkPromotionRoutes);
-app.use('/api', requireTenant, sessionRoutes);
-app.use('/api', requireTenant, revenueRoutes);
-app.use('/api/qrs', requireTenant, qrRoutes);
-app.use('/api/promotions', requireTenant, promotionRoutes);
-app.use('/api/roulette', requireTenant, rouletteRoutes);
+app.use('/api', requireTenant, layoutRoutes);         // layout de mesas — pantalla pública del restaurante
+app.use('/api', requireTenant, menuRoutes);           // menú digital — puede ser pública
+app.use('/api/qrs', requireTenant, qrRoutes);         // pantalla cliente QR — pública
+app.use('/api/promotions', requireTenant, promotionRoutes); // promociones para pantalla cliente
+app.use('/api/roulette', requireTenant, rouletteRoutes);    // ruleta para pantalla cliente
+
+// =============================================
+// RUTAS PROTEGIDAS (tenant + auth JWT requeridos)
+// =============================================
+app.use('/api', requireTenant, authMiddleware, operationRoutes);       // cuentas, órdenes, stock
+app.use('/api', requireTenant, authMiddleware, configRoutes);          // configuración del restaurante
+app.use('/api', requireTenant, authMiddleware, billingRoutes);         // facturación SUNAT
+app.use('/api', requireTenant, authMiddleware, productRoutes);         // productos e ingredientes
+app.use('/api', requireTenant, authMiddleware, attendanceRoutes);      // asistencia
+app.use('/api', requireTenant, authMiddleware, userRoutes);            // gestión de usuarios
+app.use('/api/reservations', requireTenant, authMiddleware, reservationRoutes); // reservas
+app.use('/api/stock', requireTenant, authMiddleware, recipeRoutes);   // recetas y stock
+app.use('/api', requireTenant, authMiddleware, auditRoutes);          // auditoría
+app.use('/api', requireTenant, authMiddleware, expenseRoutes);        // gastos
+app.use('/api', requireTenant, authMiddleware, accountRoutes);        // cuentas
+app.use('/api', requireTenant, authMiddleware, drinkPromotionRoutes); // promociones de bebidas
+app.use('/api', requireTenant, authMiddleware, sessionRoutes);        // sesiones de caja
+app.use('/api', requireTenant, authMiddleware, revenueRoutes);        // ingresos (también tiene apiKeyAuth)
 
 // Reservation Auto-Release Logic (Run every minute)
 setInterval(async () => {

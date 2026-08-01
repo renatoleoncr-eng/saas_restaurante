@@ -6,8 +6,8 @@
 
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_restaurante_prod';
-const SAAS_API_KEY = process.env.SAAS_API_KEY || 'mak_secure_auth_k3y_928374';
+const JWT_SECRET = process.env.JWT_SECRET;
+const SAAS_API_KEY = process.env.SAAS_API_KEY;
 
 /**
  * Generate a superadmin JWT (no tenantId — platform-level access).

@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 // Middleware: validar x-api-key (mismo key que usa el Sunat Hub)
 const apiKeyAuth = (req, res, next) => {
     const key = req.headers['x-api-key'];
-    const expected = process.env.SAAS_API_KEY || 'mak_secure_auth_k3y_928374';
+    const expected = process.env.SAAS_API_KEY;
     if (!key || key !== expected) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
