@@ -330,40 +330,53 @@ app.use('/api/superadmin', superadminRoutes);         // POST /api/superadmin/lo
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante SaaS' }));
 
 // =============================================
-// DESCARGAS PÚBLICAS DEL AGENTE (sin auth, sin tenant — cualquier persona puede descargar)
+// DESCARGAS PÚBLICAS DEL AGENTE (sin auth, sin tenant — compatible con nuevas y viejas URLs del instalador)
 // =============================================
-app.get('/api/agent/setup-exe', (req, res) => {
+const sendAgentSetupExe = (req, res) => {
     const fs = require('fs');
     const filePath = require('path').resolve(__dirname, 'bin/MakalaAgentSetup.exe');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Instalador no encontrado.' });
     res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
     res.setHeader('Content-Disposition', 'attachment; filename="MakalaAgentSetup.exe"');
     fs.createReadStream(filePath).pipe(res);
-});
-app.get('/api/agent/agent-js', (req, res) => {
+};
+const sendAgentJs = (req, res) => {
     const fs = require('fs');
     const filePath = require('path').resolve(__dirname, '../print-agent.js');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'print-agent.js no encontrado.' });
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Content-Disposition', 'attachment; filename="print-agent.js"');
     fs.createReadStream(filePath).pipe(res);
-});
-app.get('/api/agent/print-raw-ps1', (req, res) => {
+};
+const sendPrintRawPs1 = (req, res) => {
     const fs = require('fs');
     const filePath = require('path').resolve(__dirname, 'utils/print_raw.ps1');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'print_raw.ps1 no encontrado.' });
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment; filename="print_raw.ps1"');
     fs.createReadStream(filePath).pipe(res);
-});
-app.get('/api/agent/installer-ps1', (req, res) => {
+};
+const sendInstallerPs1 = (req, res) => {
     const fs = require('fs');
     const filePath = require('path').resolve(__dirname, '../instalar_servicio_impresion.ps1');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Script no encontrado.' });
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment; filename="instalar_servicio_impresion.ps1"');
     fs.createReadStream(filePath).pipe(res);
-});
+};
+
+// URLs Nuevas (/api/agent/*)
+app.get('/api/agent/setup-exe', sendAgentSetupExe);
+app.get('/api/agent/agent-js', sendAgentJs);
+app.get('/api/agent/print-raw-ps1', sendPrintRawPs1);
+app.get('/api/agent/installer-ps1', sendInstallerPs1);
+
+// URLs Antiguas (/api/config/printers/*) compatibles con el ejecutable MakalaAgentSetup.exe existente
+app.get('/api/config/printers/agent-setup-exe', sendAgentSetupExe);
+app.get('/api/config/printers/agent-js', sendAgentJs);
+app.get('/api/config/printers/print-raw-ps1', sendPrintRawPs1);
+app.get('/api/config/printers/agent-download', sendInstallerPs1);
+
 
 // =============================================
 // RUTAS DE TENANT PÚBLICAS (tenant requerido, sin auth)
