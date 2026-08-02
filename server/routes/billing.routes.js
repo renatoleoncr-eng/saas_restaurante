@@ -362,8 +362,8 @@ router.post('/billing/invoices', async (req, res) => {
                 // Apply SSL fix / subdomain replacement to the PDF URL in the response
                 let ticketUrl = sunatResponse.url_ticket || sunatResponse.url || sunatResponse.pdf_url || (sunatResponse.links && sunatResponse.links.pdf);
                 if (ticketUrl && typeof ticketUrl === 'string') {
-                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('maksuites') || ticketUrl.includes('bluzcx')) {
-                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('bluzcx') || ticketUrl.startsWith('http://')) {
+                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http(s)?:\/\/[\w.-]+/g, 'https://sunat.maksuites.com.pe');
                         
                         // Update inside sunatResponse
                         if (sunatResponse.url_ticket) sunatResponse.url_ticket = ticketUrl;
@@ -521,8 +521,8 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
 
                 let ticketUrl = sunatResponse.url_ticket || sunatResponse.url || sunatResponse.pdf_url;
                 if (ticketUrl && typeof ticketUrl === 'string') {
-                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('maksuites') || ticketUrl.includes('bluzcx')) {
-                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+                    if (ticketUrl.includes('72.61.57.199') || ticketUrl.includes('bluzcx') || ticketUrl.startsWith('http://')) {
+                        ticketUrl = ticketUrl.replace(/:\d+/g, '').replace(/http(s)?:\/\/[\w.-]+/g, 'https://sunat.maksuites.com.pe');
                     }
                 }
 
