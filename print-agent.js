@@ -99,7 +99,16 @@ function poll() {
             currentPollInterval = POLL_INTERVAL_OK;
 
             try {
-                const jobs = JSON.parse(data);
+                const parsed = JSON.parse(data);
+
+                // Señal de reinicio remoto: el servidor pide que el agente se reinicie
+                if (parsed && parsed.restart === true) {
+                    log('[INFO] Servidor solicito reinicio del agente. Saliendo para que el Task Scheduler reinicie...');
+                    setTimeout(() => process.exit(0), 500);
+                    return;
+                }
+
+                const jobs = Array.isArray(parsed) ? parsed : (parsed.jobs || []);
                 if (jobs && jobs.length > 0) {
                     log(`[INFO] Recibidos ${jobs.length} trabajo(s) de impresion.`);
                     processJobs(jobs);

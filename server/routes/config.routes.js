@@ -299,6 +299,19 @@ router.post('/config/printers/agent-ping', (req, res) => {
     }
 });
 
+// POST solicitar reinicio de un agente especifico — la UI llama esto, el agente lo recibe en el proximo /pending
+router.post('/config/printers/agents/:agentId/restart', (req, res) => {
+    try {
+        const { agentId } = req.params;
+        if (!agentId) return res.status(400).json({ error: 'agentId requerido.' });
+        global.agentRestartRequested = global.agentRestartRequested || new Set();
+        global.agentRestartRequested.add(agentId);
+        res.json({ ok: true, message: `Reinicio solicitado para ${agentId}. Se aplicara en el proximo ciclo del agente.` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET status for frontend dashboard
 router.get('/config/printers/agent-status', (req, res) => {
     try {

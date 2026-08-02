@@ -65,6 +65,8 @@ const LATEST_AGENT_VERSION_INDEX = (() => {
 })();
 
 global.connectedAgents = global.connectedAgents || {};
+// Set de agentIds que deben reiniciarse en el proximo poll
+global.agentRestartRequested = global.agentRestartRequested || new Set();
 
 printerAgentRouter.post('/config/printers/agent-ping', (req, res) => {
     try {
@@ -99,6 +101,12 @@ printerAgentRouter.get('/config/printers/pending', async (req, res) => {
             return getPendingJobs(agentId);
         };
 
+        // Verificar si este agente tiene solicitud de reinicio pendiente
+        if (agentId && global.agentRestartRequested.has(agentId)) {
+            global.agentRestartRequested.delete(agentId);
+            return res.json({ restart: true, jobs: [] });
+        }
+
         // Intento inmediato en DB
         let jobs = await fetchJobs();
         if (jobs && jobs.length > 0) {
@@ -119,7 +127,14 @@ printerAgentRouter.get('/config/printers/pending', async (req, res) => {
 
         const timeoutId = setTimeout(() => {
             printEvent.removeListener('new_job', onNewJob);
-            if (!res.headersSent) res.json([]);
+            if (!res.headersSent) {
+                // Verificar reinicio al expirar el long-poll tambien
+                if (agentId && global.agentRestartRequested.has(agentId)) {
+                    global.agentRestartRequested.delete(agentId);
+                    return res.json({ restart: true, jobs: [] });
+                }
+                res.json([]);
+            }
         }, 8000);
 
         printEvent.on('new_job', onNewJob);
@@ -146,41 +161,6 @@ printerAgentRouter.post('/config/printers/jobs/:id/ack', async (req, res) => {
     }
 });
 
-// GET descargar instalador del agente (.exe) — ruta pública: el navegador no envía JWT en links de descarga
-printerAgentRouter.get('/config/printers/agent-setup-exe', (req, res) => {
-    const fs = require('fs');
-    const filePath = require('path').resolve(__dirname, 'bin/MakalaAgentSetup.exe');
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Instalador no encontrado en el servidor.' });
-    }
-    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
-    res.setHeader('Content-Disposition', 'attachment; filename="MakalaAgentSetup.exe"');
-    fs.createReadStream(filePath).pipe(res);
-});
-
-// GET descargar print-agent.js — ruta pública
-printerAgentRouter.get('/config/printers/agent-js', (req, res) => {
-    const fs = require('fs');
-    const filePath = require('path').resolve(__dirname, '../print-agent.js');
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'print-agent.js no encontrado.' });
-    }
-    res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Content-Disposition', 'attachment; filename="print-agent.js"');
-    fs.createReadStream(filePath).pipe(res);
-});
-
-// GET descargar script PowerShell instalador — ruta pública
-printerAgentRouter.get('/config/printers/agent-download', (req, res) => {
-    const fs = require('fs');
-    const filePath = require('path').resolve(__dirname, '../instalar_servicio_impresion.ps1');
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Script de instalacion no encontrado.' });
-    }
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'attachment; filename="instalar_servicio_impresion.ps1"');
-    fs.createReadStream(filePath).pipe(res);
-});
 
 
 const { Reservation } = require('./models');
@@ -348,6 +328,42 @@ app.use('/api/tenants', tenantRoutes);                // POST /api/tenants/regis
 app.use('/api/superadmin', superadminRoutes);         // POST /api/superadmin/login, tenant management (no requireTenant)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Gestion Restaurante SaaS' }));
+
+// =============================================
+// DESCARGAS PÚBLICAS DEL AGENTE (sin auth, sin tenant — cualquier persona puede descargar)
+// =============================================
+app.get('/api/agent/setup-exe', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, 'bin/MakalaAgentSetup.exe');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Instalador no encontrado.' });
+    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
+    res.setHeader('Content-Disposition', 'attachment; filename="MakalaAgentSetup.exe"');
+    fs.createReadStream(filePath).pipe(res);
+});
+app.get('/api/agent/agent-js', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, '../print-agent.js');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'print-agent.js no encontrado.' });
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Content-Disposition', 'attachment; filename="print-agent.js"');
+    fs.createReadStream(filePath).pipe(res);
+});
+app.get('/api/agent/print-raw-ps1', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, 'utils/print_raw.ps1');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'print_raw.ps1 no encontrado.' });
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="print_raw.ps1"');
+    fs.createReadStream(filePath).pipe(res);
+});
+app.get('/api/agent/installer-ps1', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, '../instalar_servicio_impresion.ps1');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Script no encontrado.' });
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="instalar_servicio_impresion.ps1"');
+    fs.createReadStream(filePath).pipe(res);
+});
 
 // =============================================
 // RUTAS DE TENANT PÚBLICAS (tenant requerido, sin auth)

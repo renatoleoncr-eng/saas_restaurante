@@ -67,6 +67,7 @@ const BillingConfigModal = ({ onClose }) => {
     const [agentStatus, setAgentStatus] = useState('unknown'); // 'active' | 'inactive' | 'unknown'
     const [agentLatestVersion, setAgentLatestVersion] = useState(null);
     const [hasOutdatedAgent, setHasOutdatedAgent] = useState(false);
+    const [restartingAgent, setRestartingAgent] = useState(false);
 
     // Annulment Modal States
     const [annulTarget, setAnnulTarget] = useState(null);
@@ -1604,7 +1605,7 @@ const BillingConfigModal = ({ onClose }) => {
                                             descarga el nuevo instalador y ejecútalo en las PCs donde el agente esté instalado.
                                         </p>
                                         <a
-                                            href="/api/config/printers/agent-setup-exe"
+                                            href="/api/agent/setup-exe"
                                             download="MakalaAgentSetup.exe"
                                             className="inline-flex items-center gap-2 mt-3 bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-700 transition shadow-sm"
                                         >
@@ -1663,7 +1664,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                 ¿La impresora no responde aunque el agente está activo? Reinstala el agente en esta PC para reiniciarlo completamente.
                                             </p>
                                             <a
-                                                href="/api/config/printers/agent-setup-exe"
+                                                href="/api/agent/setup-exe"
                                                 download="MakalaAgentSetup.exe"
                                                 className="inline-flex items-center gap-2 bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-green-800 transition"
                                             >
@@ -1684,7 +1685,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                 </ol>
                                             </div>
                                             <a
-                                                href="/api/config/printers/agent-setup-exe"
+                                                href="/api/agent/setup-exe"
                                                 download="MakalaAgentSetup.exe"
                                                 className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                                             >
