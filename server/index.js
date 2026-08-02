@@ -53,7 +53,8 @@ const superadminRoutes = require('./routes/superadmin.routes');
 // Router para rutas del agente de impresion (sin auth de usuario — proceso de sistema)
 const express_inner = require('express');
 const printerAgentRouter = express_inner.Router();
-const { getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs } = require('./utils/printer');
+const { getPendingJobs, getPendingJobsForPrinters, ackPrintJob, cleanupOldPrintJobs, printEvent } = require('./utils/printer');
+
 const LATEST_AGENT_VERSION_INDEX = (() => {
     try {
         const fs = require('fs');
@@ -84,26 +85,67 @@ printerAgentRouter.post('/config/printers/agent-ping', (req, res) => {
     }
 });
 
-printerAgentRouter.get('/config/printers/pending', (req, res) => {
+// GET pending print jobs — long-polling, DB-backed (identico al original en config.routes.js)
+printerAgentRouter.get('/config/printers/pending', async (req, res) => {
     try {
-        const { agentId, printers } = req.query;
-        const printerList = printers ? printers.split(',') : [];
-        const jobs = getPendingJobsForPrinters(printerList, agentId);
-        res.json(jobs);
+        const { printers, agentId } = req.query;
+        let keys = null;
+        if (printers) {
+            keys = printers.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+        }
+
+        const fetchJobs = async () => {
+            if (keys && keys.length > 0) return getPendingJobsForPrinters(keys, agentId);
+            return getPendingJobs(agentId);
+        };
+
+        // Intento inmediato en DB
+        let jobs = await fetchJobs();
+        if (jobs && jobs.length > 0) {
+            return res.json(jobs);
+        }
+
+        // Long-polling: espera hasta 8s por un nuevo job
+        const onNewJob = async () => {
+            try {
+                jobs = await fetchJobs();
+                if (jobs && jobs.length > 0) {
+                    clearTimeout(timeoutId);
+                    printEvent.removeListener('new_job', onNewJob);
+                    if (!res.headersSent) res.json(jobs);
+                }
+            } catch (_) {}
+        };
+
+        const timeoutId = setTimeout(() => {
+            printEvent.removeListener('new_job', onNewJob);
+            if (!res.headersSent) res.json([]);
+        }, 8000);
+
+        printEvent.on('new_job', onNewJob);
+
+        req.on('close', () => {
+            clearTimeout(timeoutId);
+            printEvent.removeListener('new_job', onNewJob);
+        });
+
+    } catch (err) {
+        if (!res.headersSent) res.status(500).json({ error: err.message });
+    }
+});
+
+// POST ack — el agente llama /api/config/printers/jobs/:id/ack (con el ID en la URL)
+printerAgentRouter.post('/config/printers/jobs/:id/ack', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { success, error: errorMsg } = req.body;
+        await ackPrintJob(parseInt(id, 10), success !== false, errorMsg);
+        res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-printerAgentRouter.post('/config/printers/ack', (req, res) => {
-    try {
-        const { jobId } = req.body;
-        ackPrintJob(jobId);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
