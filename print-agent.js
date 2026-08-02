@@ -33,6 +33,10 @@ const POLL_INTERVAL_ERR   = 1000;  // 1s on first error
 const POLL_INTERVAL_MAX   = 5000;  // max 5s backoff
 let   currentPollInterval = POLL_INTERVAL_OK;
 
+// Watchdog: rastrea el ultimo intento de poll para detectar si el loop se rompio
+let lastPollAttempt = Date.now();
+const WATCHDOG_INTERVAL = 20 * 1000; // si en 20s no hubo ningun poll, lo reinicia
+
 // Log to both console and file (max 500KB, then truncate)
 function log(msg) {
     const line = `[${new Date().toISOString()}] ${msg}`;
@@ -63,6 +67,7 @@ function getEnabledLocalPrinters() {
 }
 
 function poll() {
+    lastPollAttempt = Date.now(); // actualizar timestamp para el watchdog
     const client = serverUrl.startsWith('https') ? https : http;
     
     const enabledPrinters = getEnabledLocalPrinters();
@@ -267,3 +272,13 @@ pingServer();
 
 // Start polling
 poll();
+
+// Watchdog: si poll() no se ha ejecutado en WATCHDOG_INTERVAL ms, lo reinicia automaticamente
+// Esto cubre el caso donde el loop de setTimeout se rompe silenciosamente
+setInterval(() => {
+    const elapsed = Date.now() - lastPollAttempt;
+    if (elapsed > WATCHDOG_INTERVAL) {
+        log(`[WARN] Watchdog: poll() lleva ${Math.round(elapsed / 1000)}s sin ejecutarse. Reiniciando loop...`);
+        poll();
+    }
+}, WATCHDOG_INTERVAL);

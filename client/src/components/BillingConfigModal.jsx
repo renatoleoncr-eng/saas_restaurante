@@ -1650,11 +1650,29 @@ const BillingConfigModal = ({ onClose }) => {
                                             </div>
                                             <p className={`text-xs ${agentStatus === 'active' ? 'text-green-700' : 'text-blue-700'}`}>
                                                 {agentStatus === 'active'
-                                                    ? 'El agente está corriendo y arrancará automáticamente con Windows. No necesitas hacer nada más en esta PC.'
+                                                    ? 'El agente está corriendo y arrancará automáticamente con Windows.'
                                                     : 'Cada PC del restaurante que tenga una impresora conectada debe instalar el agente una sola vez. Funciona en segundo plano.'}
                                             </p>
                                         </div>
                                     </div>
+
+                                    {/* Agente activo pero con problemas: mostrar reinstalador */}
+                                    {agentStatus === 'active' && (
+                                        <div className="ml-10 pt-1 border-t border-green-200">
+                                            <p className="text-xs text-green-700 mb-2">
+                                                ¿La impresora no responde aunque el agente está activo? Reinstala el agente en esta PC para reiniciarlo completamente.
+                                            </p>
+                                            <a
+                                                href="/api/config/printers/agent-setup-exe"
+                                                download="MakalaAgentSetup.exe"
+                                                className="inline-flex items-center gap-2 bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-green-800 transition"
+                                            >
+                                                <Download size={13} />
+                                                Reinstalar Agente en esta PC
+                                            </a>
+                                        </div>
+                                    )}
+
                                     {agentStatus !== 'active' && (
                                         <div className="ml-10 space-y-2">
                                             <div className="text-xs text-blue-800 space-y-1">
