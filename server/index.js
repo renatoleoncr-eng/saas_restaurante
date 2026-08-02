@@ -146,6 +146,42 @@ printerAgentRouter.post('/config/printers/jobs/:id/ack', async (req, res) => {
     }
 });
 
+// GET descargar instalador del agente (.exe) — ruta pública: el navegador no envía JWT en links de descarga
+printerAgentRouter.get('/config/printers/agent-setup-exe', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, 'bin/MakalaAgentSetup.exe');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Instalador no encontrado en el servidor.' });
+    }
+    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
+    res.setHeader('Content-Disposition', 'attachment; filename="MakalaAgentSetup.exe"');
+    fs.createReadStream(filePath).pipe(res);
+});
+
+// GET descargar print-agent.js — ruta pública
+printerAgentRouter.get('/config/printers/agent-js', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, '../print-agent.js');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'print-agent.js no encontrado.' });
+    }
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Content-Disposition', 'attachment; filename="print-agent.js"');
+    fs.createReadStream(filePath).pipe(res);
+});
+
+// GET descargar script PowerShell instalador — ruta pública
+printerAgentRouter.get('/config/printers/agent-download', (req, res) => {
+    const fs = require('fs');
+    const filePath = require('path').resolve(__dirname, '../instalar_servicio_impresion.ps1');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Script de instalacion no encontrado.' });
+    }
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="instalar_servicio_impresion.ps1"');
+    fs.createReadStream(filePath).pipe(res);
+});
+
 
 const { Reservation } = require('./models');
 const { Op } = require('sequelize');
