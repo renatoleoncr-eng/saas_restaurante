@@ -298,6 +298,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
     if (Math.abs(totalDiff) < 0.01) totalDiff = 0;
 
     const produccionTotal = (details?.payments || []).reduce((acc, p) => acc + Number(p.amount || 0), 0);
+    const totalEgresos = (details?.expenses || []).reduce((acc, e) => acc + Number(e.amount || 0), 0);
     const fondoInicial = parseFloat(session?.openingCash || 0);
     const esperadoSinFondo = totalExpected - fondoInicial;
     const contadoSinFondo = totalCounted - fondoInicial;
@@ -429,12 +430,12 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                     <span className="text-sm sm:text-xl font-extrabold text-blue-600 mt-1">S/ {produccionTotal.toFixed(2)}</span>
                                 </div>
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">En Caja (Esperado)</span>
-                                    <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {esperadoSinFondo.toFixed(2)}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Egresos</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-rose-600 mt-1">S/ {totalEgresos.toFixed(2)}</span>
                                 </div>
                                 <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between">
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Total Contado</span>
-                                    <span className="text-sm sm:text-xl font-extrabold text-gray-900 mt-1">S/ {contadoSinFondo.toFixed(2)}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block leading-tight">Esperado</span>
+                                    <span className="text-sm sm:text-xl font-extrabold text-gray-800 mt-1">S/ {esperadoSinFondo.toFixed(2)}</span>
                                 </div>
                                 <div className={`p-3 sm:p-4 rounded-xl border shadow-xs flex flex-col justify-between ${
                                     totalDiff === 0 
