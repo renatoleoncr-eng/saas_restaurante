@@ -922,12 +922,15 @@ Payment.beforeCreate(async (payment, options) => {
 
     if (isQrPayment) {
         if (!payment.qr_id) {
-            try {
-                const { consumeQrLimit } = require('../routes/qr.routes');
-                const qrId = await consumeQrLimit(payment.amount, payment.TenantId, options.transaction);
-                payment.qr_id = qrId;
-            } catch (err) {
-                console.error("[Payment Hook] Error consuming QR limit:", err);
+            throw new Error('Debe seleccionar un QR específico para el pago con Yape/Plin.');
+        } else {
+            const QrAccount = sequelize.models.QrAccount;
+            const qr = await QrAccount.findByPk(payment.qr_id, { transaction: options.transaction });
+            if (qr && !qr.isUnlimited) {
+                const newSum = parseFloat(qr.accumulated_month_sum || 0) + parseFloat(payment.amount);
+                if (newSum > parseFloat(qr.limitAmount)) {
+                    throw new Error(`El QR "${qr.name}" superará su límite (Límite: S/ ${parseFloat(qr.limitAmount).toFixed(2)}, Acumulado con este pago: S/ ${newSum.toFixed(2)}). Por favor, consulte con administración.`);
+                }
             }
         }
     }

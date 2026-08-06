@@ -346,7 +346,7 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
     try {
         const { Account, Table, Payment, CashSession } = getModels();
         const { id } = req.params;
-        const { paymentMethod } = req.body;
+        const { paymentMethod, qr_id } = req.body;
 
         const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         const CashSessionId = activeSession ? activeSession.id : null;
@@ -381,6 +381,7 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
                 amount: remaining,
                 method: paymentMethod || 'efectivo',
                 evidence: account.paymentEvidence,
+                qr_id: qr_id || null,
                 UserId: req.body.userId || null,
                 CashSessionId,
                 TenantId: req.tenant.id
@@ -412,7 +413,7 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
     try {
         const { Account, Table, Payment, CashSession } = getModels();
         const { id } = req.params;
-        const { amount, paymentMethod, userId } = req.body;
+        const { amount, paymentMethod, userId, qr_id } = req.body;
 
         const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
         const CashSessionId = activeSession ? activeSession.id : null;
@@ -454,6 +455,7 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
             amount: parseFloat(amount),
             method: paymentMethod || 'efectivo',
             evidence: evidencePath,
+            qr_id: qr_id || null,
             UserId: userId || null,
             CashSessionId,
             TenantId: req.tenant.id

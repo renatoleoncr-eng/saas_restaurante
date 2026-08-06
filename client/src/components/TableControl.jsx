@@ -33,6 +33,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     }, [cart]);
 
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
+    const [qrsList, setQrsList] = useState([]);
+    const [selectedQrId, setSelectedQrId] = useState('');
     const [evidenceFiles, setEvidenceFiles] = useState([]);
     const [payAmount, setPayAmount] = useState('');
     const [isLastPaymentPartial, setIsLastPaymentPartial] = useState(false);
@@ -62,6 +64,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             setBillingConfig(res.data);
         } catch (err) {
             console.error("Error fetching billing config:", err);
+        }
+    };
+
+    const fetchQrs = async () => {
+        try {
+            const res = await axios.get('/api/qr');
+            setQrsList(res.data.filter(qr => qr.isActive));
+        } catch (err) {
+            console.error("Error fetching QRs:", err);
         }
     };
 
@@ -761,6 +772,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         fetchDailyMenu();
         fetchDrinkPromotions();
         fetchBillingConfig();
+        fetchQrs();
     }, [tableId, accountId, refreshTrigger]);
 
     // DIRECT SOCKET LISTENER (Redundancy for safety)
@@ -1394,6 +1406,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return;
         }
 
+        if (paymentMethod === 'yape' && !selectedQrId) {
+            alert('Por favor seleccione a qué código QR se está haciendo el pago.');
+            setIsConfirmingPayment(false);
+            setIsProcessingPayment(false);
+            return;
+        }
+
         const isPartial = enteredAmount < (remaining - 0.01);
         setIsLastPaymentPartial(isPartial);
 
@@ -1494,6 +1513,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 formData.append('amount', enteredAmount);
             }
             formData.append('paymentMethod', paymentMethod);
+            if (paymentMethod === 'yape' && selectedQrId) {
+                formData.append('qr_id', selectedQrId);
+            }
             if (user?.id) {
                 formData.append('userId', user.id);
             }
@@ -3706,6 +3728,32 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                         </button>
                                     ))}
                                 </div>
+
+                                {paymentMethod === 'yape' && (
+                                    <div className="space-y-3 mb-6 animate-in slide-in-from-top-2">
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Seleccione el QR Destino (Obligatorio):</label>
+                                        <div className="flex flex-col gap-2">
+                                            {qrsList.map(qr => (
+                                                <button
+                                                    key={qr.id}
+                                                    disabled={isConfirmingPayment}
+                                                    onClick={() => setSelectedQrId(qr.id)}
+                                                    className={`w-full p-3 rounded-lg border text-left flex justify-between items-center transition-all ${
+                                                        selectedQrId === qr.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-offset-1' : 'border-gray-200 hover:bg-gray-50'
+                                                    } ${isConfirmingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    <span className="font-medium text-gray-700">{qr.name}</span>
+                                                    {selectedQrId === qr.id && <CheckCircle size={18} className="text-blue-500" />}
+                                                </button>
+                                            ))}
+                                            {qrsList.length === 0 && (
+                                                <div className="text-sm text-red-500 p-2 border border-red-200 rounded bg-red-50">
+                                                    No hay QRs activos configurados.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* EVIDENCE UPLOAD */}
                                 {paymentMethod !== 'efectivo' && (() => {
