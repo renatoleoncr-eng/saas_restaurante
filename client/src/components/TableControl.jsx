@@ -69,7 +69,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     const fetchQrs = async () => {
         try {
-            const res = await axios.get('/api/qr');
+            const res = await axios.get('/api/qrs');
             setQrsList(res.data.filter(qr => qr.isActive));
         } catch (err) {
             console.error("Error fetching QRs:", err);
