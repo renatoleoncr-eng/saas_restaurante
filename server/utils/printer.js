@@ -793,67 +793,81 @@ async function triggerInvoicePrint(invoice, account) {
 // DB-backed print queue helpers
 // =============================================
 
+let isFetchingJobs = false;
+
 /**
  * Fetches pending print jobs from DB for a given agent.
  * Atomically marks them as 'processing' to prevent double-delivery.
  */
 async function getPendingJobs(agentId) {
-    const { PrintJob } = getModels();
-    const { Op } = require('sequelize');
+    if (isFetchingJobs) return [];
+    isFetchingJobs = true;
+    try {
+        const { PrintJob } = getModels();
+        const { Op } = require('sequelize');
 
-    const where = { status: 'pending' };
-    if (agentId) {
-        where[Op.or] = [
-            { targetAgentId: agentId },
-            { targetAgentId: null }
-        ];
+        const where = { status: 'pending' };
+        if (agentId) {
+            where[Op.or] = [
+                { targetAgentId: agentId },
+                { targetAgentId: null }
+            ];
+        }
+
+        const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
+        if (jobs.length === 0) return [];
+
+        // Mark as processing to prevent other agents picking same job
+        const ids = jobs.map(j => j.id);
+        await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
+
+        return jobs.map(j => ({
+            id: j.id,
+            printerKey: j.printerKey,
+            printerConfig: JSON.parse(j.printerConfig),
+            hexData: j.hexData
+        }));
+    } finally {
+        isFetchingJobs = false;
     }
-
-    const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
-    if (jobs.length === 0) return [];
-
-    // Mark as processing to prevent other agents picking same job
-    const ids = jobs.map(j => j.id);
-    await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
-
-    return jobs.map(j => ({
-        id: j.id,
-        printerKey: j.printerKey,
-        printerConfig: JSON.parse(j.printerConfig),
-        hexData: j.hexData
-    }));
 }
 
 /**
  * Fetches pending jobs filtered by printer keys.
  */
 async function getPendingJobsForPrinters(printerKeys, agentId) {
-    const { PrintJob } = getModels();
-    const { Op } = require('sequelize');
+    if (isFetchingJobs) return [];
+    isFetchingJobs = true;
+    try {
+        const { PrintJob } = getModels();
+        const { Op } = require('sequelize');
 
-    const where = {
-        status: 'pending',
-        printerKey: { [Op.in]: printerKeys }
-    };
-    if (agentId) {
-        where[Op.or] = [
-            { targetAgentId: agentId },
-            { targetAgentId: null }
-        ];
+        const where = {
+            status: 'pending',
+            printerKey: { [Op.in]: printerKeys }
+        };
+        if (agentId) {
+            where[Op.or] = [
+                { targetAgentId: agentId },
+                { targetAgentId: null }
+            ];
+        }
+
+        const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
+        if (jobs.length === 0) return [];
+
+        const ids = jobs.map(j => j.id);
+        await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
+
+        return jobs.map(j => ({
+            id: j.id,
+            printerKey: j.printerKey,
+            printerConfig: JSON.parse(j.printerConfig),
+            hexData: j.hexData
+        }));
+    } finally {
+        isFetchingJobs = false;
     }
-
-    const jobs = await PrintJob.findAll({ where, order: [['createdAt', 'ASC']], limit: 20 });
-    if (jobs.length === 0) return [];
-
-    const ids = jobs.map(j => j.id);
-    await PrintJob.update({ status: 'processing' }, { where: { id: ids } });
-
-    return jobs.map(j => ({
-        id: j.id,
-        printerKey: j.printerKey,
-        printerConfig: JSON.parse(j.printerConfig),
-        hexData: j.hexData
-    }));
 }
 
 /**

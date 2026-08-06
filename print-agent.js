@@ -35,7 +35,8 @@ let   currentPollInterval = POLL_INTERVAL_OK;
 
 // Watchdog: rastrea el ultimo intento de poll para detectar si el loop se rompio
 let lastPollAttempt = Date.now();
-const WATCHDOG_INTERVAL = 20 * 1000; // si en 20s no hubo ningun poll, lo reinicia
+const WATCHDOG_INTERVAL = 30 * 1000; // Aumentado a 30s
+let isPolling = false; // Flag para prevenir multiples loops concurrentes
 
 // Log to both console and file (max 500KB, then truncate)
 function log(msg) {
@@ -67,6 +68,8 @@ function getEnabledLocalPrinters() {
 }
 
 function poll() {
+    if (isPolling) return;
+    isPolling = true;
     lastPollAttempt = Date.now(); // actualizar timestamp para el watchdog
     const client = serverUrl.startsWith('https') ? https : http;
     
@@ -76,6 +79,7 @@ function poll() {
     if (enabledPrinters !== null) {
         if (enabledPrinters.length === 0) {
             // No printers configured or all disabled -> wait and retry later
+            isPolling = false;
             setTimeout(poll, POLL_INTERVAL_ERR);
             return;
         }
@@ -91,6 +95,7 @@ function poll() {
             if (res.statusCode !== 200) {
                 log(`[WARN] Servidor retorno estado ${res.statusCode}. Reintentando en ${currentPollInterval / 1000}s...`);
                 currentPollInterval = Math.min(currentPollInterval * 2, POLL_INTERVAL_MAX);
+                isPolling = false;
                 setTimeout(poll, currentPollInterval);
                 return;
             }
@@ -111,18 +116,20 @@ function poll() {
                 const jobs = Array.isArray(parsed) ? parsed : (parsed.jobs || []);
                 if (jobs && jobs.length > 0) {
                     log(`[INFO] Recibidos ${jobs.length} trabajo(s) de impresion.`);
-                    processJobs(jobs);
+                    processJobs(jobs); // processJobs clearing isPolling when done
                 } else {
+                    isPolling = false;
                     setTimeout(poll, currentPollInterval);
                 }
             } catch (err) {
                 log(`[ERROR] Error al decodificar JSON: ${err.message}`);
+                isPolling = false;
                 setTimeout(poll, POLL_INTERVAL_ERR);
             }
         });
     });
 
-    req.setTimeout(10000, () => {
+    req.setTimeout(25000, () => {
         log('[WARN] Timeout de conexion con el servidor. Destruyendo socket...');
         req.destroy();
     });
@@ -130,6 +137,7 @@ function poll() {
     req.on('error', (err) => {
         currentPollInterval = Math.min(currentPollInterval * 2 || POLL_INTERVAL_ERR, POLL_INTERVAL_MAX);
         log(`[WARN] Sin conexion (${err.message}). Reintentando en ${currentPollInterval / 1000}s...`);
+        isPolling = false;
         setTimeout(poll, currentPollInterval);
     });
 }
@@ -156,6 +164,7 @@ function ackJob(jobId, success, errorMsg) {
 
 function processJobs(jobs) {
     if (jobs.length === 0) {
+        isPolling = false;
         poll();
         return;
     }
@@ -285,9 +294,15 @@ poll();
 // Watchdog: si poll() no se ha ejecutado en WATCHDOG_INTERVAL ms, lo reinicia automaticamente
 // Esto cubre el caso donde el loop de setTimeout se rompe silenciosamente
 setInterval(() => {
+    // Si esta ocupado procesando trabajos, actualizamos el lastPollAttempt para evitar que el watchdog se dispare
+    if (isPolling) {
+        lastPollAttempt = Date.now();
+    }
+    
     const elapsed = Date.now() - lastPollAttempt;
     if (elapsed > WATCHDOG_INTERVAL) {
         log(`[WARN] Watchdog: poll() lleva ${Math.round(elapsed / 1000)}s sin ejecutarse. Reiniciando loop...`);
+        isPolling = false; // Reset the flag
         poll();
     }
 }, WATCHDOG_INTERVAL);
