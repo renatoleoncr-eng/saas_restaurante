@@ -931,7 +931,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                 <div className="min-w-0 space-y-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-black shrink-0 ${doc.status === 'anulado' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                                            {doc.tipoDocumento === '01' ? 'Factura' : 'Boleta'} {doc.serie}-{doc.correlativo}
+                                            {doc.tipo === 'factura' ? 'Factura' : 'Boleta'} {doc.serie}-{doc.correlativo}
                                         </span>
                                         {doc.status === 'anulado' && <span className="text-[9px] font-black text-rose-500 shrink-0">ANULADA</span>}
                                     </div>

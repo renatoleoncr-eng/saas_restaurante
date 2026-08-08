@@ -13,12 +13,17 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
     const isWaiter = user?.role === 'waiter';
     const [activeTab, setActiveTab] = useState(() => {
         if (mode === 'menu_only') return 'menu_options';
-        if (viewMode === 'insumos') return 'ingredients';
-        const saved = localStorage.getItem('stock_activeTab') || 'finished';
-        // If we're in carta mode, never start on ingredients tab (guard against stale localStorage)
-        if (viewMode === 'carta' && saved === 'ingredients') return 'finished';
-        return saved;
-
+        if (viewMode === 'insumos') {
+            const saved = localStorage.getItem('stock_activeTab_insumos') || 'ingredients';
+            if (saved !== 'ingredients' && saved !== 'finished') return 'ingredients';
+            return saved;
+        }
+        if (viewMode === 'carta') {
+            const saved = localStorage.getItem('stock_activeTab_carta') || 'prepared';
+            if (saved !== 'prepared' && saved !== 'free') return 'prepared';
+            return saved;
+        }
+        return localStorage.getItem('stock_activeTab') || 'finished';
     });
     const [products, setProducts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -81,16 +86,20 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
     // Sync activeTab when viewMode changes
     useEffect(() => {
         if (viewMode === 'insumos') {
-            setActiveTab('ingredients');
-        } else if (viewMode === 'carta' && activeTab === 'ingredients') {
-            setActiveTab('finished');
+            const saved = localStorage.getItem('stock_activeTab_insumos') || 'ingredients';
+            setActiveTab(saved !== 'ingredients' && saved !== 'finished' ? 'ingredients' : saved);
+        } else if (viewMode === 'carta') {
+            const saved = localStorage.getItem('stock_activeTab_carta') || 'prepared';
+            setActiveTab(saved !== 'prepared' && saved !== 'free' ? 'prepared' : saved);
         }
     }, [viewMode]);
 
-    // Save active tabs to localStorage (only in full viewMode to avoid polluting shared key)
+    // Save active tabs to localStorage
     useEffect(() => {
-        if (mode !== 'menu_only' && viewMode === 'full') {
-            localStorage.setItem('stock_activeTab', activeTab);
+        if (mode !== 'menu_only') {
+            if (viewMode === 'insumos') localStorage.setItem('stock_activeTab_insumos', activeTab);
+            else if (viewMode === 'carta') localStorage.setItem('stock_activeTab_carta', activeTab);
+            else localStorage.setItem('stock_activeTab', activeTab);
         }
     }, [activeTab, mode, viewMode]);
 
@@ -172,12 +181,12 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
 
         // Switch to the first tab that has matches — but respect viewMode boundaries
         if (viewMode === 'insumos') {
-            // Only search within ingredients tab
-            return;
+            // Only search within ingredients and finished
+            if (hasIngredientMatches) setActiveTab('ingredients');
+            else if (hasFinishedMatches) setActiveTab('finished');
         } else if (viewMode === 'carta') {
-            // Only search within plato tabs (no ingredients)
-            if (hasFinishedMatches) setActiveTab('finished');
-            else if (hasPreparedMatches) setActiveTab('prepared');
+            // Only search within plato tabs (prepared, free)
+            if (hasPreparedMatches) setActiveTab('prepared');
             else if (hasFreeMatches) setActiveTab('free');
         } else {
             // Full mode: search all tabs
@@ -513,59 +522,65 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                 <div className={`flex flex-col md:flex-row md:justify-between md:items-center ${activeTab === 'ingredients' ? 'mb-0 md:mb-6' : 'mb-3 md:mb-6'} gap-3 md:gap-6`}>
 
                     {/* TABS CONTROLLERS (Order 3 on mobile, Order 1 on desktop) */}
-                    {viewMode !== 'insumos' && (
-                        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
-                            {/* MOBILE TABS (TOP) */}
-                            {mode !== 'menu_only' && (
-                                <div className="md:hidden w-full">
-                                    <MobileTabMenu
-                                        tabs={[
-                                            { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
+                        {/* MOBILE TABS (TOP) */}
+                        {mode !== 'menu_only' && (
+                            <div className="md:hidden w-full">
+                                <MobileTabMenu
+                                    tabs={[
+                                        ...(viewMode === 'carta' || viewMode === 'full' ? [
                                             { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
                                             { id: 'free', label: `Libres (${countFree})`, icon: Zap },
-                                            ...(viewMode === 'full' ? [
-                                                { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
-                                            ] : []),
-                                        ]}
-                                        activeTab={activeTab}
-                                        onTabChange={setActiveTab}
-                                    />
-                                </div>
-                            )}
+                                        ] : []),
+                                        ...(viewMode === 'insumos' || viewMode === 'full' ? [
+                                            { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
+                                            { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
+                                        ] : []),
+                                    ]}
+                                    activeTab={activeTab}
+                                    onTabChange={setActiveTab}
+                                />
+                            </div>
+                        )}
 
-                            {/* DESKTOP TABS */}
-                            {mode !== 'menu_only' && (
-                                <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
-                                    <button
-                                        onClick={() => setActiveTab('finished')}
-                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                    >
-                                        Terminados ({countFinished})
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('prepared')}
-                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                    >
-                                        Preparados ({countPrepared})
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('free')}
-                                        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
-                                    >
-                                        Libres ({countFree})
-                                    </button>
-                                    {viewMode === 'full' && (
+                        {/* DESKTOP TABS */}
+                        {mode !== 'menu_only' && (
+                            <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
+                                {(viewMode === 'insumos' || viewMode === 'full') && (
+                                    <>
                                         <button
                                             onClick={() => setActiveTab('ingredients')}
                                             className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ingredients' ? 'bg-white text-amber-800 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                         >
                                             Insumos ({countIngredients})
                                         </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                        <button
+                                            onClick={() => setActiveTab('finished')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Terminados ({countFinished})
+                                        </button>
+                                    </>
+                                )}
+                                {(viewMode === 'carta' || viewMode === 'full') && (
+                                    <>
+                                        <button
+                                            onClick={() => setActiveTab('prepared')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Preparados ({countPrepared})
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('free')}
+                                            className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'free' ? 'bg-white text-emerald-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                            Libres ({countFree})
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* SEARCH AND ACTION BAR (Order 1 & 2 on mobile, Order 2 on desktop) */}
                     <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 items-center w-full md:w-auto order-1 md:order-2">
@@ -674,7 +689,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
             )}
 
             {/* CONTENT */}
-            {(viewMode === 'insumos' || activeTab === 'ingredients') ? (
+            {activeTab === 'ingredients' ? (
                 <IngredientManager readOnly={readOnly} user={user} searchQuery={searchQuery} />
             ) : (
                 <>
