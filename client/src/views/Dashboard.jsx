@@ -137,10 +137,10 @@ export default function Dashboard() {
 
     const renderContent = () => {
         if (currentView === 'carta') {
-            return <StockDashboard readOnly={user.role !== 'admin'} user={user} viewMode="carta" />;
+            return <StockDashboard key="carta" readOnly={user.role !== 'admin'} user={user} viewMode="carta" />;
         }
         if (currentView === 'insumos') {
-            return <StockDashboard readOnly={user.role !== 'admin'} user={user} viewMode="insumos" />;
+            return <StockDashboard key="insumos" readOnly={user.role !== 'admin'} user={user} viewMode="insumos" />;
         }
         if (currentView === 'menu') {
             return <MenuView />;
