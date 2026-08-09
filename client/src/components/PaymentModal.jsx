@@ -12,6 +12,7 @@ const PaymentModal = ({
     isSearchingClient,
     searchClientData,
     printingEnabled,
+    fetchAccount,
     onClose
 }) => {
     if (!showPaymentModal) return null;
@@ -29,7 +30,8 @@ const PaymentModal = ({
         isProcessingPayment, setIsProcessingPayment,
         billingConfig, whatsappPhone, setwhatsappPhone,
         showWhatsappInput, setShowWhatsappInput,
-        confirmPayment, handleShareWhatsapp, handlePrintLocalInvoice, handleDownloadLocalXml, fetchAccount
+        setShowPaymentModal,
+        confirmPayment, handleShareWhatsapp, handlePrintLocalInvoice, handleDownloadLocalXml
     } = paymentFlow;
 
     // We will extract isInvoiceDataMissing & isStaffCommentMissing logic that was hardcoded

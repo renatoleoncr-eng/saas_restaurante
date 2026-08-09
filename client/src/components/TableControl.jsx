@@ -1918,6 +1918,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 isSearchingClient={isSearchingClient}
                 searchClientData={searchClientData}
                 printingEnabled={printingEnabled}
+                fetchAccount={fetchAccount}
                 onClose={onClose}
             />
         </div >,
