@@ -525,7 +525,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             if (!item.productId) return true; // Combos/Promos usually print
             const p = products.find(prod => prod.id === item.productId);
             if (p) {
-                // Terminado = isStockManaged=true (regardless of requiresPreparation, which may be stale in old records)
+                // 'otro' type (Cover, cargos varios) never goes to kitchen/bar — skip comanda
+                if (p.type === 'otro') continue;
+                // Terminado = isStockManaged=true → no comanda needed
                 if (!p.isStockManaged) {
                     return true;
                 }
