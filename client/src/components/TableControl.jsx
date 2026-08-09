@@ -236,7 +236,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     // Explicitly fetching account
-    const fetchAccount = async () => {
+    async function fetchAccount() {
         try {
             let url = `/api/accounts/table/${tableId}?t=${Date.now()}`;
             if (accountId) {
@@ -283,9 +283,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         } finally {
             setIsAccountLoaded(true);
         }
-    };
+    }
 
-    const loadTableDataFromAcc = async (resolvedTableId) => {
+    async function loadTableDataFromAcc(resolvedTableId) {
         try {
             const tableRes = await axios.get(`/api/tables/${resolvedTableId}?t=${Date.now()}`);
             setTableData(tableRes.data);
