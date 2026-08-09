@@ -32,6 +32,44 @@ export default function Dashboard() {
         localStorage.setItem('lastView', currentView);
     }, [currentView]);
 
+    // Inactivity timeout: Return to main (Salón) if app was in background for > 30 mins
+    useEffect(() => {
+        const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes in ms
+
+        const checkInactivity = () => {
+            const lastTime = localStorage.getItem('lastBackgroundTime');
+            if (lastTime) {
+                const elapsed = Date.now() - parseInt(lastTime, 10);
+                if (elapsed > INACTIVITY_LIMIT) {
+                    setCurrentView('main');
+                }
+            }
+        };
+
+        // Check immediately on mount in case the app was completely closed
+        checkInactivity();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                localStorage.setItem('lastBackgroundTime', Date.now().toString());
+            } else if (document.visibilityState === 'visible') {
+                checkInactivity();
+            }
+        };
+
+        const handleBeforeUnload = () => {
+            localStorage.setItem('lastBackgroundTime', Date.now().toString());
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
+
     // Role-based and module-based view protection
     useEffect(() => {
         const restrictedViews = {

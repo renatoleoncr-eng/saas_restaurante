@@ -104,8 +104,33 @@ export default function CashFlowTab() {
     const formatCurrency = (val) => `S/ ${Number((parseFloat(val) || 0)).toFixed(2)}`;
     const formatDate = (dateStr) => new Date(dateStr).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+    // ADD VISIBILITY LISTENER TO RETRY IF FAILED
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && !report) {
+                fetchReport();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleVisibilityChange);
+        };
+    }, [report]);
+
     if (loading && !report) return <div className="p-8 text-center text-gray-500 animate-pulse">Cargando reporte...</div>;
-    if (!report) return <div className="p-8 text-center text-red-500">Error cargando datos.</div>;
+    if (!report) return (
+        <div className="p-8 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+            <div className="text-red-500 font-medium">Error cargando datos. La conexión pudo haberse interrumpido.</div>
+            <button 
+                onClick={fetchReport} 
+                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition-colors"
+            >
+                Reintentar
+            </button>
+        </div>
+    );
 
     // PREPARE TRANSACTIONS LIST (MERGE INCOME & EXPENSES)
     const transactions = [

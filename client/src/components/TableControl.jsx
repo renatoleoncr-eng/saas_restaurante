@@ -7,7 +7,18 @@ import { formatTableName } from '../utils/tableUtils';
 import TableTransferModal from './TableTransferModal';
 import PinPadModal from './PinPadModal';
 import PrintConfirmModal from './PrintConfirmModal';
+import PaymentModal from './PaymentModal';
+import { usePaymentFlow } from '../hooks/usePaymentFlow';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { getEffectiveStock, syncMenuStock, getMenuStockStats, isProductOutOfStock } from '../utils/menuStockUtils';
+import { useMenuFlow } from '../hooks/useMenuFlow';
+import { useCart } from '../hooks/useCart';
+import CartSidebar from './CartSidebar';
+// NOTE: billingPrintUtils and billingXmlUtils are ready but NOT connected yet.
+// Connect them when ready to test the print service (Phase 1 of refactoring plan).
+// import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
+// import { downloadUblXml } from '../utils/billingXmlUtils';
+
 
 export default function TableControl({ tableId, accountId, onClose, initialShowCart = false }) {
     const { user, refreshTrigger, refreshData, printingEnabled } = useRestaurant();
@@ -15,477 +26,20 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [tableData, setTableData] = useState(null);
     const [isAccountLoaded, setIsAccountLoaded] = useState(false);
     const [products, setProducts] = useState([]);
-    const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState('dish'); // Default to 'dish'
     const [searchTerm, setSearchTerm] = useState('');
     const [showMobileCart, setShowMobileCart] = useState(initialShowCart);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [showTransferModal, setShowTransferModal] = useState(false); // New State for Transfer
-    const [isSendingOrder, setIsSendingOrder] = useState(false); // Prevent double-clicks
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [isSendingOrder, setIsSendingOrder] = useState(false);
     const [isActionInProgress, setIsActionInProgress] = useState(false);
-    const isSendingRef = useRef(false); // Synchronous flag to prevent double-clicks
-    const idempotencyKeyRef = useRef(null); // Prevents duplicate orders due to network retries
-
-    useEffect(() => {
-        // Reset idempotency key when cart changes
-        idempotencyKeyRef.current = null;
-    }, [cart]);
-
-    const [paymentMethod, setPaymentMethod] = useState('efectivo');
-    const [qrsList, setQrsList] = useState([]);
-    const [selectedQrId, setSelectedQrId] = useState('');
-    const [evidenceFiles, setEvidenceFiles] = useState([]);
-    const [payAmount, setPayAmount] = useState('');
-    const [isLastPaymentPartial, setIsLastPaymentPartial] = useState(false);
-    const handleFileChange = (e) => {
-        if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setEvidenceFiles(prev => [...prev, ...files]);
-        }
-    };
-    const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
-    const [issueInvoice, setIssueInvoice] = useState(false);
-    const [invoiceType, setInvoiceType] = useState('boleta');
-    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const isSendingRef = useRef(false);
+    const idempotencyKeyRef = useRef(null);
 
     // Client Editing State
     const [isEditingClient, setIsEditingClient] = useState(false);
     const [clientForm, setClientForm] = useState({ name: '', dni: '', direccion: '', accountType: 'standard' });
     const [isSearchingClient, setIsSearchingClient] = useState(false);
-    const [successInvoice, setSuccessInvoice] = useState(null);
-    const [billingConfig, setBillingConfig] = useState(null);
-    const [whatsappPhone, setwhatsappPhone] = useState('');
-    const [showWhatsappInput, setShowWhatsappInput] = useState(false);
-
-    const fetchBillingConfig = async () => {
-        try {
-            const res = await axios.get('/api/billing/config');
-            setBillingConfig(res.data);
-        } catch (err) {
-            console.error("Error fetching billing config:", err);
-        }
-    };
-
-    const fetchQrs = async () => {
-        try {
-            const res = await axios.get('/api/qrs');
-            setQrsList(res.data.filter(qr => qr.isActive));
-        } catch (err) {
-            console.error("Error fetching QRs:", err);
-        }
-    };
-
-    const handlePrintLocalInvoice = (invoice) => {
-        if (!invoice) return;
-
-        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
-        const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
-        const docName = invoice.tipo === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
-        
-        const rucEmpresa = billingConfig?.ruc || '20614409593';
-        const nameEmpresa = billingConfig?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
-        const addressEmpresa = billingConfig?.direccion || 'Av. Larco 123, Miraflores, Lima';
-
-        // Check for Amazonas exoneration (exoneradas or igv === 0)
-        const isExonerated = billingConfig?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
-        const totalAmount = parseFloat(invoice.total || 0);
-        const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
-        const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
-        const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
-        const igvLabel = isExonerated ? 'I.G.V. (0%):' : `I.G.V. (${billingConfig?.igvTasa || 18}%):`;
-
-        // Generate SUNAT QR Code pipe-delimited string
-        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
-        let tipoDocAdq = '0';
-        if (invoice.clienteDocumento) {
-            if (invoice.clienteDocumento.length === 11) tipoDocAdq = '6'; // RUC
-            else if (invoice.clienteDocumento.length === 8) tipoDocAdq = '1'; // DNI
-        }
-        const nroDocAdq = invoice.clienteDocumento || '00000000';
-        
-        const rawDate = invoice.emitidoAt || invoice.createdAt || new Date();
-        const dateObj = new Date(rawDate);
-        const yyyy = dateObj.getFullYear();
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        const formattedDate = `${yyyy}-${mm}-${dd}`;
-
-        const qrString = `${rucEmpresa}|${tipoComp}|${invoice.serie}|${invoice.correlativo}|${igvAmount.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdq}|${nroDocAdq}|`;
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrString)}`;
-
-        // Verify if it is electronic (successfully sent to SUNAT Hub)
-        const isElectronico = !!(
-            (invoice.sunatResponse || successInvoice?.sunatResponse) && 
-            (() => {
-                try {
-                    const rawResp = invoice.sunatResponse || successInvoice?.sunatResponse;
-                    const parsed = typeof rawResp === 'string' ? JSON.parse(rawResp) : rawResp;
-                    return parsed && !parsed.error && parsed.success !== false;
-                } catch (e) {
-                    return false;
-                }
-            })()
-        );
-
-        const clienteDireccionHtml = invoice.clienteDireccion ? `<div><b>DIRECCIÓN:</b> ${invoice.clienteDireccion.toUpperCase()}</div>` : '';
-
-        const printableHtml = `
-            <html>
-            <head>
-                <title>${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</title>
-                <style>
-                    @page {
-                        size: 80mm auto;
-                        margin: 0;
-                    }
-                    body {
-                        font-family: 'Courier New', Courier, monospace, sans-serif;
-                        width: 72mm;
-                        margin: 0 auto;
-                        padding: 5mm 2mm;
-                        font-size: 11px;
-                        color: #000;
-                        line-height: 1.3;
-                    }
-                    .text-center { text-align: center; }
-                    .text-right { text-align: right; }
-                    .bold { font-weight: bold; }
-                    .header { margin-bottom: 5mm; }
-                    .company-name { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-                    .document-title { font-size: 12px; font-weight: bold; border: 1px solid #000; padding: 4px; margin: 4mm 0; text-transform: uppercase; }
-                    .divider { border-top: 1px dashed #000; margin: 3mm 0; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
-                    th { border-bottom: 1px dashed #000; padding: 2px 0; font-size: 10px; text-transform: uppercase; }
-                    td { padding: 3px 0; vertical-align: top; }
-                    .totals { margin-top: 4mm; }
-                    .totals-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
-                    .footer { margin-top: 8mm; font-size: 9px; }
-                    .sunat-badge {
-                        background-color: #e6f4ea;
-                        color: #137333;
-                        font-weight: bold;
-                        border: 1px solid #a8dab5;
-                        padding: 4px 8px;
-                        border-radius: 4px;
-                        display: inline-block;
-                        font-size: 10px;
-                        text-transform: uppercase;
-                        margin-bottom: 3mm;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="text-center header">
-                    <div class="company-name">${nameEmpresa}</div>
-                    <div>RUC: ${rucEmpresa}</div>
-                    <div>${addressEmpresa.toUpperCase()}</div>
-                    <div class="document-title">
-                        ${docName}<br>
-                        ${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}
-                    </div>
-                </div>
-                
-                <div>
-                    <div><b>FECHA EMISIÓN:</b> ${dateStr}</div>
-                    <div><b>SEÑOR(ES):</b> ${(invoice.clienteNombre || 'CLIENTES VARIOS').toUpperCase()}</div>
-                    <div><b>${invoice.tipo === 'factura' ? 'RUC' : 'DNI'}:</b> ${nroDocAdq}</div>
-                    ${clienteDireccionHtml}
-                    <div><b>MÉTODO PAGO:</b> ${(paymentMethod ? paymentMethod : 'EFECTIVO').toUpperCase()}</div>
-                </div>
-                
-                <div class="divider"></div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="text-center" style="width: 10%;">CANT</th>
-                            <th style="width: 45%;">DESCRIPCIÓN</th>
-                            <th class="text-right" style="width: 20%;">P.UNIT</th>
-                            <th class="text-right" style="width: 25%;">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${items.map(item => {
-                            const qty = item.qty || item.quantity || 1;
-                            const total = parseFloat(item.amount || item.subtotal || 0);
-                            const pUnit = total / qty;
-                            return `
-                                <tr>
-                                    <td class="text-center">${qty}</td>
-                                    <td style="text-transform: uppercase;">${item.description}</td>
-                                    <td class="text-right">S/ ${pUnit.toFixed(2)}</td>
-                                    <td class="text-right">S/ ${total.toFixed(2)}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-                
-                <div class="divider"></div>
-                
-                <div class="totals">
-                    <div class="totals-row">
-                        <span>${opLabel}</span>
-                        <span>S/ ${opAmount.toFixed(2)}</span>
-                    </div>
-                    <div class="totals-row">
-                        <span>OP. INAFECTA:</span>
-                        <span>S/ 0.00</span>
-                    </div>
-                    <div class="totals-row">
-                        <span>${igvLabel}</span>
-                        <span>S/ ${igvAmount.toFixed(2)}</span>
-                    </div>
-                    <div class="totals-row bold" style="font-size: 13px;">
-                        <span>TOTAL A PAGAR:</span>
-                        <span>S/ ${totalAmount.toFixed(2)}</span>
-                    </div>
-                </div>
-                
-                <div class="divider"></div>
-                
-                ${isElectronico ? `
-                <div class="text-center" style="margin-top: 3mm; margin-bottom: 3mm;">
-                    <div class="sunat-badge">
-                        [✓] ACEPTADA POR SUNAT
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="text-center" style="margin-top: 4mm; margin-bottom: 4mm;">
-                    <img src="${qrCodeUrl}" style="width: 120px; height: 120px;" alt="Código QR SUNAT" />
-                </div>
-
-                <div class="text-center footer">
-                    <b>REPRESENTACIÓN IMPRESA DE COMPROBANTE DE PAGO</b><br>
-                    <span>Autorizado mediante Resolución de SUNAT</span><br><br>
-                    <b>¡Gracias por su preferencia!</b>
-                </div>
-            </body>
-            </html>
-        `;
-
-        // Create invisible iframe for printing
-        let iframe = document.getElementById('print-iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.id = 'print-iframe';
-            iframe.style.position = 'fixed';
-            iframe.style.right = '0';
-            iframe.style.bottom = '0';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            document.body.appendChild(iframe);
-        }
-
-        iframe.contentWindow.document.open();
-        iframe.contentWindow.document.write(printableHtml);
-        iframe.contentWindow.document.close();
-
-        // Trigger print after load
-        setTimeout(() => {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-        }, 300);
-    };
-
-    const handleDownloadLocalXml = (invoice) => {
-        if (!invoice) return;
-        const rucEmpresa = billingConfig?.ruc || '20614409593';
-        const nameEmpresa = billingConfig?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
-        const clientDoc = invoice.clienteDocumento || '00000000';
-        const clientName = invoice.clienteNombre || 'CLIENTES VARIOS';
-        const dateStr = invoice.createdAt ? invoice.createdAt.split('T')[0] : new Date().toISOString().split('T')[0];
-        const docType = invoice.tipo === 'factura' ? '01' : '03'; 
-        const clientDocType = invoice.tipo === 'factura' ? '6' : '1'; 
-        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
-
-        const isExonerated = billingConfig?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
-        const totalVal = parseFloat(invoice.total || 0);
-        const subtotalVal = isExonerated ? totalVal : parseFloat(invoice.subtotal || 0);
-        const igvVal = isExonerated ? 0 : parseFloat(invoice.igv || 0);
-
-        let itemsXml = '';
-        items.forEach((item, idx) => {
-            const lineTotal = parseFloat(item.amount || item.subtotal || 0);
-            const qty = parseInt(item.qty || item.quantity || 1);
-            const unitVal = lineTotal / qty;
-
-            const itemTaxAmount = isExonerated ? 0 : (lineTotal * 0.18 / 1.18);
-            const itemTaxableAmount = isExonerated ? lineTotal : (lineTotal / 1.18);
-            const itemPriceAmount = isExonerated ? unitVal : (unitVal / 1.18);
-            const itemPercent = isExonerated ? "0.00" : "18.00";
-            const itemExemptionCode = isExonerated ? "20" : "10";
-            const taxSchemeId = isExonerated ? "9997" : "1000";
-            const taxSchemeName = isExonerated ? "EXO" : "IGV";
-
-            itemsXml += `
-        <cac:InvoiceLine>
-            <cbc:ID>${idx + 1}</cbc:ID>
-            <cbc:InvoicedQuantity unitCode="NIU">${qty}</cbc:InvoicedQuantity>
-            <cbc:LineExtensionAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:LineExtensionAmount>
-            <cac:PricingReference>
-                <cac:AlternativeConditionPrice>
-                    <cbc:PriceAmount currencyID="PEN">${unitVal.toFixed(2)}</cbc:PriceAmount>
-                    <cbc:PriceTypeCode>01</cbc:PriceTypeCode>
-                </cac:AlternativeConditionPrice>
-            </cac:PricingReference>
-            <cac:TaxTotal>
-                <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
-                <cac:TaxSubtotal>
-                    <cbc:TaxableAmount currencyID="PEN">${itemTaxableAmount.toFixed(2)}</cbc:TaxableAmount>
-                    <cbc:TaxAmount currencyID="PEN">${itemTaxAmount.toFixed(2)}</cbc:TaxAmount>
-                    <cac:TaxCategory>
-                        <cbc:Percent>${itemPercent}</cbc:Percent>
-                        <cbc:TaxExemptionReasonCode>${itemExemptionCode}</cbc:TaxExemptionReasonCode>
-                        <cac:TaxScheme>
-                            <cbc:ID>${taxSchemeId}</cbc:ID>
-                            <cbc:Name>${taxSchemeName}</cbc:Name>
-                            <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
-                        </cac:TaxScheme>
-                    </cac:TaxCategory>
-                </cac:TaxSubtotal>
-            </cac:TaxTotal>
-            <cac:Item>
-                <cbc:Description><![CDATA[${item.description}]]></cbc:Description>
-            </cac:Item>
-            <cac:Price>
-                <cbc:PriceAmount currencyID="PEN">${itemPriceAmount.toFixed(2)}</cbc:PriceAmount>
-            </cac:Price>
-        </cac:InvoiceLine>`;
-        });
-
-        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
-         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
-         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
-         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
-    <ext:UBLExtensions>
-        <ext:UBLExtension>
-            <ext:ExtensionContent>
-                <!-- Firma Digital Mock -->
-            </ext:ExtensionContent>
-        </ext:UBLExtension>
-    </ext:UBLExtensions>
-    <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
-    <cbc:CustomizationID>2.0</cbc:CustomizationID>
-    <cbc:ID>${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</cbc:ID>
-    <cbc:IssueDate>${dateStr}</cbc:IssueDate>
-    <cbc:InvoiceTypeCode listID="0101">${docType}</cbc:InvoiceTypeCode>
-    <cbc:DocumentCurrencyCode>PEN</cbc:DocumentCurrencyCode>
-    <cac:AccountingSupplierParty>
-        <cac:Party>
-            <cac:PartyIdentification>
-                <cbc:ID schemeID="6">${rucEmpresa}</cbc:ID>
-            </cac:PartyIdentification>
-            <cac:PartyLegalEntity>
-                <cbc:RegistrationName><![CDATA[${nameEmpresa}]]></cbc:RegistrationName>
-            </cac:PartyLegalEntity>
-        </cac:Party>
-    </cac:AccountingSupplierParty>
-    <cac:AccountingCustomerParty>
-        <cac:Party>
-            <cac:PartyIdentification>
-                <cbc:ID schemeID="${clientDocType}">${clientDoc}</cbc:ID>
-            </cac:PartyIdentification>
-            ${invoice.clienteDireccion ? `
-            <cac:PostalAddress>
-                <cbc:StreetName><![CDATA[${invoice.clienteDireccion}]]></cbc:StreetName>
-            </cac:PostalAddress>
-            ` : ''}
-            <cac:PartyLegalEntity>
-                <cbc:RegistrationName><![CDATA[${clientName}]]></cbc:RegistrationName>
-            </cac:PartyLegalEntity>
-        </cac:Party>
-    </cac:AccountingCustomerParty>
-    <cac:TaxTotal>
-        <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
-        <cac:TaxSubtotal>
-            <cbc:TaxableAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:TaxableAmount>
-            <cbc:TaxAmount currencyID="PEN">${igvVal.toFixed(2)}</cbc:TaxAmount>
-            <cac:TaxCategory>
-                <cac:TaxScheme>
-                    <cbc:ID>${isExonerated ? '9997' : '1000'}</cbc:ID>
-                    <cbc:Name>${isExonerated ? 'EXO' : 'IGV'}</cbc:Name>
-                    <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
-                </cac:TaxScheme>
-            </cac:TaxCategory>
-        </cac:TaxSubtotal>
-    </cac:TaxTotal>
-    <cac:LegalMonetaryTotal>
-        <cbc:LineExtensionAmount currencyID="PEN">${subtotalVal.toFixed(2)}</cbc:LineExtensionAmount>
-        <cbc:TaxInclusiveAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:TaxInclusiveAmount>
-        <cbc:PayableAmount currencyID="PEN">${totalVal.toFixed(2)}</cbc:PayableAmount>
-    </cac:LegalMonetaryTotal>${itemsXml}
-</Invoice>`;
-
-        const blob = new Blob([xmlContent], { type: 'text/xml' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${rucEmpresa}-${docType}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}.xml`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleShareWhatsapp = () => {
-        if (!successInvoice || !successInvoice.invoice) return;
-        const phone = whatsappPhone.trim();
-        if (!phone) {
-            alert('Por favor ingrese un número de teléfono válido.');
-            return;
-        }
-
-        let cleanPhone = phone.replace(/\D/g, '');
-        if (cleanPhone.length === 9) {
-            cleanPhone = '51' + cleanPhone;
-        }
-
-        const invoice = successInvoice.invoice;
-        const docName = invoice.tipo === 'factura' ? 'Factura' : 'Boleta';
-        const invoiceCode = `${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}`;
-        
-        // Extract PDF URL from sunatResponse
-        const sunatResp = successInvoice.sunatResponse;
-        let pdfUrl = '';
-        if (sunatResp) {
-            let parsed = sunatResp;
-            if (typeof sunatResp === 'string') {
-                try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
-            }
-            if (parsed) {
-                pdfUrl = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || '';
-            }
-        }
-
-        // Apply SSL fix
-        if (pdfUrl && typeof pdfUrl === 'string') {
-            if (pdfUrl.includes('72.61.57.199') || pdfUrl.includes('maksuites') || pdfUrl.includes('bluzcx')) {
-                pdfUrl = pdfUrl.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
-            }
-        }
-
-        const busterUrl = pdfUrl ? `${pdfUrl}?v=${Date.now()}` : '';
-        
-        let text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*.\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
-        
-        if (busterUrl) {
-            text = `Hola *${invoice.clienteNombre || 'Cliente'}*, adjuntamos tu *${docName} ${invoiceCode}* por un total de *S/ ${parseFloat(invoice.total).toFixed(2)}*:\n${busterUrl}\n\n¡Gracias por tu preferencia!\n_Gestión Restaurante_`;
-        }
-
-        const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
-        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            window.location.href = waUrl;
-        } else {
-            window.open(waUrl, '_blank');
-        }
-    };
-
     const searchClientData = async () => {
         const doc = clientForm.dni.trim();
         if (doc.length !== 8 && doc.length !== 11) {
@@ -529,44 +83,44 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clientForm.dni]);
 
-    // Menu Daily State
-    const [viewMode, setViewMode] = useState('products'); // 'products' | 'menu_builder'
     const [dailyMenu, setDailyMenu] = useState({ entries: [], mains: [], activeGroups: [] });
-    const [menuSelection, setMenuSelection] = useState({ entry: '', main: '' });
-    const [pendingMenuProduct, setPendingMenuProduct] = useState(null);
-    const [pendingVariantProduct, setPendingVariantProduct] = useState(null); // For aggregating variant selection
-    const [variantQuantities, setVariantQuantities] = useState({}); // local quantities state for variant selection
     const [deleteConfirmId, setDeleteConfirmId] = useState(null); // For inline delete confirmation
-
-    // 2x1 Drink Promotions State
     const [drinkPromotions, setDrinkPromotions] = useState([]);
-    const [pendingComboPromo, setPendingComboPromo] = useState(null); // promo being built
-    const [comboSelection, setComboSelection] = useState([]); // array of up to 2 selected items
+    
+    // --- Custom Hooks ---
+    const cartFlow = useCart({
+        onOpenMenuBuilder: (product) => menuFlow.openMenuBuilder(product)
+    });
+    const { cart, setCart, addToCart, updateQuantity, removeItem, clearCart, cartTotal } = cartFlow;
 
-    // Helpers for 2x1 promotions quantities and counters
-    const getComboItemCount = (itemId, promoId) => {
-        return comboSelection.filter(s => s.id === itemId && s.promoId === promoId).length;
-    };
+    const menuFlow = useMenuFlow({
+        addToCart: (...args) => addToCart(...args),
+        setCart,
+        setSearchTerm,
+        dailyMenu,
+        fetchDailyMenu: () => fetchDailyMenu()
+    });
 
-    const handleIncrementComboItem = (item, promo) => {
-        if (comboSelection.length >= 2) return;
-        const instanceId = `${promo.id}:${item.id}:${Date.now()}:${Math.random()}`;
-        setComboSelection(prev => [...prev, {
-            ...item,
-            promoId: promo.id,
-            _uid: instanceId,
-            _promoPrice: parseFloat(promo.price),
-            _originalPrice: parseFloat(item.individualPrice || 0)
-        }]);
-    };
+    // Destructure for easy access in the template
+    const {
+        viewMode, setViewMode,
+        menuSelection, setMenuSelection,
+        pendingMenuProduct, setPendingMenuProduct,
+        pendingVariantProduct, setPendingVariantProduct,
+        variantQuantities, setVariantQuantities,
+        pendingComboPromo, setPendingComboPromo,
+        comboSelection, setComboSelection,
 
-    const handleDecrementComboItem = (itemId, promoId) => {
-        setComboSelection(prev => {
-            const idx = prev.findIndex(s => s.id === itemId && s.promoId === promoId);
-            if (idx === -1) return prev;
-            return prev.filter((_, i) => i !== idx);
-        });
-    };
+        handleConfirmVariants,
+        openMenuBuilder,
+        confirmMenuSelection,
+        cancelMenuSelection,
+
+        getComboItemCount,
+        handleIncrementComboItem,
+        handleDecrementComboItem,
+        confirmComboSelection
+    } = menuFlow;
 
     // Helper to group identical orders (Optimized O(N))
     const groupOrders = (orders) => {
@@ -593,33 +147,20 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     // Memoize heavily to avoid re-calc on every render
     const groupedOrders = React.useMemo(() => groupOrders(account?.Orders), [account?.Orders]);
 
-    // Happy Hour Check Utility
-    const isHappyHourActive = (startStr, endStr) => {
-        if (!startStr || !endStr) return false;
-        const now = new Date();
-        const currentHours = String(now.getHours()).padStart(2, '0');
-        const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-        const currentTimeStr = `${currentHours}:${currentMinutes}`;
+    const paymentFlow = usePaymentFlow({
+        account,
+        clientForm,
+        user,
+        tableData,
+        groupedOrders,
+        fetchAccount,
+        onClose
+    });
+    const { showPaymentModal, setShowPaymentModal, isConfirmingPayment } = paymentFlow;
 
-        if (startStr <= endStr) {
-            // Normal range (e.g., 10:00 to 17:00)
-            return currentTimeStr >= startStr && currentTimeStr <= endStr;
-        } else {
-            // Cross-midnight range (e.g., 20:00 to 07:00)
-            return currentTimeStr >= startStr || currentTimeStr <= endStr;
-        }
-    };
+    // isHappyHourActive moved to useCart / timeUtils
 
-    // Reset viewMode when category changes
-    useEffect(() => {
-        if (selectedCategory !== 'combo') {
-            setViewMode('products');
-        } else {
-            setViewMode('combo_categories');
-        }
-        setPendingMenuProduct(null);
-        setPendingVariantProduct(null);
-    }, [selectedCategory]);
+
 
     const parseMenuData = (items) => {
         if (!items) return [];
@@ -943,160 +484,10 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         addToCart(product);
     };
 
-    const addToCart = (product, specificNotes = '', subItems = [], presentationName = null, overridePrice = null, quantityToAdd = 1) => {
-        // Intercept Menu Type -> Switch to Inline Builder
-        if (product.type === 'menu' && !specificNotes) {
-            setPendingMenuProduct(product);
-            // Ensure menu data is fresh
-            if (dailyMenu.entries.length === 0) fetchDailyMenu();
-            setViewMode('menu_builder'); // Switch View
-            setMenuSelection({ entry: '', main: '' });
-            return;
-        }
+    // addToCart moved to useCart
 
-        let basePrice = 0;
-        let activePrice = 0;
 
-        const variants = product.parsedVariants || product.ProductVariants;
-
-        if (overridePrice !== null) {
-            basePrice = parseFloat(overridePrice);
-            activePrice = parseFloat(overridePrice);
-        } else if (presentationName && variants) {
-            const variantEntry = variants.find(v => v.name === presentationName);
-            if (variantEntry) {
-                basePrice = parseFloat(variantEntry.price || 0);
-                const isHH = variantEntry.happyHourPrice && isHappyHourActive(variantEntry.happyHourStart, variantEntry.happyHourEnd);
-                activePrice = isHH ? parseFloat(variantEntry.happyHourPrice) : basePrice;
-            } else {
-                basePrice = product.price !== undefined ? parseFloat(product.price) : 0;
-                const isHH = product.happyHourPrice && isHappyHourActive(product.happyHourStart, product.happyHourEnd);
-                activePrice = isHH ? parseFloat(product.happyHourPrice) : basePrice;
-            }
-        } else {
-            basePrice = product.price !== undefined ? parseFloat(product.price) : 0;
-            const isHH = product.happyHourPrice && isHappyHourActive(product.happyHourStart, product.happyHourEnd);
-            activePrice = isHH ? parseFloat(product.happyHourPrice) : basePrice;
-        }
-
-        const finalPriceCalc = activePrice;
-        const originalPriceCalc = basePrice;
-
-        setCart(prev => {
-            // Use custom ticket name over original name if provided (helpful for decoupled combos)
-            const finalName = product.customNameForTicket || product.name;
-            const existingIndex = prev.findIndex(item =>
-                item.productId === product.id &&
-                item.notes === (specificNotes || '') &&
-                item.name === finalName &&
-                JSON.stringify(item.subItems) === JSON.stringify(subItems)
-            );
-
-            if (existingIndex !== -1) {
-                const newCart = [...prev];
-                newCart[existingIndex] = {
-                    ...newCart[existingIndex],
-                    quantity: newCart[existingIndex].quantity + quantityToAdd
-                };
-                return newCart;
-            }
-            return [...prev, {
-                productId: product.id,
-                name: finalName,
-                price: finalPriceCalc,
-                originalPrice: originalPriceCalc,
-                quantity: quantityToAdd,
-                notes: specificNotes || '',
-                subItems: subItems,
-                presentation: presentationName // Important: Send this to backend
-            }];
-        });
-    };
-
-    const handleConfirmVariants = () => {
-        if (!pendingVariantProduct) return;
-        Object.entries(variantQuantities).forEach(([presentationName, qty]) => {
-            if (qty > 0) {
-                addToCart(pendingVariantProduct, '', [], presentationName, null, qty);
-            }
-        });
-        setPendingVariantProduct(null);
-    };
-
-    const confirmMenuSelection = () => {
-        if (!menuSelection.entry && !menuSelection.main) {
-            alert("Debes seleccionar al menos una Entrada o un Segundo");
-            return;
-        }
-
-        // Find linked IDs and Menu Item IDs
-        const entryObj = filteredEntries.find(e => e.name === menuSelection.entry && (e.groupName || 'Menú del Día') === pendingMenuProduct.name);
-        const mainObj = filteredMains.find(m => m.name === menuSelection.main && (m.groupName || 'Menú del Día') === pendingMenuProduct.name);
-
-        const subItems = [];
-        let totalCustomPrice = 0;
-        let isCombo = false;
-
-        if (menuSelection.entry && menuSelection.main) {
-            isCombo = true;
-        }
-
-        // Add Entry
-        if (entryObj && menuSelection.entry) {
-            subItems.push({
-                productId: entryObj.linkId || null,
-                menuItemId: entryObj.id || null, // BACKWARD COMPATIBILITY: Allow null if no ID
-                quantity: 1,
-                name: entryObj.name, // For display/logging
-                price: entryObj.individualPrice || 0 // Individual price
-            });
-            if (!isCombo) totalCustomPrice += Number(entryObj.individualPrice || 0);
-        }
-
-        // Add Main
-        if (mainObj && menuSelection.main) {
-            subItems.push({
-                productId: mainObj.linkId || null,
-                menuItemId: mainObj.id || null,
-                quantity: 1,
-                name: mainObj.name,
-                price: mainObj.individualPrice || 0
-            });
-            if (!isCombo) totalCustomPrice += Number(mainObj.individualPrice || 0);
-        }
-
-        let note = '';
-        if (isCombo) {
-            note = `Combo: ${menuSelection.entry || 'N/A'} + ${menuSelection.main || 'N/A'}`;
-        } else if (menuSelection.entry) {
-            note = `Solo: ${menuSelection.entry}`;
-        } else if (menuSelection.main) {
-            note = `Solo: ${menuSelection.main}`;
-        }
-
-        // If it's a dynamic menu (Virtual), use its name as Presentation to show on bill
-        // e.g. Product: "Menú del Día", Presentation: "Menú Lunes"
-        const presentation = pendingMenuProduct.isVirtualGroup ? pendingMenuProduct.name : null;
-
-        // Clone the product to give it a custom name/price if it's an individual item
-        const productToCart = { ...pendingMenuProduct };
-        let overridePrice = null;
-        if (!isCombo) {
-            overridePrice = totalCustomPrice;
-            productToCart.price = totalCustomPrice;
-        }
-
-        addToCart(productToCart, note, subItems, presentation, overridePrice);
-        setViewMode('products'); // Return to List
-        setPendingMenuProduct(null);
-        setMenuSelection({ entry: null, main: null }); // Reset selection just in case
-    };
-
-    const cancelMenuSelection = () => {
-        setViewMode('products');
-        setPendingMenuProduct(null);
-    };
-
+    // Function bodies moved to useMenuFlow
     const [showPinPad, setShowPinPad] = useState(false);
     const [pinError, setPinError] = useState('');
     const [validatedPinForOrder, setValidatedPinForOrder] = useState(null);
@@ -1212,7 +603,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 printComanda: printComanda,
                 batchId: currentBatchId
             });
-            setCart([]);
+            clearCart();
 
             const accRes = await axios.get(`/api/accounts/table/${tableId}`);
             setAccount(accRes.data);
@@ -1385,179 +776,6 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         }
     };
 
-    const confirmPayment = async () => {
-        // Instead of native confirm(), we use a UI-based confirmation step
-        if (!isConfirmingPayment) {
-            setIsConfirmingPayment(true);
-            return;
-        }
-
-        if (isProcessingPayment) return;
-        setIsProcessingPayment(true);
-
-        const totalPaid = account.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
-        const remaining = Math.max(0, Math.round((parseFloat(account.total) - totalPaid) * 100) / 100);
-        const enteredAmount = parseFloat(payAmount);
-
-        if (isNaN(enteredAmount) || enteredAmount <= 0) {
-            alert('Por favor ingrese un monto a pagar válido.');
-            setIsConfirmingPayment(false);
-            setIsProcessingPayment(false);
-            return;
-        }
-
-        if (paymentMethod === 'yape' && !selectedQrId) {
-            alert('Por favor seleccione a qué código QR se está haciendo el pago.');
-            setIsConfirmingPayment(false);
-            setIsProcessingPayment(false);
-            return;
-        }
-
-        const isPartial = enteredAmount < (remaining - 0.01);
-        setIsLastPaymentPartial(isPartial);
-
-        if (isPartial && issueInvoice) {
-            setIssueInvoice(false);
-            alert('No se pueden emitir comprobantes para abonos parciales.');
-            setIsConfirmingPayment(false);
-            setIsProcessingPayment(false);
-            return;
-        }
-
-        if (issueInvoice) {
-            if (invoiceType === 'factura') {
-                if (!clientForm.dni || clientForm.dni.length !== 11) {
-                    alert('Para emitir una Factura es obligatorio ingresar un RUC válido de 11 dígitos. Por favor, ingréselo en el formulario.');
-                    setIsConfirmingPayment(false);
-                    setIsProcessingPayment(false);
-                    return;
-                }
-            } else if (invoiceType === 'boleta') {
-                if (!clientForm.dni) {
-                    const proceed = window.confirm('No ha ingresado un documento. La boleta se emitirá a "CLIENTES VARIOS". ¿Desea continuar o prefiere cancelar para ingresar los datos del cliente?');
-                    if (!proceed) {
-                        setIsConfirmingPayment(false);
-                        setIsProcessingPayment(false);
-                        return;
-                    }
-                }
-            }
-        }
-
-        try {
-            // Save inline client edits if any
-            if (account && (clientForm.dni !== account.clientDni || clientForm.name !== account.customerName || clientForm.direccion !== account.clientAddress)) {
-                await axios.put(`/api/accounts/${account.id}`, {
-                    customerName: clientForm.name,
-                    clientDni: clientForm.dni,
-                    clientAddress: clientForm.direccion,
-                    accountType: clientForm.accountType
-                });
-            }
-
-            // Pre-create invoice if requested
-            let resInvoiceData = null;
-            if (issueInvoice) {
-                let itemsToBill = [];
-                const previousInvoices = account?.Invoices ? account.Invoices.filter(inv => inv.status !== 'anulado') : [];
-                const totalInvoiced = previousInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-
-                if (totalInvoiced > 0) {
-                    const availableToInvoice = Math.max(0, parseFloat(account.total) - totalInvoiced);
-                    itemsToBill = [{
-                        description: `Saldo restante - Mesa ${tableData ? (tableData.number || tableData.id) : account.TableId} - Cuenta #${account.id}`,
-                        qty: 1,
-                        amount: availableToInvoice
-                    }];
-                } else if (isPartial) {
-                    itemsToBill = [{
-                        description: `Abono parcial - Mesa ${tableData ? (tableData.number || tableData.id) : account.TableId} - Cuenta #${account.id}`,
-                        qty: 1,
-                        amount: enteredAmount
-                    }];
-                } else {
-                    itemsToBill = groupedOrders.map(o => {
-                        let pName = "Producto";
-                        let displayNotes = o.notes;
-                        if (!o.ProductId && o.notes) {
-                            const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
-                            pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
-                            displayNotes = null;
-                        } else if (o.Product && o.Product.name) {
-                            pName = o.Product.name;
-                        }
-                        const fullDesc = `${pName} ${o.presentation ? `(${o.presentation})` : ''} ${displayNotes ? `- ${displayNotes}` : ''}`.trim();
-                        
-                        return {
-                            description: fullDesc,
-                            qty: o.quantity,
-                            amount: o.quantity * parseFloat(o.priceAtOrder)
-                        };
-                    });
-                }
-                
-                const resInvoice = await axios.post('/api/billing/invoices', {
-                    tipo: invoiceType,
-                    clienteDocumento: clientForm.dni || '00000000',
-                    clienteNombre: clientForm.name || 'CLIENTES VARIOS',
-                    clienteDireccion: clientForm.direccion || '',
-                    items: itemsToBill,
-                    userId: user.id,
-                    accountId: account.id
-                });
-                resInvoiceData = resInvoice.data;
-            }
-
-            const formData = new FormData();
-            if (isPartial) {
-                formData.append('amount', enteredAmount);
-            }
-            formData.append('paymentMethod', paymentMethod);
-            if (paymentMethod === 'yape' && selectedQrId) {
-                formData.append('qr_id', selectedQrId);
-            }
-            if (user?.id) {
-                formData.append('userId', user.id);
-            }
-            if (evidenceFiles && evidenceFiles.length > 0) {
-                for (let i = 0; i < evidenceFiles.length; i++) {
-                    formData.append('evidence', evidenceFiles[i]);
-                }
-            }
-
-            const endpoint = isPartial 
-                ? `/api/accounts/${account.id}/pay`
-                : `/api/accounts/${account.id}/close`;
-
-            await axios.post(endpoint, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (issueInvoice && resInvoiceData && resInvoiceData.success) {
-                setSuccessInvoice({
-                    invoice: resInvoiceData.invoice,
-                    sunatResponse: resInvoiceData.sunatResponse
-                });
-                setIsConfirmingPayment(false);
-                setEvidenceFiles([]);
-            } else {
-                setIsConfirmingPayment(false);
-                setShowPaymentModal(false);
-                setEvidenceFiles([]); // Reset file
-                if (isPartial) {
-                    fetchAccount();
-                } else {
-                    onClose();
-                }
-            }
-        } catch (err) {
-            alert('Error al procesar el pago: ' + (err.response?.data?.error || err.message));
-            setIsConfirmingPayment(false); // Reset on error
-        } finally {
-            setIsProcessingPayment(false);
-        }
-    };
-
     // === MENU DATA PARSING ===
     // The DB stores all items in 'entries' with a 'category' field ('entry' or 'main').
     // We need to split them for the UI logic.
@@ -1644,116 +862,23 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     };
 
     // Helper to calculate effective stock based on ingredients
-    const getEffectiveStock = (product, presentation = null) => {
-        if (!product) return 0;
+    // Now delegated to menuStockUtils (pure function, same signature, no state deps).
+    // The imported getEffectiveStock replaces this — all call sites work unchanged.
 
-        // 1. If it has Recipes, calculate limit based on Ingredients
-        if (product.Recipes && product.Recipes.length > 0) {
-            let targetRecipes = [];
-            if (presentation) {
-                targetRecipes = product.Recipes.filter(r => r.presentation === presentation);
-                if (targetRecipes.length === 0) targetRecipes = product.Recipes.filter(r => r.presentation === null);
-            } else {
-                targetRecipes = product.Recipes.filter(r => r.presentation === null);
-                // Fallback for variants if no base recipe
-                if (targetRecipes.length === 0) {
-                    const uniquePres = [...new Set(product.Recipes.map(r => r.presentation))].filter(p => p);
-                    if (uniquePres.length > 0) {
-                        // If all recipes are variant-specific, we check all of them or just return a combined limit? 
-                        // For display, let's pick the "Standard" one or first found
-                        targetRecipes = product.Recipes.filter(r => r.presentation === uniquePres[0]);
-                    }
-                }
-            }
-
-            if (targetRecipes.length > 0) {
-                let minStock = Infinity;
-                targetRecipes.forEach(recipe => {
-                    if (recipe.Ingredient) {
-                        const avail = Math.floor(parseFloat(recipe.Ingredient.stock) / parseFloat(recipe.quantity) || 0);
-                        minStock = Math.min(minStock, avail);
-                    }
-                });
-                return minStock === Infinity ? 0 : minStock;
-            } else {
-                return 0; // Has recipes, but none match the requested presentation
-            }
-        } else if (product.requiresPreparation && !product.isStockManaged && product.type !== 'menu') {
-            // Prepared items without any recipe configured should show 0 stock to match backend validation
-            return 0;
-        }
-
-        // 2. If it's a direct Stock Managed or has variants
-        if (product.isStockManaged) {
-            if (presentation && product.ProductVariants) {
-                const variant = product.ProductVariants.find(v => v.name === presentation);
-                return variant ? variant.stock : product.stock;
-            }
-            // If it has variants, we sum them for the main button
-            if (product.ProductVariants && product.ProductVariants.length > 0) {
-                return product.ProductVariants.reduce((sum, v) => sum + (v.stock || 0), product.stock || 0);
-            }
-            return product.stock || 0;
-        }
-
-        return 999; // Assume infinite if no stock management or recipes AND it's not a required preparation item
-    };
 
     // Helper to sync Daily Menu items with Real Product Stock
-    const syncMenuStock = (items) => {
-        if (!items) return [];
-        return items.map(item => {
-            const realProduct = item.linkId != null ? products.find(p => p.id == item.linkId) : null;
-            let finalStock = item.stock !== undefined ? item.stock : 20;
+    // Delegated to menuStockUtils — wrap to inject `products` from component state.
+    const syncMenuStockLocal = (items) => syncMenuStock(items, products);
 
-            if (realProduct) {
-                const physicalLimit = getEffectiveStock(realProduct);
-                if (realProduct.type === 'daily_entry' || realProduct.type === 'daily_main') {
-                    // Logic: Manual limit but cannot exceed physical ingredients
-                    finalStock = Math.min(item.stock, physicalLimit);
-                } else {
-                    finalStock = physicalLimit;
-                }
-            }
-            return { ...item, stock: finalStock, individualPrice: realProduct ? parseFloat(realProduct.price || 0) : 0 };
-        });
-    };
-
-    const filteredEntries = getMenuOptions(syncMenuStock(parsedEntries));
-    const filteredMains = getMenuOptions(syncMenuStock(parsedMains));
+    const filteredEntries = getMenuOptions(syncMenuStockLocal(parsedEntries));
+    const filteredMains = getMenuOptions(syncMenuStockLocal(parsedMains));
 
     // Calculate Stock for Menu Products
-    const getMenuStockStats = (menuGroup) => {
-        // 1. Get all items belonging to this group
-        const groupEntries = syncMenuStock(parsedEntries).filter(e => (e.groupName || 'Menú del Día') === menuGroup.name);
-        const groupMains = syncMenuStock(parsedMains).filter(m => (m.groupName || 'Menú del Día') === menuGroup.name);
+    // Delegated to menuStockUtils — wrap to inject parsedEntries, parsedMains, products.
+    const getMenuStockStatsLocal = (menuGroup) => getMenuStockStats(menuGroup, parsedEntries, parsedMains, products);
 
-        const totalEntriesStock = groupEntries.reduce((sum, e) => sum + Number(e.stock || 0), 0);
-        const totalMainsStock = groupMains.reduce((sum, m) => sum + Number(m.stock || 0), 0);
-
-        const minStock = Math.min(totalEntriesStock, totalMainsStock);
-
-        const hasUnlimitedEntry = groupEntries.some(e => Number(e.stock || 0) >= 999);
-        const hasUnlimitedMain = groupMains.some(m => Number(m.stock || 0) >= 999);
-        const isUnlimited = hasUnlimitedEntry && hasUnlimitedMain;
-
-        return {
-            stock: minStock,
-            isUnlimited,
-            details: `E:${totalEntriesStock}/S:${totalMainsStock}`
-        };
-    };
-
-    const isProductOutOfStock = (prod) => {
-        const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
-        let displayStock = getEffectiveStock(prod);
-        if (prod.type === 'menu') {
-            const stats = getMenuStockStats(prod);
-            displayStock = stats.stock;
-        }
-        const isMissingRecipe = prod.requiresPreparation && !prod.isStockManaged && prod.type !== 'menu' && (!prod.Recipes || prod.Recipes.length === 0);
-        return isMissingRecipe || ((prod.isStockManaged || prod.requiresPreparation || prod.type === 'menu') && (displayStock - cartQty) <= 0);
-    };
+    // Delegated to menuStockUtils — wrap to inject cart, parsedEntries, parsedMains, products.
+    const isProductOutOfStockLocal = (prod) => isProductOutOfStock(prod, cart, parsedEntries, parsedMains, products);
 
     const renderStockOrLibreBadge = (prod, displayStock, isOutOfStock, isMissingRecipe, isMenuUnlimited, hasVariants, variantsList, stockDetails) => {
         if (isMissingRecipe) {
@@ -1805,7 +930,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         );
     };
 
-    const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // cartTotal is now provided by useCart
     const accountTotal = account ? parseFloat(account.total) : 0;
     const totalPaid = account?.Payments ? account.Payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
     const remaining = account ? Math.max(0, accountTotal - totalPaid) : 0;
@@ -1831,342 +956,45 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         );
     }
 
+    const cartSidebarProps = {
+        account,
+        clientForm,
+        setClientForm,
+        handleClose,
+        handleCloseClick,
+        setStaffTotalInput,
+        setStaffCommentInput,
+        setShowStaffConfirm,
+        groupedOrders,
+        products,
+        user,
+        deleteConfirmId,
+        setDeleteConfirmId,
+        handleDeleteOrder,
+        handleDecrementOrder,
+        cart,
+        updateQuantity,
+        removeItem,
+        totalPaid,
+        isStaff,
+        staffPayableTotal,
+        accountTotal,
+        originalGrandTotal,
+        grandTotal,
+        orderError,
+        sendOrder,
+        isSendingOrder,
+        printingEnabled,
+        handlePrintPreCuenta
+    };
+
     return createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-stretch md:items-center justify-center p-0 md:p-4 z-50">
             <div className="bg-white w-full h-[100dvh] md:h-[90vh] md:max-w-6xl rounded-none md:rounded-lg shadow-2xl flex flex-col md:flex-row overflow-hidden relative">
 
                 {/* --- MOBILE: CART VIEW OVERLAY --- */}
                 {showMobileCart && (
-                    <div className="md:hidden absolute inset-0 bg-white z-20 flex flex-col animate-in slide-in-from-right">
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                                <ShoppingCart size={20} /> Carrito
-                                {account && <span className="text-sm font-normal text-gray-500 ml-2">Cuenta #{account.id}</span>}
-                            </h2>
-                            <button onClick={() => setShowMobileCart(false)} className="p-2 hover:bg-gray-200 rounded-full"><X /></button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {/* Account Info in Cart View */}
-                            {account && (
-                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="staff_toggle_direct_mobile"
-                                            checked={account.accountType === 'staff'}
-                                            onChange={async (e) => {
-                                                if (e.target.checked) {
-                                                    setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
-                                                    setStaffCommentInput(account.clientAddress || '');
-                                                    setShowStaffConfirm(true);
-                                                } else {
-                                                    const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
-                                                    setClientForm(newClientForm);
-                                                    try {
-                                                        const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                            customerName: newClientForm.name,
-                                                            clientDni: newClientForm.dni,
-                                                            clientAddress: newClientForm.direccion,
-                                                            accountType: newClientForm.accountType
-                                                        });
-                                                        setAccount(res.data);
-                                                    } catch (err) {
-                                                        console.error("Error setting account to standard:", err);
-                                                        alert('Error al actualizar la cuenta a consumo estándar');
-                                                    }
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
-                                        />
-                                        <label htmlFor="staff_toggle_direct_mobile" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
-                                            Consumo de Trabajador
-                                        </label>
-                                        {account.accountType === 'staff' && (
-                                            <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
-                                                S/ {Number(account.total).toFixed(1)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {account.accountType === 'staff' && account.clientAddress && (
-                                        <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-2 font-medium italic">
-                                            Nota: {account.clientAddress}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* New Account Info in Cart View (Checkbox Staff + Comment) */}
-                            {!account && (
-                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 mb-4 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="staff_toggle_new_mobile"
-                                            checked={clientForm.accountType === 'staff'}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setStaffTotalInput(clientForm.staffTotal || 0);
-                                                    setStaffCommentInput(clientForm.direccion || '');
-                                                    setShowStaffConfirm(true); // Open custom modal
-                                                } else {
-                                                    setClientForm({ ...clientForm, accountType: 'standard' });
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="staff_toggle_new_mobile" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
-                                    </div>
-                                    {clientForm.accountType === 'staff' && (
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex flex-col gap-1">
-                                                <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
-                                                <input 
-                                                    type="number"
-                                                    min="0"
-                                                    step="1"
-                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                    value={clientForm.staffTotal} 
-                                                    onChange={e => {
-                                                        let val = e.target.value;
-                                                        if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
-                                                            val = accountTotal;
-                                                        }
-                                                        setClientForm({ ...clientForm, staffTotal: val });
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                                <input 
-                                                    className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                    value={clientForm.direccion || ''} 
-                                                    onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                    placeholder="Escriba un comentario..." 
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* SENT ORDERS (Mobile View) */}
-                            {groupedOrders.length > 0 && (
-                                <div className="bg-white p-3 rounded-lg border border-gray-200 mb-4 shadow-sm">
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-2 border-b pb-1">Pedidos Enviados</h3>
-                                    <div className="space-y-2">
-                                        {groupedOrders.map(o => {
-                                            let pName = "Producto desconocido";
-                                            let displayNotes = o.notes;
-                                            let originalP = null;
-
-                                            if (!o.ProductId && o.notes) {
-                                                const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
-                                                pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
-                                                displayNotes = null;
-                                            } else if (o.Product && o.Product.name) {
-                                                pName = o.Product.name;
-                                            } else if (products.length > 0) {
-                                                const localP = products.find(p => p.id === o.ProductId);
-                                                if (localP) pName = localP.name;
-                                            }
-
-                                            if (products.length > 0 && o.ProductId) {
-                                                const localP = products.find(p => p.id === o.ProductId);
-                                                if (localP) {
-                                                    if (o.presentation) {
-                                                        if (localP.ProductVariants && localP.ProductVariants.length > 0) {
-                                                            const v = localP.ProductVariants.find(v => v.name === o.presentation);
-                                                            if (v) originalP = v.price;
-                                                        } else if (localP.presentations) {
-                                                            try {
-                                                                const vars = typeof localP.presentations === 'string' ? JSON.parse(localP.presentations) : localP.presentations;
-                                                                const v = vars.find(v => v.name === o.presentation);
-                                                                if (v) originalP = v.price;
-                                                            } catch (e) { }
-                                                        }
-                                                    }
-                                                    if (originalP === null) originalP = localP.price;
-                                                }
-                                            }
-
-                                            return (
-                                                <div key={o.key} className="flex justify-between items-center text-sm border-b border-dashed pb-2 last:border-b-0 last:pb-0">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-gray-700">
-                                                            {o.quantity}x {pName}
-                                                            <span className="text-blue-600 ml-1">
-                                                                {o.quantity > 1 ? (
-                                                                    `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
-                                                                ) : (
-                                                                    `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
-                                                                )}
-                                                            </span>
-                                                        </span>
-                                                        {o.presentation && <span className="text-xs text-blue-500">({o.presentation})</span>}
-                                                        {displayNotes && <span className="text-xs text-red-400 italic">"{displayNotes}"</span>}
-                                                    </div>
-
-                                                    {/* Actions */}
-                                                    <div className="flex items-center gap-2">
-                                                        {user?.role === 'admin' && (
-                                                            deleteConfirmId === o.id ? (
-                                                                <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
-                                                                    <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
-                                                                    <button
-                                                                        onClick={() => handleDeleteOrder(o.id)}
-                                                                        className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded hover:bg-red-600 transition-colors"
-                                                                    >Sí</button>
-                                                                    <button
-                                                                        onClick={() => setDeleteConfirmId(null)}
-                                                                        className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded hover:bg-gray-300 transition-colors"
-                                                                    >No</button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center gap-1.5">
-                                                                    {o.quantity > 1 && (
-                                                                        <button
-                                                                            onClick={() => handleDecrementOrder(o.id)}
-                                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded-lg transition-colors"
-                                                                            title="Reducir Cantidad"
-                                                                        >
-                                                                            <Minus size={14} />
-                                                                        </button>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => setDeleteConfirmId(o.id)}
-                                                                        className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
-                                                                        title="Eliminar Pedido"
-                                                                    >
-                                                                        <Trash2 size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Cart Items */}
-                            {cart.length === 0 ? (
-                                <div className="text-center py-10 text-gray-400">Carrito vacío</div>
-                            ) : (
-                                cart.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center p-3 bg-white border rounded-lg shadow-sm">
-                                        <div>
-                                            <div className="font-bold text-gray-800">{item.name}</div>
-                                            <div className="text-blue-600 font-bold">S/ {Number((item.price * item.quantity).toFixed(1))}</div>
-                                            {item.notes && <div className="text-xs text-gray-400 max-w-[200px] truncate">{item.notes}</div>}
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => setCart(c => c.map((p, i) => i === idx ? { ...p, quantity: Math.max(1, p.quantity - 1) } : p))}
-                                                className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full font-bold text-gray-600"
-                                            >-</button>
-                                            <span className="font-bold w-4 text-center">{item.quantity}</span>
-                                            <button
-                                                onClick={() => setCart(c => c.map((p, i) => i === idx ? { ...p, quantity: p.quantity + 1 } : p))}
-                                                className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full font-bold text-gray-600"
-                                            >+</button>
-                                            <button
-                                                onClick={() => setCart(c => c.filter((_, i) => i !== idx))}
-                                                className="ml-2 text-red-400"
-                                            ><X size={18} /></button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        <div className="p-4 border-t bg-gray-50">
-                            {totalPaid > 0 && (
-                                <div className="space-y-1 text-xs border-b pb-2 mb-2 text-gray-500">
-                                    <div className="flex justify-between">
-                                        <span>{isStaff ? 'Total a cobrar:' : 'Total consumido:'}</span>
-                                        <span className="font-semibold">S/ {(isStaff ? staffPayableTotal : accountTotal).toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-green-600">
-                                        <span>Abonado:</span>
-                                        <span className="font-semibold">- S/ {totalPaid.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="flex justify-between items-center mb-4">
-                                <span className="font-bold text-gray-600">{totalPaid > 0 ? 'Saldo Pendiente' : 'Total a Pagar'}</span>
-                                <div className="flex items-center gap-2">
-                                    {isStaff && (
-                                        <span className="text-sm text-gray-400 line-through">
-                                            S/ {Number(originalGrandTotal).toFixed(1)}
-                                        </span>
-                                    )}
-                                    <span className="text-2xl font-bold text-blue-800">S/ {Number(grandTotal).toFixed(1)}</span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowMobileCart(false)}
-                                className="w-full text-blue-600 font-bold text-sm mb-3 text-center block"
-                            >
-                                Seguir Comprando
-                            </button>
-                            {cart.length > 0 && (
-                                <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1 text-left">
-                                    <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                    <div>
-                                        <span className="font-bold">⚠️ Atención:</span> Una vez enviado el pedido, <span className="font-bold text-red-950">no se podrá modificar ni eliminar</span> (salvo por un administrador). Por favor, revise bien los productos y las cantidades antes de enviar.
-                                    </div>
-                                </div>
-                            )}
-                            {orderError && (
-                                <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-3 font-bold text-center text-xs">
-                                    {orderError}
-                                </div>
-                            )}
-                            {cart.length > 0 ? (
-                                <button
-                                    onClick={sendOrder}
-                                    disabled={isSendingOrder}
-                                    className={`w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
-                                >
-                                    {isSendingOrder ? 'Enviando...' : 'Enviar Pedido'} {!isSendingOrder && <Check size={20} />}
-                                </button>
-                            ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
-                                <button
-                                    onClick={handleCloseClick}
-                                    className="w-full text-white py-3 rounded-xl font-bold text-lg shadow-lg bg-gray-500 hover:bg-gray-600"
-                                >
-                                    Liberar Mesa
-                                </button>
-                            ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
-                                <div className="flex gap-3 w-full">
-                                    {printingEnabled && (
-                                        <button
-                                            onClick={() => handlePrintPreCuenta(account.id)}
-                                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                        >
-                                            <Printer size={20} /> Pre-cuenta
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleCloseClick}
-                                        className={`${printingEnabled ? 'flex-1' : 'w-full'} bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all`}
-                                    >
-                                        Pagar
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={handleCloseClick}
-                                    className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all"
-                                >
-                                    Pagar
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                    <CartSidebar viewMode="mobile" onCloseMobile={() => setShowMobileCart(false)} {...cartSidebarProps} />
                 )}
 
                 {/* --- VARIANT SELECTION MODAL --- */}
@@ -2341,10 +1169,29 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     key={cat}
                                     onClick={() => {
                                         setSelectedCategory(cat);
-                                        // The useEffect handles the viewMode switch now
+                                        
                                         if (cat === 'combo') {
+                                            setViewMode('combo_categories');
                                             setPendingComboPromo(null);
                                             setComboSelection([]);
+                                            setPendingMenuProduct(null);
+                                            setPendingVariantProduct(null);
+                                        } else if (cat === 'menu') {
+                                            const menuProducts = products.filter(p => p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStockLocal(p));
+                                            if (menuProducts.length === 1) {
+                                                setPendingMenuProduct(menuProducts[0]);
+                                                setViewMode('menu_builder');
+                                                setPendingVariantProduct(null);
+                                                fetchDailyMenu(); // Ensure menu data is fresh
+                                            } else {
+                                                setViewMode('products');
+                                                setPendingMenuProduct(null);
+                                                setPendingVariantProduct(null);
+                                            }
+                                        } else {
+                                            setViewMode('products');
+                                            setPendingMenuProduct(null);
+                                            setPendingVariantProduct(null);
                                         }
                                     }}
                                     className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${selectedCategory === cat ? (cat === 'combo' ? 'bg-purple-600 text-white ring-2 ring-purple-300 ring-offset-1' : 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-1') : 'bg-white border text-gray-600 hover:bg-gray-50'}`}
@@ -2407,7 +1254,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             let stockDetails = '';
                                             let isMenuUnlimited = false;
                                             if (prod.type === 'menu') {
-                                                const stats = getMenuStockStats(prod);
+                                                const stats = getMenuStockStatsLocal(prod);
                                                 displayStock = stats.stock;
                                                 stockDetails = stats.details;
                                                 isMenuUnlimited = stats.isUnlimited;
@@ -2488,9 +1335,9 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                                     {(products.filter(p => {
                                         if (selectedCategory === 'menu') {
-                                            return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStock(p);
+                                            return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStockLocal(p);
                                         }
-                                        return p.type === selectedCategory && !isProductOutOfStock(p);
+                                        return p.type === selectedCategory && !isProductOutOfStockLocal(p);
                                     }).length === 0) ? (
                                         <div className="col-span-full text-center text-gray-400 py-20 italic">
                                             No hay productos disponibles o no coinciden con la búsqueda.
@@ -2498,16 +1345,16 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     ) : (
                                         products.filter(p => {
                                             if (selectedCategory === 'menu') {
-                                                return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStock(p);
+                                                return p.type === 'menu' && dailyMenu.activeGroups.includes(p.name) && !isProductOutOfStockLocal(p);
                                             }
-                                            return p.type === selectedCategory && !isProductOutOfStock(p);
+                                            return p.type === selectedCategory && !isProductOutOfStockLocal(p);
                                         }).map(prod => {
                                             const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
                                             let displayStock = getEffectiveStock(prod);
                                             let stockDetails = '';
                                             let isMenuUnlimited = false;
                                             if (prod.type === 'menu') {
-                                                const stats = getMenuStockStats(prod);
+                                                const stats = getMenuStockStatsLocal(prod);
                                                 displayStock = stats.stock;
                                                 stockDetails = stats.details;
                                                 isMenuUnlimited = stats.isUnlimited;
@@ -2849,7 +1696,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             Cancelar
                                         </button>
                                         <button
-                                            onClick={confirmMenuSelection}
+                                            onClick={() => confirmMenuSelection(filteredEntries, filteredMains)}
                                             disabled={!menuSelection.entry && !menuSelection.main}
                                             className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 flex flex-col items-center justify-center leading-tight"
                                         >
@@ -2890,36 +1737,6 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                 priceLabel = 'Combo 2x1 (precio mayor)';
                             }
 
-                            const handleAdd = () => {
-                                if (comboSelection.length === 0) return;
-                                const name = comboSelection.length === 2
-                                    ? `${comboSelection[0].name} + ${comboSelection[1].name}`
-                                    : comboSelection[0].name;
-                                // Always include drinkItemId so the backend can look up DrinkItemRecipe
-                                // for 'prepared' type items and deduct ingredient stock correctly
-                                const subItems = comboSelection.map(s => ({
-                                    drinkItemId: s.id,           // ID of DrinkPromotionItem (for ingredient deduction)
-                                    productId: s.linkedProductId || null, // Legacy link to Product (for 'finished' type)
-                                    type: s.type,
-                                    quantity: 1,
-                                    name: s.name
-                                }));
-                                const isActualCombo = comboSelection.length === 2;
-                                setCart(prev => [...prev, {
-                                    productId: null,
-                                    name: isActualCombo ? `2x1: ${name}` : comboSelection[0].name,
-                                    price: displayPrice,
-                                    quantity: 1,
-                                    notes: isActualCombo ? name : '',
-                                    isCombo: isActualCombo,
-                                    subItems
-                                }]);
-                                setComboSelection([]);
-                                setViewMode('combo_categories');
-                                setPendingComboPromo(null);
-                                setSearchTerm(''); // Clear search on success
-                            };
-
                             return (
                                 <div className="border-t border-purple-100 pt-3 mt-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white z-20">
                                     <div className="flex flex-row items-center justify-between sm:justify-start gap-3 sm:gap-6 min-w-0 flex-1">
@@ -2946,7 +1763,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                             Limpiar
                                         </button>
                                         <button
-                                            onClick={handleAdd}
+                                            onClick={() => confirmComboSelection(displayPrice)}
                                             className={`px-4 py-2 rounded-xl font-black text-xs transition-all shadow active:scale-95 flex items-center justify-center gap-1.5 
                                             ${comboSelection.length === 2
                                                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
@@ -2999,346 +1816,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 </div>
 
                 {/* RIGHT: Desktop Cart Panel (Always visible on desktop, hidden on mobile) */}
-                <div className="hidden md:flex w-[380px] bg-white border-l flex-col shadow-xl z-20">
-                    <div className="p-5 border-b bg-gray-50">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-lg font-bold text-gray-800">
-                                {account ? `Cuenta #${account.id}` : <span className="text-green-600">Nueva Cuenta</span>}
-                            </h2>
-                            <button 
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleClose();
-                                }} 
-                                className="p-2.5 hover:bg-gray-200 active:bg-gray-300 rounded-full text-gray-500 hover:text-gray-800 transition-all duration-200 relative z-50 cursor-pointer pointer-events-auto shrink-0 flex items-center justify-center -mr-1"
-                                aria-label="Cerrar"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-                        {/* Show Client Edit only if Account Exists OR allow pre-fill? 
-                        Acc doesn't exist yet, so we can't update it via API.
-                        For simplicity: Only allow editing client AFTER account creation (first order).
-                        OR: We could store clientForm in state and send it with open.
-                        For now: Only show if account exists. */}
-                        {account ? (
-                            <div className="mt-3 bg-orange-50 p-3 rounded-lg border border-orange-100 mb-2">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        id="staff_toggle_direct_desktop"
-                                        checked={account.accountType === 'staff'}
-                                        onChange={async (e) => {
-                                            if (e.target.checked) {
-                                                setStaffTotalInput(account.accountType === 'staff' ? (parseFloat(account.total) || 0) : 0);
-                                                setStaffCommentInput(account.clientAddress || '');
-                                                setShowStaffConfirm(true);
-                                            } else {
-                                                const newClientForm = { name: 'Cliente', dni: '', direccion: '', accountType: 'standard', staffTotal: 0 };
-                                                setClientForm(newClientForm);
-                                                try {
-                                                    const res = await axios.put(`/api/accounts/${account.id}`, {
-                                                        customerName: newClientForm.name,
-                                                        clientDni: newClientForm.dni,
-                                                        clientAddress: newClientForm.direccion,
-                                                        accountType: newClientForm.accountType
-                                                    });
-                                                    setAccount(res.data);
-                                                } catch (err) {
-                                                    console.error("Error setting account to standard:", err);
-                                                    alert('Error al actualizar la cuenta a consumo estándar');
-                                                }
-                                            }
-                                        }}
-                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded cursor-pointer"
-                                    />
-                                    <label htmlFor="staff_toggle_direct_desktop" className="text-xs font-bold text-orange-800 cursor-pointer flex-1 select-none">
-                                        Consumo de Trabajador
-                                    </label>
-                                    {account.accountType === 'staff' && (
-                                        <span className="text-xs font-bold text-orange-700 bg-white border border-orange-200 px-1.5 py-0.5 rounded shadow-sm">
-                                            S/ {Number(account.total).toFixed(1)}
-                                        </span>
-                                    )}
-                                </div>
-                                {account.accountType === 'staff' && account.clientAddress && (
-                                    <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded px-2 py-1 mt-2 font-medium italic">
-                                        Nota: {account.clientAddress}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="mt-3 space-y-3">
-                                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100">
-                                    <input
-                                        type="checkbox"
-                                        id="staff_toggle_new"
-                                        checked={clientForm.accountType === 'staff'}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setStaffTotalInput(clientForm.staffTotal || 0);
-                                                setStaffCommentInput(clientForm.direccion || '');
-                                                setShowStaffConfirm(true); // Open custom modal
-                                            } else {
-                                                setClientForm({ ...clientForm, accountType: 'standard', staffTotal: 0 });
-                                            }
-                                        }}
-                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                    />
-                                    <label htmlFor="staff_toggle_new" className="text-xs font-bold text-orange-800 cursor-pointer">Consumo de Trabajador</label>
-                                </div>
-                                {clientForm.accountType === 'staff' && (
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-bold text-gray-600">Total a cobrar (S/)</label>
-                                            <input 
-                                                type="number"
-                                                min="0"
-                                                step="1"
-                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                value={clientForm.staffTotal} 
-                                                onChange={e => {
-                                                    let val = e.target.value;
-                                                    if (val !== '' && accountTotal > 0 && Number(val) > accountTotal) {
-                                                        val = accountTotal;
-                                                    }
-                                                    setClientForm({ ...clientForm, staffTotal: val });
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
-                                            <input 
-                                                className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
-                                                value={clientForm.direccion || ''} 
-                                                onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })} 
-                                                placeholder="Escriba un comentario..." 
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="text-sm text-gray-500 italic">
-                                    Agrega productos para abrir la mesa.
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-
-                        {groupedOrders.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-xs font-bold text-gray-400 uppercase">Pedidos Enviados</h3>
-                                {groupedOrders.map(o => {
-                                    // Robust Product Name Lookup
-                                    let pName = "Producto desconocido";
-                                    let displayNotes = o.notes;
-
-                                    let originalP = null;
-
-                                    // Combo orders have no ProductId — use notes as name
-                                    if (!o.ProductId && o.notes) {
-                                        const cleanNote = o.notes.replace(/^2x1:\s*/i, '');
-                                        pName = cleanNote.includes(' + ') ? `2x1: ${cleanNote}` : cleanNote;
-                                        displayNotes = null; // avoid repeating under name
-                                    } else if (o.Product && o.Product.name) {
-                                        pName = o.Product.name;
-                                    }
-
-                                    if (products.length > 0 && o.ProductId) {
-                                        // Fallback: Find in local products list
-                                        const localP = products.find(p => p.id === o.ProductId);
-                                        if (localP) {
-                                            pName = localP.name;
-                                            if (o.presentation) {
-                                                if (localP.ProductVariants && localP.ProductVariants.length > 0) {
-                                                    const v = localP.ProductVariants.find(v => v.name === o.presentation);
-                                                    if (v) originalP = v.price;
-                                                } else if (localP.presentations) {
-                                                    try {
-                                                        const vars = typeof localP.presentations === 'string' ? JSON.parse(localP.presentations) : localP.presentations;
-                                                        const v = vars.find(v => v.name === o.presentation);
-                                                        if (v) originalP = v.price;
-                                                    } catch (e) { }
-                                                }
-                                            }
-                                            if (originalP === null) originalP = localP.price;
-                                        }
-                                    }
-
-                                    const isStaff = account?.accountType === 'staff';
-
-                                    return (
-                                        <div key={o.key} className="flex justify-between items-center text-sm py-2 border-b border-dashed">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-gray-700">
-                                                    {o.quantity}x {pName}
-                                                    <span className="text-blue-600 ml-1">
-                                                        {isStaff ? (
-                                                            o.quantity > 1 ? (
-                                                                <span className="text-orange-600">({o.quantity}x S/ {Number(parseFloat(o.priceAtOrder || 0).toFixed(1))} = S/ {Number((o.quantity * parseFloat(o.priceAtOrder || 0)).toFixed(1))})</span>
-                                                            ) : (
-                                                                <span className="text-orange-600">(S/ {Number(parseFloat(o.priceAtOrder || 0).toFixed(1))})</span>
-                                                            )
-                                                        ) : (
-                                                            o.quantity > 1 ? (
-                                                                `(${o.quantity} x S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))} = S/ ${Number((o.quantity * parseFloat(o.priceAtOrder)).toFixed(1))})`
-                                                            ) : (
-                                                                `(S/ ${Number(parseFloat(o.priceAtOrder).toFixed(1))})`
-                                                            )
-                                                        )}
-                                                    </span>
-                                                </span>
-                                                {o.presentation && <span className="text-xs text-blue-500">({o.presentation})</span>}
-                                                {displayNotes && <span className="text-xs text-red-400 italic">"{displayNotes}"</span>}
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <div className="flex items-center gap-1 mt-1">
-                                                        {/* Status Badges Removed for Simplicity */}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex items-center gap-2">
-                                                {user?.role === 'admin' && (
-                                                    deleteConfirmId === o.id ? (
-                                                        <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
-                                                            <span className="text-xs text-red-700 font-bold mr-1">¿Eliminar?</span>
-                                                            <button
-                                                                onClick={() => handleDeleteOrder(o.id)}
-                                                                className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded hover:bg-red-600 transition-colors"
-                                                            >Sí</button>
-                                                            <button
-                                                                onClick={() => setDeleteConfirmId(null)}
-                                                                className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded hover:bg-gray-300 transition-colors"
-                                                            >No</button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-1.5">
-                                                            {o.quantity > 1 && (
-                                                                <button
-                                                                    onClick={() => handleDecrementOrder(o.id)}
-                                                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded-lg transition-colors"
-                                                                    title="Reducir Cantidad"
-                                                                >
-                                                                    <Minus size={14} />
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => setDeleteConfirmId(o.id)}
-                                                                className="bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-lg transition-colors"
-                                                                title="Eliminar Pedido"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </div>
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {cart.length > 0 && (
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-blue-600 uppercase">Nuevo Pedido</h3>
-                                {cart.map((item, idx) => (
-                                    <div key={idx} className="bg-blue-50 p-3 rounded-lg flex justify-between items-center relative group">
-                                        <div>
-                                            <div className="font-bold text-sm">{item.name}</div>
-                                            <div className="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
-                                                {item.originalPrice !== undefined && item.originalPrice !== item.price && (
-                                                    <span className="line-through text-gray-400">S/ {Number((item.originalPrice * item.quantity).toFixed(1))}</span>
-                                                )}
-                                                <span className={item.price === 0 ? "text-orange-600 font-bold" : ""}>
-                                                    S/ {Number((item.price * item.quantity).toFixed(1))}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-white rounded px-1 border">
-                                            <button onClick={() => setCart(c => c.map((p, i) => i === idx ? { ...p, quantity: Math.max(1, p.quantity - 1) } : p))} className="px-2 font-bold">-</button>
-                                            <span className="text-sm font-bold">{item.quantity}</span>
-                                            <button onClick={() => setCart(c => c.map((p, i) => i === idx ? { ...p, quantity: p.quantity + 1 } : p))} className="px-2 font-bold">+</button>
-                                        </div>
-                                        <button onClick={() => setCart(c => c.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-100 text-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"><X size={12} /></button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="p-4 border-t bg-gray-50">
-                        {totalPaid > 0 && (
-                            <div className="space-y-1 text-sm border-b pb-2 mb-2 text-gray-500">
-                                <div className="flex justify-between">
-                                    <span>{isStaff ? 'Total a cobrar:' : 'Total consumido:'}</span>
-                                    <span className="font-semibold">S/ {(isStaff ? staffPayableTotal : accountTotal).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-green-600">
-                                    <span>Abonado:</span>
-                                    <span className="font-semibold">- S/ {totalPaid.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-xl font-bold text-gray-800 mb-4 items-center">
-                            <span>{totalPaid > 0 ? 'Saldo Pendiente' : 'Total'}</span>
-                            <div className="flex flex-col items-end">
-                                {account?.accountType === 'staff' && (
-                                    <span className="text-[10px] text-orange-600 uppercase font-bold bg-orange-50 px-2 py-0.5 rounded -mb-1">Consumo Personal</span>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    {isStaff && (
-                                        <span className="text-sm text-gray-400 line-through font-normal">
-                                            S/ {Number(originalGrandTotal).toFixed(1)}
-                                        </span>
-                                    )}
-                                    <span className="text-blue-800 font-bold">S/ {Number(grandTotal).toFixed(1)}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {cart.length > 0 && (
-                            <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1 text-left">
-                                <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-bold">⚠️ Atención:</span> Una vez enviado el pedido, <span className="font-bold text-red-950">no se podrá modificar ni eliminar</span> (salvo por un administrador). Por favor, revise bien los productos y las cantidades antes de enviar.
-                                </div>
-                            </div>
-                        )}
-                        {orderError && (
-                            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-3 font-bold text-center text-xs">
-                                {orderError}
-                            </div>
-                        )}
-                        {cart.length > 0 ? (
-                            <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
-                        ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
-                            <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100">Liberar Mesa</button>
-                        ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
-                            <div className="flex gap-2 w-full">
-                                {printingEnabled && (
-                                    <button 
-                                        onClick={() => handlePrintPreCuenta(account.id)} 
-                                        className="flex-1 border-2 border-amber-600 text-amber-600 py-3 rounded-xl font-bold hover:bg-amber-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                    >
-                                        <Printer size={16} /> Pre-cuenta
-                                    </button>
-                                )}
-                                <button 
-                                    onClick={handleCloseClick} 
-                                    className={`${printingEnabled ? 'flex-1' : 'w-full'} border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all`}
-                                >
-                                    Pagar
-                                </button>
-                            </div>
-                        ) : (
-                            <button onClick={handleCloseClick} className="w-full border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all">Pagar</button>
-                        )}
-                    </div>
-                </div>
+                <CartSidebar viewMode="desktop" {...cartSidebarProps} />
             </div >
 
             {/* Custom Confirmation Modal for Staff Consumption */}
