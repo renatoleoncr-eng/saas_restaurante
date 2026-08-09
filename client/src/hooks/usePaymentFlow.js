@@ -24,23 +24,23 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
         fetchQrs();
     }, []);
 
-    const fetchBillingConfig = async () => {
+    async function fetchBillingConfig() {
         try {
             const res = await axios.get('/api/billing/config');
             setBillingConfig(res.data);
         } catch (err) {
             console.error("Error fetching billing config:", err);
         }
-    };
+    }
 
-    const fetchQrs = async () => {
+    async function fetchQrs() {
         try {
             const res = await axios.get('/api/qrs');
             setQrsList(res.data.filter(qr => qr.isActive));
         } catch (err) {
             console.error("Error fetching QRs:", err);
         }
-    };
+    }
 
     const confirmPayment = async () => {
         if (!isConfirmingPayment) {

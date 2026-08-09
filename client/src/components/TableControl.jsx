@@ -156,7 +156,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         fetchAccount,
         onClose
     });
-    const { showPaymentModal, setShowPaymentModal, isConfirmingPayment } = paymentFlow;
+    const { 
+        showPaymentModal, setShowPaymentModal, 
+        isConfirmingPayment, setIsConfirmingPayment,
+        setPayAmount, setIssueInvoice, setInvoiceType
+    } = paymentFlow;
 
     // isHappyHourActive moved to useCart / timeUtils
 
@@ -312,8 +316,6 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
         fetchAccount();
         fetchDailyMenu();
         fetchDrinkPromotions();
-        fetchBillingConfig();
-        fetchQrs();
     }, [tableId, accountId, refreshTrigger]);
 
     // DIRECT SOCKET LISTENER (Redundancy for safety)
