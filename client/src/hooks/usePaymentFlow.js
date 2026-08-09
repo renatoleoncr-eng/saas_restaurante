@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { generatePrintableHtml } from '../utils/billingPrintUtils';
+import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
 
 export function usePaymentFlow({ account, clientForm, user, tableData, groupedOrders, fetchAccount, onClose }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -232,14 +232,7 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
         if (!invoice) return;
         
         const html = generatePrintableHtml(invoice, billingConfig, paymentMethod, successInvoice);
-        
-        const iframe = document.getElementById('print-iframe');
-        if (iframe) {
-            const doc = iframe.contentWindow.document;
-            doc.open();
-            doc.write(html);
-            doc.close();
-        }
+        triggerIframePrint(html);
     };
 
     const handleDownloadLocalXml = (invoice) => {

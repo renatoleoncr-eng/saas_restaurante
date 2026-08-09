@@ -20,7 +20,7 @@ const PaymentModal = ({
         successInvoice, setSuccessInvoice,
         paymentMethod, setPaymentMethod,
         qrsList, selectedQrId, setSelectedQrId,
-        evidenceFiles, setEvidenceFiles, handleFileChange,
+        evidenceFiles, setEvidenceFiles,
         payAmount, setPayAmount,
         isLastPaymentPartial, setIsLastPaymentPartial,
         isConfirmingPayment, setIsConfirmingPayment,
@@ -49,7 +49,7 @@ const PaymentModal = ({
     };
 
     return (
-                showPaymentModal && (
+                (
                     <div className="absolute inset-0 bg-black/60 z-[60] flex justify-center items-start overflow-y-auto p-4">
                         {successInvoice ? (
                             <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200 my-auto">
