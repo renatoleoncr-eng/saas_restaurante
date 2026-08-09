@@ -38,6 +38,7 @@ const PaymentModal = ({
         (invoiceType === 'boleta' && clientForm.dni && (!clientForm.name || clientForm.name.trim() === ''))
     );
     const isPayDisabled = isConfirmingPayment || isProcessingPayment || isInvoiceDataMissing;
+    const isStaff = account?.type === 'staff';
     
     // We also need handleFileChange if it's not exported from usePaymentFlow.
     // wait, handleFileChange from TableControl needs to be reconstructed here or exposed.
