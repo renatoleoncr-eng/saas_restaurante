@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { generatePrintableHtml } from '../utils/billingPrintUtils';
 
 export function usePaymentFlow({ account, clientForm, user, tableData, groupedOrders, fetchAccount, onClose }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -229,138 +230,9 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
 
     const handlePrintLocalInvoice = (invoice) => {
         if (!invoice) return;
-
-        const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
-        const dateStr = invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString();
-        const docName = invoice.tipo === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
         
-        const rucEmpresa = billingConfig?.ruc || '20614409593';
-        const nameEmpresa = billingConfig?.razonSocial || 'GESTIÓN RESTAURANTE EIRL';
-        const addressEmpresa = billingConfig?.direccion || 'Av. Larco 123, Miraflores, Lima';
-
-        const isExonerated = billingConfig?.operacionesExoneradas || parseFloat(invoice.igv || 0) === 0;
-        const totalAmount = parseFloat(invoice.total || 0);
-        const igvAmount = isExonerated ? 0 : parseFloat(invoice.igv || 0);
-        const opAmount = isExonerated ? totalAmount : parseFloat(invoice.subtotal || 0);
-        const opLabel = isExonerated ? 'OP. EXONERADA:' : 'OP. GRAVADA:';
-        const igvLabel = isExonerated ? 'I.G.V. (0%):' : `I.G.V. (${billingConfig?.igvTasa || 18}%):`;
-
-        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
-        let tipoDocAdq = '0';
-        if (invoice.clienteDocumento) {
-            if (invoice.clienteDocumento.length === 11) tipoDocAdq = '6';
-            else if (invoice.clienteDocumento.length === 8) tipoDocAdq = '1';
-        }
-        const nroDocAdq = invoice.clienteDocumento || '00000000';
+        const html = generatePrintableHtml(invoice, billingConfig, paymentMethod, successInvoice);
         
-        const rawDate = invoice.emitidoAt || invoice.createdAt || new Date();
-        const d = new Date(rawDate);
-        const fechaEmi = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
-        const qrData = [
-            rucEmpresa,
-            tipoComp,
-            invoice.serie,
-            invoice.correlativo,
-            igvAmount.toFixed(2),
-            totalAmount.toFixed(2),
-            fechaEmi,
-            tipoDocAdq,
-            nroDocAdq
-        ].join('|');
-
-        let html = `
-            <html>
-            <head>
-                <style>
-                    body { font-family: monospace; width: 300px; margin: 0 auto; font-size: 12px; }
-                    .center { text-align: center; }
-                    .right { text-align: right; }
-                    .bold { font-weight: bold; }
-                    .divider { border-top: 1px dashed #000; margin: 5px 0; }
-                    table { width: 100%; border-collapse: collapse; }
-                    td { vertical-align: top; padding: 2px 0; }
-                    .qr-code { display: block; margin: 10px auto; width: 120px; height: 120px; }
-                </style>
-                <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-            </head>
-            <body>
-                <div class="center">
-                    <h2 style="margin: 5px 0;">${nameEmpresa}</h2>
-                    <div>RUC: ${rucEmpresa}</div>
-                    <div>${addressEmpresa}</div>
-                    <div class="divider"></div>
-                    <div class="bold" style="font-size: 14px;">${docName}</div>
-                    <div>${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}</div>
-                </div>
-                <div class="divider"></div>
-                <div>Fecha: ${dateStr}</div>
-                <div>Cliente: ${invoice.clienteNombre || 'CLIENTES VARIOS'}</div>
-                <div>${invoice.tipo === 'factura' ? 'RUC' : 'Doc'}: ${invoice.clienteDocumento || '00000000'}</div>
-                ${invoice.clienteDireccion ? `<div>Dir: ${invoice.clienteDireccion}</div>` : ''}
-                <div class="divider"></div>
-                <table>
-                    <tr><td colspan="4" class="divider"></td></tr>
-                    <tr>
-                        <td class="bold">Cant</td>
-                        <td class="bold">Descripción</td>
-                        <td class="bold right">P.Unit</td>
-                        <td class="bold right">Total</td>
-                    </tr>
-                    <tr><td colspan="4" class="divider"></td></tr>
-                    ${items.map(item => `
-                        <tr>
-                            <td>${item.qty}</td>
-                            <td>${item.description}</td>
-                            <td class="right">${(item.amount / item.qty).toFixed(2)}</td>
-                            <td class="right">${parseFloat(item.amount).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                <div class="divider"></div>
-                <table style="width:100%">
-                    <tr>
-                        <td class="bold right" style="width: 70%;">${opLabel}</td>
-                        <td class="right">S/ ${opAmount.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td class="bold right">${igvLabel}</td>
-                        <td class="right">S/ ${igvAmount.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td class="bold right" style="font-size:14px;">TOTAL:</td>
-                        <td class="bold right" style="font-size:14px;">S/ ${totalAmount.toFixed(2)}</td>
-                    </tr>
-                </table>
-                
-                <div id="qrcode" class="qr-code"></div>
-
-                <div class="center" style="margin-top: 10px; font-size: 10px;">
-                    Representación impresa del comprobante electrónico.<br>
-                    Consulte su comprobante en SUNAT.
-                </div>
-                <div class="divider" style="margin-bottom: 20px;"></div>
-
-                <script>
-                    var qr = new QRCode(document.getElementById("qrcode"), {
-                        text: "${qrData}",
-                        width: 120,
-                        height: 120,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.M
-                    });
-                    
-                    window.onload = function() {
-                        setTimeout(() => {
-                            window.print();
-                        }, 500);
-                    };
-                </script>
-            </body>
-            </html>
-        `;
-
         const iframe = document.getElementById('print-iframe');
         if (iframe) {
             const doc = iframe.contentWindow.document;
