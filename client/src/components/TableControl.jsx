@@ -14,6 +14,7 @@ import { getEffectiveStock, syncMenuStock, getMenuStockStats, isProductOutOfStoc
 import { useMenuFlow } from '../hooks/useMenuFlow';
 import { useCart } from '../hooks/useCart';
 import CartSidebar from './CartSidebar';
+import { isHappyHourActive } from '../utils/timeUtils';
 // NOTE: billingPrintUtils and billingXmlUtils are ready but NOT connected yet.
 // Connect them when ready to test the print service (Phase 1 of refactoring plan).
 // import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
