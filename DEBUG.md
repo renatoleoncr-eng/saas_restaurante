@@ -26,6 +26,6 @@ errors: "ReferenceError: Can't find var..."
   implication: If it's a code issue, it's something else not caught by ESLint `no-undef`.
 
 ## Resolution
-root_cause: TBD
-fix: TBD
-verification: TBD
+root_cause: `isHappyHourActive` was heavily used in `TableControl.jsx`'s JSX rendering (16 times) to show prices, but it was not imported. It was missed because ESLint buried it at the bottom of 30+ TDZ warnings. When a table was selected, the UI crashed attempting to read the undefined function.
+fix: Imported `isHappyHourActive` from `timeUtils.js`. Verified via strict ESLint flat config that ZERO `no-undef` errors exist now.
+verification: Pushed to main and deployed to VPS. User must hard-reload.

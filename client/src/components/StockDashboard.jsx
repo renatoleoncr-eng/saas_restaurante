@@ -15,12 +15,12 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
         if (mode === 'menu_only') return 'menu_options';
         if (viewMode === 'insumos') {
             const saved = localStorage.getItem('stock_activeTab_insumos') || 'ingredients';
-            if (saved !== 'ingredients' && saved !== 'finished') return 'ingredients';
+            if (saved !== 'ingredients') return 'ingredients';
             return saved;
         }
         if (viewMode === 'carta') {
             const saved = localStorage.getItem('stock_activeTab_carta') || 'prepared';
-            if (saved !== 'prepared' && saved !== 'free') return 'prepared';
+            if (saved !== 'prepared' && saved !== 'free' && saved !== 'finished') return 'prepared';
             return saved;
         }
         return localStorage.getItem('stock_activeTab') || 'finished';
@@ -87,10 +87,10 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
     useEffect(() => {
         if (viewMode === 'insumos') {
             const saved = localStorage.getItem('stock_activeTab_insumos') || 'ingredients';
-            setActiveTab(saved !== 'ingredients' && saved !== 'finished' ? 'ingredients' : saved);
+            setActiveTab(saved !== 'ingredients' ? 'ingredients' : saved);
         } else if (viewMode === 'carta') {
             const saved = localStorage.getItem('stock_activeTab_carta') || 'prepared';
-            setActiveTab(saved !== 'prepared' && saved !== 'free' ? 'prepared' : saved);
+            setActiveTab(saved !== 'prepared' && saved !== 'free' && saved !== 'finished' ? 'prepared' : saved);
         }
     }, [viewMode]);
 
@@ -524,17 +524,17 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                     {/* TABS CONTROLLERS (Order 3 on mobile, Order 1 on desktop) */}
                     <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto order-3 md:order-1">
                         {/* MOBILE TABS (TOP) */}
-                        {mode !== 'menu_only' && (
+                        {mode !== 'menu_only' && viewMode !== 'insumos' && (
                             <div className="md:hidden w-full">
                                 <MobileTabMenu
                                     tabs={[
                                         ...(viewMode === 'carta' || viewMode === 'full' ? [
+                                            { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
                                             { id: 'prepared', label: `Preparados (${countPrepared})`, icon: ChefHat },
                                             { id: 'free', label: `Libres (${countFree})`, icon: Zap },
                                         ] : []),
                                         ...(viewMode === 'insumos' || viewMode === 'full' ? [
                                             { id: 'ingredients', label: `Insumos (${countIngredients})`, icon: Layers },
-                                            { id: 'finished', label: `Terminados (${countFinished})`, icon: Package },
                                         ] : []),
                                     ]}
                                     activeTab={activeTab}
@@ -544,7 +544,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                         )}
 
                         {/* DESKTOP TABS */}
-                        {mode !== 'menu_only' && (
+                        {mode !== 'menu_only' && viewMode !== 'insumos' && (
                             <div className="hidden md:flex bg-gray-100 p-1.5 rounded-xl overflow-x-auto shadow-sm border border-gray-200">
                                 {(viewMode === 'insumos' || viewMode === 'full') && (
                                     <>
@@ -554,16 +554,16 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                         >
                                             Insumos ({countIngredients})
                                         </button>
+                                    </>
+                                )}
+                                {(viewMode === 'carta' || viewMode === 'full') && (
+                                    <>
                                         <button
                                             onClick={() => setActiveTab('finished')}
                                             className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'finished' ? 'bg-white text-blue-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
                                         >
                                             Terminados ({countFinished})
                                         </button>
-                                    </>
-                                )}
-                                {(viewMode === 'carta' || viewMode === 'full') && (
-                                    <>
                                         <button
                                             onClick={() => setActiveTab('prepared')}
                                             className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'prepared' ? 'bg-white text-orange-700 shadow-sm border border-gray-200/50' : 'text-gray-600 hover:bg-gray-200'}`}
@@ -1828,6 +1828,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                             {products.filter(product => {
                                                 // Menu products are managed via Configurar Menú, not inventory tabs
                                                 const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
+
+                                                if (searchQuery && viewMode === 'carta') {
+                                                    return !excludedTypes.includes(product.type);
+                                                }
+
                                                 if (activeTab === 'finished') {
                                                     // Ensure we are in stock mode
                                                     if (finishedTab === 'movements') return false;
@@ -2115,6 +2120,11 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                     <div className="md:hidden grid grid-cols-1 gap-4">
                                         {products.filter(p => {
                                             const excludedTypes = ['daily_entry', 'daily_main', 'daily_option', 'menu'];
+
+                                            if (searchQuery && viewMode === 'carta') {
+                                                return !excludedTypes.includes(p.type);
+                                            }
+
                                             if (activeTab === 'finished') return p.isStockManaged && !excludedTypes.includes(p.type);
                                             if (activeTab === 'prepared') return !p.isStockManaged && p.requiresPreparation && !excludedTypes.includes(p.type);
                                             if (activeTab === 'free') return !p.isStockManaged && !p.requiresPreparation && !excludedTypes.includes(p.type);
