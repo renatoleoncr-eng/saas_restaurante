@@ -914,7 +914,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             }
         }
 
-        const isManaged = prod.isStockManaged || prod.requiresPreparation || (prod.type === 'menu' && !isMenuUnlimited);
+        const isManaged = prod.type === 'menu' ? !isMenuUnlimited : (prod.isStockManaged || prod.requiresPreparation);
         if (!isManaged) {
             return null;
         }

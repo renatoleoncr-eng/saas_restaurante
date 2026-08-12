@@ -133,6 +133,7 @@ router.post('/menu/daily', async (req, res) => {
                     type: 'menu',
                     stock: 999,
                     isStockManaged: false,
+                    requiresPreparation: false,
                     description: 'Generado automáticamente desde Configuración de Menú',
                     TenantId: req.tenant.id
                 }
