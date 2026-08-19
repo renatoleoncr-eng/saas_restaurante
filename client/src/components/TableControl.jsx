@@ -36,6 +36,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
     const [isActionInProgress, setIsActionInProgress] = useState(false);
     const isSendingRef = useRef(false);
     const idempotencyKeyRef = useRef(null);
+    const isPostOrderFetchRef = useRef(false); // Blocks concurrent fetchAccount during order send
 
     // Client Editing State
     const [isEditingClient, setIsEditingClient] = useState(false);
@@ -311,6 +312,11 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
 
     // Initial Load & Context Trigger
     useEffect(() => {
+        // Suppress redundant refetch if executeSendOrder just did a manual fetch
+        if (isPostOrderFetchRef.current) {
+            isPostOrderFetchRef.current = false;
+            return;
+        }
         setIsAccountLoaded(false);
         if (tableId) loadTableData();
         fetchProducts();
@@ -609,14 +615,22 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 batchId: currentBatchId
             });
             clearCart();
+            idempotencyKeyRef.current = null; // Reset batch ID after successful send
 
-            const accRes = await axios.get(`/api/accounts/table/${tableId}`);
-            setAccount(accRes.data);
+            // Use the confirmed accountId to reload — avoids issues when tableId is undefined
+            const fetchUrl = accountId
+                ? `/api/accounts/specific/${targetAccountId}?t=${Date.now()}`
+                : `/api/accounts/table/${tableId}?t=${Date.now()}`;
+            const accRes = await axios.get(fetchUrl);
+            if (accRes.data) setAccount(accRes.data);
 
             // Force Menu Refresh immediately to update Stock UI
             await fetchDailyMenu();
-            // Also trigger global refresh to update other components
-            refreshData();
+            // Mark that we just updated account — suppress the next refreshTrigger-driven fetchAccount
+            isPostOrderFetchRef.current = true;
+            // Trigger global refresh (for Dashboard table color update), deferred to let our state win first
+            setTimeout(() => refreshData(), 300);
+
             
             setIsSendingOrder(false);
             isSendingRef.current = false;
@@ -1245,15 +1259,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                         {/* Scrollable Content Wrapper */}
                         <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
 
-                            {/* SEARCH RESULTS (Standard categories) */}
-                            {searchTerm && selectedCategory !== 'combo' && (
+                            {/* SEARCH RESULTS (Standard categories — transversal: busca en Platos, Bebidas, Menús) */}
+                            {searchTerm && (
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 animate-in fade-in slide-in-from-top-2">
-                                    {products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                    {products.filter(p => p.type !== 'combo' && p.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
                                         <div className="col-span-full text-center text-gray-400 py-20 italic">
                                             No se encontraron productos para "{searchTerm}".
                                         </div>
                                     ) : (
-                                        products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(prod => {
+                                        products.filter(p => p.type !== 'combo' && p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(prod => {
                                             const cartQty = cart.reduce((acc, c) => c.productId === prod.id ? acc + c.quantity : acc, 0);
                                             let displayStock = getEffectiveStock(prod);
                                             let stockDetails = '';
