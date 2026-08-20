@@ -417,6 +417,23 @@ export default function CartSidebar({
                             <button onClick={sendOrder} disabled={isSendingOrder} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-all mb-2 ${isSendingOrder ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}>{isSendingOrder ? 'Enviando...' : 'Enviar Pedido'}</button>
                         ) : (!account || (account.Orders && account.Orders.length === 0)) ? (
                             <button onClick={handleCloseClick} className="w-full border-2 border-gray-400 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-100 mb-2">Liberar Mesa</button>
+                        ) : ['admin', 'cashier', 'waiter'].includes(user?.role) ? (
+                            <div className="flex gap-2 w-full mb-2">
+                                {printingEnabled && (
+                                    <button
+                                        onClick={() => handlePrintPreCuenta(account.id)}
+                                        className="flex-1 border-2 border-amber-600 text-amber-600 py-3 rounded-xl font-bold hover:bg-amber-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                    >
+                                        <Printer size={16} /> Pre-cuenta
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleCloseClick}
+                                    className={`${printingEnabled ? 'flex-1' : 'w-full'} border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all`}
+                                >
+                                    Pagar
+                                </button>
+                            </div>
                         ) : (
                             <button onClick={handleCloseClick} className="w-full border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all mb-2">Pagar Cuenta</button>
                         )}
