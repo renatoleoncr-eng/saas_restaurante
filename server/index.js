@@ -387,6 +387,7 @@ app.use('/api', requireTenant, menuRoutes);           // menú digital — puede
 app.use('/api/qrs', requireTenant, qrRoutes);         // pantalla cliente QR — pública
 app.use('/api/promotions', requireTenant, promotionRoutes); // promociones para pantalla cliente
 app.use('/api/roulette', requireTenant, rouletteRoutes);    // ruleta para pantalla cliente
+app.use('/api', requireTenant, revenueRoutes);     // ingresos (tiene apiKeyAuth propio)
 app.use('/api', requireTenant, printerAgentRouter);   // agente de impresión local (proceso sistema, sin auth de usuario)
 
 // =============================================
@@ -405,7 +406,6 @@ app.use('/api', requireTenant, authMiddleware, expenseRoutes);        // gastos
 app.use('/api', requireTenant, authMiddleware, accountRoutes);        // cuentas
 app.use('/api', requireTenant, authMiddleware, drinkPromotionRoutes); // promociones de bebidas
 app.use('/api', requireTenant, authMiddleware, sessionRoutes);        // sesiones de caja
-app.use('/api', requireTenant, revenueRoutes);        // ingresos (tiene apiKeyAuth)
 
 // Reservation Auto-Release Logic (Run every minute)
 setInterval(async () => {
