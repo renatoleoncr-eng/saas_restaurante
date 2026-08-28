@@ -405,7 +405,7 @@ app.use('/api', requireTenant, authMiddleware, expenseRoutes);        // gastos
 app.use('/api', requireTenant, authMiddleware, accountRoutes);        // cuentas
 app.use('/api', requireTenant, authMiddleware, drinkPromotionRoutes); // promociones de bebidas
 app.use('/api', requireTenant, authMiddleware, sessionRoutes);        // sesiones de caja
-app.use('/api', requireTenant, authMiddleware, revenueRoutes);        // ingresos (también tiene apiKeyAuth)
+app.use('/api', requireTenant, revenueRoutes);        // ingresos (tiene apiKeyAuth)
 
 // Reservation Auto-Release Logic (Run every minute)
 setInterval(async () => {
