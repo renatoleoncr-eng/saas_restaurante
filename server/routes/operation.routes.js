@@ -9,27 +9,36 @@ const { logAction } = require('../utils/audit');
 
 // Open a new Account for a Table
 router.post('/accounts/open', async (req, res) => {
+    const { sequelize } = getModels();
+    const t = await sequelize.transaction();
     try {
         const { Account, Table } = getModels();
         const { tableId, customerName, clientDni, clientAddress, userId, accountType } = req.body;
 
         // Check if table is occupied (within this tenant)
-        const table = await Table.findOne({ where: { id: tableId, TenantId: req.tenant.id } });
+        const table = await Table.findOne({ where: { id: tableId, TenantId: req.tenant.id }, transaction: t });
+        if (!table) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Mesa no encontrada' });
+        }
         
         // Ensure there isn't already an open account for this table
-        const existingAccount = await Account.findOne({ where: { TableId: tableId, status: 'open', TenantId: req.tenant.id } });
+        // Use lock:true to prevent race conditions when two waiters try to open the same table
+        const existingAccount = await Account.findOne({ where: { TableId: tableId, status: 'open', TenantId: req.tenant.id }, transaction: t, lock: true });
         if (existingAccount) {
             // Self-heal table status if it was erroneously set to free
             if (table.status !== 'occupied') {
                 table.status = 'occupied';
-                await table.save();
+                await table.save({ transaction: t });
                 const io = req.app.get('io');
                 if (io) io.emit('table_updated', { tableId: table.id, status: 'occupied' });
             }
+            await t.rollback();
             return res.status(400).json({ error: 'Ya existe una cuenta abierta para esta mesa' });
         }
 
         if (table.status === 'occupied') {
+            await t.rollback();
             return res.status(400).json({ error: 'Mesa ya ocupada' });
         }
 
@@ -42,11 +51,13 @@ router.post('/accounts/open', async (req, res) => {
             accountType: accountType || 'standard',
             total: accountType === 'staff' && req.body.staffTotal !== undefined ? parseFloat(req.body.staffTotal) : 0,
             TenantId: req.tenant.id
-        });
+        }, { transaction: t });
 
         // Update Table Status
         table.status = 'occupied';
-        await table.save();
+        await table.save({ transaction: t });
+
+        await t.commit();
 
         const io = req.app.get('io');
         if (io) {
@@ -54,11 +65,14 @@ router.post('/accounts/open', async (req, res) => {
         }
 
         // Audit log
-        req.body.userId = userId || null;
-        await logAction(req, 'OPEN_ACCOUNT', 'Account', account.id, { tableId, userId, accountType: accountType || 'standard', customerName: account.customerName });
+        try {
+            req.body.userId = userId || null;
+            await logAction(req, 'OPEN_ACCOUNT', 'Account', account.id, { tableId, userId, accountType: accountType || 'standard', customerName: account.customerName });
+        } catch (_) {}
 
         res.json(account);
     } catch (err) {
+        await t.rollback();
         console.error("ERROR CREATING ACCOUNT:", err);
         res.status(500).json({ error: err.message });
     }
@@ -167,8 +181,7 @@ router.post('/accounts/transfer', async (req, res) => {
             await t.rollback();
             // Optional: Auto-heal the destination table status if it was free
             if (newTable.status === 'free') {
-                newTable.status = 'occupied';
-                await newTable.save();
+                await Table.update({ status: 'occupied' }, { where: { id: newTable.id } });
                 const io = req.app.get('io');
                 if (io) io.emit('table_updated', { tableId: newTable.id, status: 'occupied' });
             }
@@ -202,8 +215,10 @@ router.post('/accounts/transfer', async (req, res) => {
 
         // Free old table
         const oldTable = await Table.findByPk(currentTableId, { transaction: t });
-        oldTable.status = 'free';
-        await oldTable.save({ transaction: t });
+        if (oldTable) {
+            oldTable.status = 'free';
+            await oldTable.save({ transaction: t });
+        }
 
         await t.commit();
 
@@ -343,16 +358,21 @@ const restoreOrderStock = async (order, tenantId, actionUserId = null) => {
 
 // Close Account (Modified for Multipart/Upload of multiple files)
 router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res) => {
+    const { sequelize } = getModels();
+    const t = await sequelize.transaction();
     try {
         const { Account, Table, Payment, CashSession } = getModels();
         const { id } = req.params;
         const { paymentMethod, qr_id } = req.body;
 
-        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id }, transaction: t });
         const CashSessionId = activeSession ? activeSession.id : null;
 
-        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id } });
-        if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
+        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id }, transaction: t, lock: true });
+        if (!account) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Cuenta no encontrada' });
+        }
 
         if (paymentMethod) {
             account.paymentMethod = paymentMethod;
@@ -371,7 +391,7 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
         }
 
         // Calculate missing amount and generate payment
-        const allPayments = await Payment.findAll({ where: { AccountId: account.id } });
+        const allPayments = await Payment.findAll({ where: { AccountId: account.id }, transaction: t });
         const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
         const remaining = Math.max(0, Math.round((Number(account.total) - totalPaid) * 100) / 100);
 
@@ -385,54 +405,69 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
                 UserId: req.body.userId || null,
                 CashSessionId,
                 TenantId: req.tenant.id
-            });
+            }, { transaction: t });
         }
 
         account.status = 'closed';
         account.closedAt = new Date();
-        await account.save();
+        await account.save({ transaction: t });
 
         // Free the table
-        const table = await Table.findByPk(account.TableId);
-        table.status = 'free';
-        await table.save();
+        const table = await Table.findByPk(account.TableId, { transaction: t });
+        if (table) {
+            table.status = 'free';
+            await table.save({ transaction: t });
+        }
+
+        await t.commit();
 
         const io = req.app.get('io');
-        if (io) {
+        if (io && table) {
             io.emit('table_updated', { tableId: table.id, status: 'free' });
         }
 
         res.json(account);
     } catch (err) {
+        await t.rollback();
         res.status(500).json({ error: err.message });
     }
 });
 
 // Partial Payment (Abono a Cuenta)
 router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) => {
+    const { sequelize } = getModels();
+
+    const { id } = req.params;
+    const { amount, paymentMethod, userId, qr_id } = req.body;
+
+    // Validate before opening tx
+    if (!amount || isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Monto inválido' });
+    }
+
+    const t = await sequelize.transaction();
     try {
         const { Account, Table, Payment, CashSession } = getModels();
-        const { id } = req.params;
-        const { amount, paymentMethod, userId, qr_id } = req.body;
 
-        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id } });
+        const activeSession = await CashSession.findOne({ where: { status: 'open', TenantId: req.tenant.id }, transaction: t });
         const CashSessionId = activeSession ? activeSession.id : null;
 
-        if (!amount || isNaN(amount) || amount <= 0) {
-            return res.status(400).json({ error: 'Monto inválido' });
+        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id }, include: [Payment], transaction: t, lock: true });
+        if (!account) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Cuenta no encontrada' });
         }
-
-        const account = await Account.findOne({ where: { id, TenantId: req.tenant.id }, include: [Payment] });
-        if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
         const totalPaidBefore = (account.Payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
         const remaining = Math.max(0, Math.round((Number(account.total) - totalPaidBefore) * 100) / 100);
 
         if (account.status !== 'open') {
             if (account.status === 'cancelled') {
+                await t.rollback();
                 return res.status(400).json({ error: 'La cuenta está anulada y no admite pagos.' });
             }
             if (account.status === 'closed' && remaining <= 0.01) {
+                await t.rollback();
                 return res.status(400).json({ error: 'La cuenta ya está pagada por completo.' });
             }
         }
@@ -459,12 +494,13 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
             UserId: userId || null,
             CashSessionId,
             TenantId: req.tenant.id
-        });
+        }, { transaction: t });
 
         // Re-calculate total paid
-        const allPayments = await Payment.findAll({ where: { AccountId: account.id } });
+        const allPayments = await Payment.findAll({ where: { AccountId: account.id }, transaction: t });
         const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
+        let closedTable = null;
         // Auto-close if fully paid
         if (totalPaid >= Number(account.total)) {
             if (account.status === 'open') {
@@ -473,29 +509,35 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
                 if (paymentMethod) account.paymentMethod = paymentMethod;
                 if (evidencePath && !account.paymentEvidence) account.paymentEvidence = evidencePath; // fallback
 
-                await account.save();
+                await account.save({ transaction: t });
 
-                const table = await Table.findByPk(account.TableId);
+                const table = await Table.findByPk(account.TableId, { transaction: t });
                 if (table) {
                     table.status = 'free';
-                    await table.save();
-                }
-
-                const io = req.app.get('io');
-                if (io) {
-                    io.emit('table_updated', { tableId: table.id, status: 'free' });
+                    await table.save({ transaction: t });
+                    closedTable = table;
                 }
             } else {
                 // If it was already closed, just update fallbacks
                 if (paymentMethod) account.paymentMethod = paymentMethod;
                 if (evidencePath && !account.paymentEvidence) account.paymentEvidence = evidencePath; // fallback
-                await account.save();
+                await account.save({ transaction: t });
+            }
+        }
+
+        await t.commit();
+
+        if (closedTable) {
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('table_updated', { tableId: closedTable.id, status: 'free' });
             }
         }
 
         res.json({ success: true, payment, totalPaid, accountRawTotal: account.total, isClosed: account.status === 'closed' });
 
     } catch (err) {
+        await t.rollback();
         console.error("Error saving partial payment:", err);
         res.status(500).json({ error: err.message });
     }
@@ -503,6 +545,8 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
 
 // Cancel Account (Liberar Mesa w/o payment)
 router.post('/accounts/:id/cancel', async (req, res) => {
+    const { sequelize } = getModels();
+    const t = await sequelize.transaction();
     try {
         const { Account, Order, Table } = getModels();
         const { id } = req.params;
@@ -510,15 +554,21 @@ router.post('/accounts/:id/cancel', async (req, res) => {
         
         const account = await Account.findOne({
             where: { id, TenantId: req.tenant.id },
-            include: [Order]
+            include: [Order],
+            transaction: t,
+            lock: true
         });
 
-        if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
+        if (!account) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Cuenta no encontrada' });
+        }
 
         // If requested to check for empty, ensure there are no active orders
         if (checkEmpty) {
             const activeOrders = account.Orders ? account.Orders.filter(o => o.status !== 'cancelled') : [];
             if (activeOrders.length > 0) {
+                await t.rollback();
                 return res.status(400).json({ error: 'Auto-cancelación rechazada: La cuenta tiene pedidos activos en el servidor.' });
             }
         }
@@ -529,22 +579,25 @@ router.post('/accounts/:id/cancel', async (req, res) => {
             const actionUserId = req.body?.userId || req.query?.userId || null;
             for (const order of account.Orders) {
                 if (order.status !== 'cancelled') {
-                    await restoreOrderStock(order, req.tenant.id, actionUserId);
+                    // background stock restoration
+                    setImmediate(() => restoreOrderStock(order, req.tenant.id, actionUserId).catch(err => console.error(err)));
                     order.status = 'cancelled';
-                    await order.save();
+                    await order.save({ transaction: t });
                 }
             }
         }
 
         account.status = 'cancelled';
         account.closedAt = new Date();
-        await account.save();
+        await account.save({ transaction: t });
 
-        const table = await Table.findByPk(account.TableId);
+        const table = await Table.findByPk(account.TableId, { transaction: t });
         if (table) {
             table.status = 'free';
-            await table.save();
+            await table.save({ transaction: t });
         }
+
+        await t.commit();
 
         // Notify Clients of Update (Stock Restored + Table Free)
         const io = req.app.get('io');
@@ -554,11 +607,14 @@ router.post('/accounts/:id/cancel', async (req, res) => {
         }
 
         // Audit log
-        const cancelUserId = req.body?.userId || req.query?.userId || null;
-        await logAction(req, 'CANCEL_ACCOUNT', 'Account', id, { userId: cancelUserId, tableId: account.TableId, ordersCount: account.Orders ? account.Orders.length : 0 });
+        try {
+            const cancelUserId = req.body?.userId || req.query?.userId || null;
+            await logAction(req, 'CANCEL_ACCOUNT', 'Account', id, { userId: cancelUserId, tableId: account.TableId, ordersCount: account.Orders ? account.Orders.length : 0 });
+        } catch (_) {}
 
         res.json({ success: true, account });
     } catch (err) {
+        await t.rollback();
         console.error("ERROR CANCELLING ACCOUNT:", err);
         res.status(500).json({ error: err.message });
     }
@@ -1468,24 +1524,31 @@ router.post('/orders', async (req, res) => {
 
 // Delete Order (Admin Only)
 router.delete('/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+    const { Order, Product, Account, User, sequelize } = getModels();
+
+    // Auth check before tx
+    const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
+    if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Solo los administradores pueden eliminar pedidos enviados.' });
+    }
+
+    const t = await sequelize.transaction();
     try {
-        const { id } = req.params;
-        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
-        const { Order, Product, Account, User } = getModels();
-
-        const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ error: 'Solo los administradores pueden eliminar pedidos enviados.' });
-        }
-
         const order = await Order.findOne({
             where: { id, TenantId: req.tenant.id },
-            include: [Product]
+            include: [Product],
+            transaction: t,
+            lock: true
         });
 
-        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        if (!order) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
 
-        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id } });
+        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id }, transaction: t, lock: true });
 
         // Calculate data first before deleting order to ensure consistency
         const orderPrice = parseFloat(order.priceAtOrder || 0);
@@ -1493,16 +1556,20 @@ router.delete('/orders/:id', async (req, res) => {
         const totalDeduction = orderPrice * orderQty;
 
         // 1. Delete Order logic first to ensure it's gone from UI immediately
-        await order.destroy();
+        await order.destroy({ transaction: t });
 
         // 2. Recalculate Account Total safely
-        if (account.accountType !== 'staff') {
+        if (account && account.accountType !== 'staff') {
             account.total = Math.max(0, parseFloat(account.total) - totalDeduction);
+            await account.save({ transaction: t });
         }
-        await account.save();
 
-        // 3. Audit log
-        await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: order.quantity, accountId: order.AccountId, tableId: account.TableId });
+        await t.commit();
+
+        // 3. Audit log (post-commit)
+        try {
+            await logAction(req, 'CANCEL_ORDER', 'Order', id, { userId: cancelOrderUserId, productId: order.ProductId, productName: order.Product?.name, quantity: order.quantity, accountId: order.AccountId, tableId: account?.TableId });
+        } catch (_) {}
 
         // 4. Respond FAST so UI stops loading
         res.json({ success: true, message: 'Pedido eliminado. Restaurando stock en segundo plano...' });
@@ -1522,6 +1589,7 @@ router.delete('/orders/:id', async (req, res) => {
         });
 
     } catch (err) {
+        await t.rollback();
         console.error("ERROR DELETING ORDER:", err);
         res.status(500).json({ error: err.message });
     }
@@ -1529,55 +1597,68 @@ router.delete('/orders/:id', async (req, res) => {
 
 // Decrement Order quantity by 1
 router.put('/orders/:id/decrement', async (req, res) => {
+    const { id } = req.params;
+    const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
+    const { Order, Product, Account, User, sequelize } = getModels();
+
+    // Auth check before tx
+    const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
+    if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Solo los administradores pueden reducir pedidos enviados.' });
+    }
+
+    const t = await sequelize.transaction();
     try {
-        const { id } = req.params;
-        const cancelOrderUserId = req.body?.userId || req.query?.userId || null;
-        const { Order, Product, Account, User } = getModels();
-
-        const user = await User.findOne({ where: { id: cancelOrderUserId, TenantId: req.tenant.id } });
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ error: 'Solo los administradores pueden reducir pedidos enviados.' });
-        }
-
         const order = await Order.findOne({
             where: { id, TenantId: req.tenant.id },
-            include: [Product]
+            include: [Product],
+            transaction: t,
+            lock: true
         });
 
-        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        if (!order) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
 
-        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id } });
-        if (!account) return res.status(404).json({ error: 'Cuenta no encontrada' });
+        const account = await Account.findOne({ where: { id: order.AccountId, TenantId: req.tenant.id }, transaction: t, lock: true });
+        if (!account) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Cuenta no encontrada' });
+        }
 
         const orderPrice = parseFloat(order.priceAtOrder || 0);
-
         const isDeletion = order.quantity <= 1;
 
         if (isDeletion) {
             // 1. Delete Order logic
-            await order.destroy();
+            await order.destroy({ transaction: t });
         } else {
             // 1. Decrement quantity
             order.quantity = order.quantity - 1;
-            await order.save();
+            await order.save({ transaction: t });
         }
 
         // 2. Recalculate Account Total safely
         if (account.accountType !== 'staff') {
             account.total = Math.max(0, parseFloat(account.total) - orderPrice);
         }
-        await account.save();
+        await account.save({ transaction: t });
 
-        // 3. Audit log
-        await logAction(req, 'CANCEL_ORDER', 'Order', id, { 
-            userId: cancelOrderUserId, 
-            productId: order.ProductId, 
-            productName: order.Product?.name, 
-            quantity: 1, 
-            accountId: order.AccountId, 
-            tableId: account.TableId, 
-            comment: isDeletion ? "Eliminación por decremento a 0" : "Reducción de cantidad por 1" 
-        });
+        await t.commit();
+
+        // 3. Audit log (post-commit)
+        try {
+            await logAction(req, 'CANCEL_ORDER', 'Order', id, { 
+                userId: cancelOrderUserId, 
+                productId: order.ProductId, 
+                productName: order.Product?.name, 
+                quantity: 1, 
+                accountId: order.AccountId, 
+                tableId: account.TableId, 
+                comment: isDeletion ? "Eliminación por decremento a 0" : "Reducción de cantidad por 1" 
+            });
+        } catch (_) {}
 
         // 4. Respond FAST
         res.json({ 
@@ -1623,6 +1704,7 @@ router.put('/orders/:id/decrement', async (req, res) => {
         })();
 
     } catch (err) {
+        await t.rollback();
         console.error("ERROR DECREMENTING ORDER:", err);
         res.status(500).json({ error: err.message });
     }
@@ -1865,6 +1947,8 @@ router.get('/products/sales', async (req, res) => {
 
 // DELETE Payment (Admin Only)
 router.delete('/payments/:id', async (req, res) => {
+    const { sequelize } = getModels();
+    const t = await sequelize.transaction();
     try {
         const { id } = req.params;
         const { userId } = req.query; // Expecting admin userId
@@ -1872,15 +1956,19 @@ router.delete('/payments/:id', async (req, res) => {
 
         const user = await User.findOne({ where: { id: userId, TenantId: req.tenant.id } });
         if (!user || user.role !== 'admin') {
+            await t.rollback();
             return res.status(403).json({ error: 'Solo los administradores pueden eliminar movimientos.' });
         }
 
-        const payment = await Payment.findOne({ where: { id, TenantId: req.tenant.id } });
-        if (!payment) return res.status(404).json({ error: 'Pago no encontrado' });
+        const payment = await Payment.findOne({ where: { id, TenantId: req.tenant.id }, transaction: t, lock: true });
+        if (!payment) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Pago no encontrado' });
+        }
 
         const accountId = payment.AccountId;
 
-        // Delete associated evidence files from disk
+        // Delete associated evidence files from disk (can be done regardless of tx, or queued for after)
         if (payment.evidence) {
             try {
                 let filePaths = [];
@@ -1907,11 +1995,11 @@ router.delete('/payments/:id', async (req, res) => {
             }
         }
 
-        await payment.destroy();
+        await payment.destroy({ transaction: t });
 
         // Sync Account status and paymentEvidence fallback
         if (accountId) {
-            const account = await Account.findByPk(accountId);
+            const account = await Account.findByPk(accountId, { transaction: t, lock: true });
             if (account) {
                 // If account's paymentEvidence equals the deleted payment's evidence, clear it
                 if (account.paymentEvidence === payment.evidence) {
@@ -1919,7 +2007,7 @@ router.delete('/payments/:id', async (req, res) => {
                 }
 
                 // Recalculate total paid
-                const allPayments = await Payment.findAll({ where: { AccountId: account.id } });
+                const allPayments = await Payment.findAll({ where: { AccountId: account.id }, transaction: t });
                 const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
                 
                 // If the account was closed but is no longer fully paid, reopen it
@@ -1936,7 +2024,8 @@ router.delete('/payments/:id', async (req, res) => {
                                 status: 'open', 
                                 TenantId: account.TenantId,
                                 id: { [Op.ne]: account.id }
-                            }
+                            },
+                            transaction: t
                         });
                         
                         if (existingOpen) {
@@ -1948,18 +2037,27 @@ router.delete('/payments/:id', async (req, res) => {
                     console.log(`[Payment] Account ${account.id} reopened because payment was deleted and totalPaid (${totalPaid}) < total (${account.total})`);
                 }
 
-                await account.save();
+                await account.save({ transaction: t });
 
-                // If the account is now open, emit an event so the frontend updates the table view
-                if (account.status === 'open') {
-                    const io = req.app.get('io');
-                    if (io) {
-                        if (account.TableId) {
-                            io.emit('table_updated', { tableId: account.TableId, status: 'occupied' });
-                        } else {
-                            // Trigger a generic refresh if it was detached
-                            io.emit('product_updated'); 
-                        }
+                // We only emit events AFTER commit
+            }
+        }
+
+        await t.commit();
+
+        // If the account is now open, emit an event so the frontend updates the table view
+        // Needs a new read to avoid holding tx open, or we can assume state from before commit if safe.
+        // It's safe since it's already committed.
+        if (accountId) {
+            const accountForEvent = await Account.findByPk(accountId);
+            if (accountForEvent && accountForEvent.status === 'open') {
+                const io = req.app.get('io');
+                if (io) {
+                    if (accountForEvent.TableId) {
+                        io.emit('table_updated', { tableId: accountForEvent.TableId, status: 'occupied' });
+                    } else {
+                        // Trigger a generic refresh if it was detached
+                        io.emit('product_updated'); 
                     }
                 }
             }
@@ -1967,6 +2065,7 @@ router.delete('/payments/:id', async (req, res) => {
 
         res.json({ success: true, message: 'Pago eliminado y estado de cuenta/mesa actualizado correctamente.' });
     } catch (error) {
+        await t.rollback();
         console.error("[Payment] ERROR deleting payment:", error);
         res.status(500).json({ error: error.message });
     }

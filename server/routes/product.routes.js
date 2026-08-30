@@ -435,12 +435,19 @@ router.post('/products/:id/movement', async (req, res) => {
             if (!variant) throw new Error("Variante no encontrada");
 
             previousStock = parseFloat(variant.stock);
-            if (type === 'add') newStock = previousStock + parseFloat(amount);
-            else if (type === 'remove') newStock = Math.max(0, previousStock - parseFloat(amount));
-            else newStock = Math.max(0, parseFloat(amount));
-
-            variant.stock = newStock;
-            await variant.save({ transaction: t });
+            if (type === 'add') {
+                await variant.increment('stock', { by: parseFloat(amount), transaction: t });
+            } else if (type === 'remove') {
+                // Determine deduction amount (preventing negative is tricky atomically without constraints, but we rely on current read for limit)
+                const deduction = Math.min(previousStock, parseFloat(amount));
+                await variant.decrement('stock', { by: deduction, transaction: t });
+            } else {
+                variant.stock = Math.max(0, parseFloat(amount));
+                await variant.save({ transaction: t });
+            }
+            await variant.reload({ transaction: t });
+            newStock = parseFloat(variant.stock);
+            
             variantName = variant.name;
 
         } else {
@@ -451,12 +458,17 @@ router.post('/products/:id/movement', async (req, res) => {
             }
 
             previousStock = parseFloat(product.stock);
-            if (type === 'add') newStock = previousStock + parseFloat(amount);
-            else if (type === 'remove') newStock = Math.max(0, previousStock - parseFloat(amount));
-            else newStock = Math.max(0, parseFloat(amount));
-
-            product.stock = newStock;
-            await product.save({ transaction: t });
+            if (type === 'add') {
+                await product.increment('stock', { by: parseFloat(amount), transaction: t });
+            } else if (type === 'remove') {
+                const deduction = Math.min(previousStock, parseFloat(amount));
+                await product.decrement('stock', { by: deduction, transaction: t });
+            } else {
+                product.stock = Math.max(0, parseFloat(amount));
+                await product.save({ transaction: t });
+            }
+            await product.reload({ transaction: t });
+            newStock = parseFloat(product.stock);
         }
 
         await ProductMovement.create({
