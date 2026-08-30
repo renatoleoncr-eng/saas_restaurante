@@ -233,8 +233,7 @@ const AccountDetailsModal = ({
                                     return (
                                         <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4">
                                             <div>
-                                                <div className="font-bold text-gray-800 text-sm">Venta Productos</div>
-                                                <div className="text-sm text-gray-600 mt-1">
+                                                <div className="text-sm text-gray-800 font-medium">
                                                     <span className="text-orange-600 font-bold">{ord.quantity}x</span> {productName}
                                                     {ord.presentation && <span className="text-blue-500 font-medium ml-1">({ord.presentation})</span>}
                                                 </div>
