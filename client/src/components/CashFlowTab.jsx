@@ -69,7 +69,8 @@ export default function CashFlowTab() {
             setLoading(false);
         } catch (error) {
             console.error("Error fetching report:", error);
-            if (attemptsLeft > 0 && (!error.response || error.code === 'ERR_NETWORK')) {
+            const isServerError = error.response && [502, 503, 504].includes(error.response.status);
+            if (attemptsLeft > 0 && (!error.response || error.code === 'ERR_NETWORK' || isServerError)) {
                 console.log(`Retrying fetchReport... ${attemptsLeft} attempts left`);
                 setTimeout(() => fetchReport(attemptsLeft - 1), 1000);
             } else {
