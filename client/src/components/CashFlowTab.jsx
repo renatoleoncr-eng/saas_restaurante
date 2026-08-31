@@ -111,7 +111,7 @@ export default function CashFlowTab() {
     const formatCurrency = (val) => `S/ ${Number((parseFloat(val) || 0)).toFixed(2)}`;
     const formatDate = (dateStr) => new Date(dateStr).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    // ADD VISIBILITY LISTENER TO RETRY IF FAILED
+    // ADD VISIBILITY AND AUTO-RETRY LISTENER
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && !report) {
@@ -121,10 +121,19 @@ export default function CashFlowTab() {
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleVisibilityChange);
         window.addEventListener('online', handleVisibilityChange);
+
+        // Fail-safe auto-retry if network was just flaky
+        const interval = setInterval(() => {
+            if (!report) {
+                fetchReport();
+            }
+        }, 3000);
+
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleVisibilityChange);
             window.removeEventListener('online', handleVisibilityChange);
+            clearInterval(interval);
         };
     }, [report]);
 
