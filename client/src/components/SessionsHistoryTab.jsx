@@ -400,18 +400,21 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                         {formatDate(session?.closedAt)}
                                     </div>
                                 </div>
-                                <div className="space-y-1 col-span-1">
-                                    <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Fondo Inicial</span>
-                                    <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
-                                        <span className="text-gray-400 shrink-0 font-bold">S/</span>
-                                        {parseFloat(session?.openingCash || 0).toFixed(2)}
+                                {/* Fondo Inicial y Responsable en la misma línea */}
+                                <div className="col-span-2 md:col-span-2 flex items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Fondo Inicial</span>
+                                        <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
+                                            <span className="text-gray-400 shrink-0 font-bold">S/</span>
+                                            {parseFloat(session?.openingCash || 0).toFixed(2)}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-1 col-span-1">
-                                    <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Responsable</span>
-                                    <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
-                                        <User size={13} className="text-gray-400 shrink-0" />
-                                        {session?.Closer?.displayName || session?.Closer?.username || 'Sistema'}
+                                    <div className="space-y-1 text-right">
+                                        <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Responsable</span>
+                                        <div className="flex items-center justify-end gap-1 text-[11px] font-bold text-gray-700">
+                                            <User size={13} className="text-gray-400 shrink-0" />
+                                            {session?.Closer?.displayName || session?.Closer?.username || 'Sistema'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -658,29 +661,36 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                                 {movements.map(m => (
                                                     <div key={m.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-start gap-2">
                                                         <div className="flex flex-col gap-1 overflow-hidden">
-                                                            <div className="font-bold text-gray-700 text-xs truncate" title={m.reference}>
-                                                                {m.reference}
+                                                            <div className="flex items-center gap-1.5 text-xs truncate">
+                                                                <span className="font-bold text-gray-700 truncate" title={m.reference}>
+                                                                    {m.reference}
+                                                                </span>
+                                                                {m.type === 'ingreso' && m.accountId && (
+                                                                    <>
+                                                                        <span className="text-gray-400">-</span>
+                                                                        <button 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedAccountId(m.accountId);
+                                                                            }}
+                                                                            className="text-blue-600 hover:text-blue-800 font-bold hover:underline shrink-0"
+                                                                        >
+                                                                            #{m.accountId}
+                                                                        </button>
+                                                                    </>
+                                                                )}
                                                             </div>
-                                                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium mt-0.5">
+                                                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
                                                                 <span className="font-mono text-gray-400">
                                                                     {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
                                                                 <span>•</span>
-                                                                <span className="truncate max-w-[80px]" title={m.user}>{m.user}</span>
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-400 mt-0.5">
-                                                                {m.type === 'ingreso' && m.accountId ? (
-                                                                    <button 
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setSelectedAccountId(m.accountId);
-                                                                        }}
-                                                                        className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
-                                                                    >
-                                                                        Pedido #{m.accountId}
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
+                                                                <span className="truncate max-w-[100px]" title={m.user}>{m.user}</span>
+                                                                {(!m.accountId || m.type !== 'ingreso') && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span className="capitalize text-gray-400">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso'}</span>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>

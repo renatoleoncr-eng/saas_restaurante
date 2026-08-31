@@ -120,9 +120,11 @@ export default function CashFlowTab() {
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleVisibilityChange);
+        window.addEventListener('online', handleVisibilityChange);
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleVisibilityChange);
+            window.removeEventListener('online', handleVisibilityChange);
         };
     }, [report]);
 
