@@ -60,8 +60,8 @@ export default function CashFlowTab() {
     }, [socket]);
 
     // ACTIONS
-    const fetchReport = async (retries = 3) => {
-        const attemptsLeft = typeof retries === 'number' ? retries : 3;
+    const fetchReport = async (retries = 10) => {
+        const attemptsLeft = typeof retries === 'number' ? retries : 10;
         setLoading(true);
         try {
             const res = await axios.get(`/api/reports/daily?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
@@ -70,7 +70,7 @@ export default function CashFlowTab() {
         } catch (error) {
             console.error("Error fetching report:", error);
             const isServerError = error.response && [502, 503, 504].includes(error.response.status);
-            if (attemptsLeft > 0 && (!error.response || error.code === 'ERR_NETWORK' || isServerError)) {
+            if (attemptsLeft > 0 && (!error.response || isServerError)) {
                 console.log(`Retrying fetchReport... ${attemptsLeft} attempts left`);
                 setTimeout(() => fetchReport(attemptsLeft - 1), 1000);
             } else {
