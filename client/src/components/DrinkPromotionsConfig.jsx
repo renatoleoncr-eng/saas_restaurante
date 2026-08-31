@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Edit2, Save, X, Wine, ChefHat, ChevronDown, ChevronUp } from 'lucide-react';
 import RecipeModal from './RecipeModal';
@@ -220,6 +220,41 @@ export default function DrinkPromotionsConfig() {
     // Collapsed promotions list
     const [collapsedPromoIds, setCollapsedPromoIds] = useState({});
 
+    // Carousel state
+    const carouselRef = useRef(null);
+    const [activePromoIndex, setActivePromoIndex] = useState(0);
+
+    const handleCarouselScroll = (e) => {
+        const container = e.target;
+        let closestIndex = 0;
+        let minDiff = Infinity;
+        const containerCenter = container.getBoundingClientRect().left + (container.getBoundingClientRect().width / 2);
+
+        Array.from(container.children).forEach((child, index) => {
+            const childCenter = child.getBoundingClientRect().left + (child.getBoundingClientRect().width / 2);
+            const diff = Math.abs(childCenter - containerCenter);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = index;
+            }
+        });
+        
+        setActivePromoIndex(closestIndex);
+    };
+
+    const scrollToPromo = (index) => {
+        if (carouselRef.current && carouselRef.current.children[index]) {
+            const container = carouselRef.current;
+            const child = container.children[index];
+            const scrollTarget = container.scrollLeft + (child.getBoundingClientRect().left - container.getBoundingClientRect().left);
+            container.scrollTo({
+                left: scrollTarget,
+                behavior: 'smooth'
+            });
+            setActivePromoIndex(index);
+        }
+    };
+
     const togglePromoCollapse = (promoId) => {
         setCollapsedPromoIds(prev => ({ ...prev, [promoId]: !prev[promoId] }));
     };
@@ -393,9 +428,13 @@ export default function DrinkPromotionsConfig() {
             )}
 
             {/* ── Promotion sections Carousel ── */}
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start snap-x snap-mandatory">
-                {promotions.map(promo => (
-                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-[88vw] sm:w-[650px] lg:w-[750px] max-w-full snap-start">
+            <div 
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start snap-x snap-mandatory scroll-smooth"
+            >
+                {promotions.map((promo, idx) => (
+                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shrink-0 w-[88vw] sm:w-[650px] lg:w-[750px] max-w-full snap-start flex flex-col">
 
                     {/* Section header */}
                     <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
@@ -464,6 +503,7 @@ export default function DrinkPromotionsConfig() {
                     {/* Items table */}
                     {!collapsedPromoIds[promo.id] && (
                         <>
+                            <div className="overflow-y-auto max-h-[50vh] md:max-h-[500px] custom-scrollbar flex-1 bg-white">
                             <table className="w-full text-base md:text-sm block md:table">
                                 <thead className="hidden md:table-header-group">
                                     <tr className="text-xs md:text-xs text-gray-500 font-black uppercase tracking-wider border-b bg-gray-50/80">
@@ -573,21 +613,38 @@ export default function DrinkPromotionsConfig() {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
 
                             {/* Footer quick-add link (secondary affordance) */}
                             {addingItemTo !== promo.id && (
-                                <button
-                                    onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
-                                    className="w-full py-3.5 text-sm font-extrabold text-purple-600 hover:bg-purple-50 flex items-center justify-center gap-1 transition-colors border-t border-dashed border-purple-100"
-                                >
-                                    <Plus size={16} /> Agregar trago a esta categoría
-                                </button>
+                                <div className="bg-white p-3 border-t border-dashed border-purple-100 shrink-0">
+                                    <button
+                                        onClick={() => { setAddingItemTo(promo.id); setEditingItem(null); }}
+                                        className="w-full py-2.5 rounded-xl text-sm font-extrabold text-purple-600 bg-purple-50 hover:bg-purple-100 flex items-center justify-center gap-1 transition-colors"
+                                    >
+                                        <Plus size={16} /> Agregar trago a esta categoría
+                                    </button>
+                                </div>
                             )}
                         </>
                     )}
                 </div>
             ))}
             </div>
+
+            {/* Carousel Pagination Dots */}
+            {promotions.length > 1 && (
+                <div className="flex justify-center gap-2 mt-1 mb-4">
+                    {promotions.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => scrollToPromo(idx)}
+                            className={`h-2.5 rounded-full transition-all duration-300 ${activePromoIndex === idx ? 'w-8 bg-purple-600' : 'w-2.5 bg-purple-200 hover:bg-purple-300'}`}
+                            title={`Ir a categoría ${idx + 1}`}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Recipe Modal Overlay — works for both products and DrinkPromotionItems */}
             {recipeItem && (
