@@ -313,14 +313,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
             method: p.method || 'efectivo',
             time: p.createdAt,
             user: p.User ? (p.User.displayName || p.User.username) : '-',
-            reference: (
-                <div className="flex flex-col">
-                    <span className="font-bold text-gray-800 text-sm">{p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'}</span>
-                    <span className="text-[10px] text-gray-400">
-                        {p.method?.toUpperCase()} • {p.User ? (p.User.displayName || p.User.username) : 'Staff'} • {new Date(p.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </span>
-                </div>
-            ),
+            reference: p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar',
             accountId: p.AccountId || p.Account?.id
         }));
 
@@ -392,7 +385,7 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                     ) : (
                         <>
                             {/* Metadata Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 bg-white p-4 rounded-xl border shadow-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 bg-white p-4 rounded-xl border shadow-xs">
                                 <div className="space-y-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Apertura</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
@@ -599,66 +592,117 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                                 </div>
                                 <div className="p-3 max-h-60 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar">
                                     {movements.length > 0 ? (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-xs text-left border-collapse">
-                                                <thead>
-                                                    <tr className="border-b border-gray-100 text-gray-400">
-                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Hora</th>
-                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Mesa/Gasto</th>
-                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Usuario</th>
-                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Método</th>
-                                                        <th className="p-2 font-bold uppercase tracking-wider text-[9px] text-right">Monto</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-50">
-                                                    {movements.map(m => (
-                                                        <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
-                                                            <td className="p-2 text-gray-400 font-mono">
-                                                                {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <div className="font-semibold text-gray-700 max-w-[150px] truncate" title={m.reference}>
-                                                                    {m.reference}
-                                                                </div>
-                                                                <div className="text-[10px] text-gray-400 mt-0.5">
-                                                                    {m.type === 'ingreso' && m.accountId ? (
-                                                                        <button 
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setSelectedAccountId(m.accountId);
-                                                                            }}
-                                                                            className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
-                                                                        >
-                                                                            #{m.accountId}
-                                                                        </button>
-                                                                    ) : (
-                                                                        <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-2 text-gray-500 font-medium truncate max-w-[100px]" title={m.user}>
-                                                                {m.user}
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold capitalize ${
-                                                                    m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                                                                    m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                                                                    m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
-                                                                    'bg-amber-50 text-amber-700 border border-amber-100'
+                                        <>
+                                            <div className="hidden md:block overflow-x-auto">
+                                                <table className="w-full text-xs text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-gray-100 text-gray-400">
+                                                            <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Hora</th>
+                                                            <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Mesa/Gasto</th>
+                                                            <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Usuario</th>
+                                                            <th className="p-2 font-bold uppercase tracking-wider text-[9px]">Método</th>
+                                                            <th className="p-2 font-bold uppercase tracking-wider text-[9px] text-right">Monto</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {movements.map(m => (
+                                                            <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
+                                                                <td className="p-2 text-gray-400 font-mono">
+                                                                    {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <div className="font-semibold text-gray-700 max-w-[150px] truncate" title={m.reference}>
+                                                                        {m.reference}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                        {m.type === 'ingreso' && m.accountId ? (
+                                                                            <button 
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setSelectedAccountId(m.accountId);
+                                                                                }}
+                                                                                className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                                                                            >
+                                                                                #{m.accountId}
+                                                                            </button>
+                                                                        ) : (
+                                                                            <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-2 text-gray-500 font-medium truncate max-w-[100px]" title={m.user}>
+                                                                    {m.user}
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold capitalize ${
+                                                                        m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                                                        m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                                        m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                                        'bg-amber-50 text-amber-700 border border-amber-100'
+                                                                    }`}>
+                                                                        {m.method}
+                                                                    </span>
+                                                                </td>
+                                                                <td className={`p-2 text-right font-mono font-bold whitespace-nowrap ${
+                                                                    m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
                                                                 }`}>
-                                                                    {m.method}
+                                                                    {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {/* Mobile View */}
+                                            <div className="md:hidden space-y-2">
+                                                {movements.map(m => (
+                                                    <div key={m.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-start gap-2">
+                                                        <div className="flex flex-col gap-1 overflow-hidden">
+                                                            <div className="font-bold text-gray-700 text-xs truncate" title={m.reference}>
+                                                                {m.reference}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium mt-0.5">
+                                                                <span className="font-mono text-gray-400">
+                                                                    {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
-                                                            </td>
-                                                            <td className={`p-2 text-right font-mono font-bold whitespace-nowrap ${
+                                                                <span>•</span>
+                                                                <span className="truncate max-w-[80px]" title={m.user}>{m.user}</span>
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                {m.type === 'ingreso' && m.accountId ? (
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedAccountId(m.accountId);
+                                                                        }}
+                                                                        className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                                                                    >
+                                                                        Pedido #{m.accountId}
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="capitalize">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso/Gasto'}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1.5 shrink-0 mt-0.5">
+                                                            <div className={`font-mono font-bold text-xs ${
                                                                 m.type === 'ingreso' ? 'text-green-600' : 'text-red-500'
                                                             }`}>
                                                                 {m.type === 'ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                            </div>
+                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold capitalize ${
+                                                                m.method === 'efectivo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                                                m.method === 'tarjeta' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                                m.method === 'yape' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                                'bg-amber-50 text-amber-700 border border-amber-100'
+                                                            }`}>
+                                                                {m.method}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
                                     ) : (
                                         <div className="text-center py-6 text-gray-400 italic text-xs">
                                             No hay movimientos registrados en este turno.
