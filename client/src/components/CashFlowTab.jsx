@@ -137,16 +137,13 @@ export default function CashFlowTab() {
         };
     }, [report]);
 
-    if (loading && !report) return <div className="p-8 text-center text-gray-500 animate-pulse">Cargando reporte...</div>;
     if (!report) return (
         <div className="p-8 flex flex-col items-center justify-center min-h-[50vh] gap-4">
-            <div className="text-red-500 font-medium">Error cargando datos. La conexión pudo haberse interrumpido.</div>
-            <button 
-                onClick={fetchReport} 
-                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition-colors"
-            >
-                Reintentar
-            </button>
+            <div className="text-gray-500 font-medium animate-pulse flex flex-col items-center gap-2">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Cargando reporte...</span>
+                <span className="text-xs text-gray-400 font-normal">Sincronizando datos</span>
+            </div>
         </div>
     );
 
