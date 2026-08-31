@@ -35,9 +35,13 @@ const PaymentModal = ({
     } = paymentFlow;
 
     // We will extract isInvoiceDataMissing & isStaffCommentMissing logic that was hardcoded
+    const totalToPay = parseFloat(payAmount) || 0;
     const isInvoiceDataMissing = issueInvoice && (
         (invoiceType === 'factura' && (!clientForm.dni || clientForm.dni.trim().length !== 11 || !clientForm.name || !clientForm.direccion)) ||
-        (invoiceType === 'boleta' && clientForm.dni && (!clientForm.name || clientForm.name.trim() === ''))
+        (invoiceType === 'boleta' && (
+            (totalToPay > 700 && (!clientForm.dni || clientForm.dni.trim().length < 8 || !clientForm.name || clientForm.name.trim() === '')) ||
+            (clientForm.dni && clientForm.dni.trim() !== '' && (!clientForm.name || clientForm.name.trim() === ''))
+        ))
     );
     const isPayDisabled = isConfirmingPayment || isProcessingPayment || isInvoiceDataMissing;
     const isStaff = account?.type === 'staff';

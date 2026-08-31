@@ -656,7 +656,15 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
     const handleSubmit = async () => {
         if (loading || selectedItems.length === 0) return;
-        if (!customerName) return;
+        
+        if (docType === '03' && totalSelected <= 700) {
+            // Permitir vacío (Consumidor Final se inyecta en el backend)
+        } else {
+            if (!customerName || customerName.trim() === '') {
+                setErrorMsg(docType === '01' ? 'La Razón Social es obligatoria para Facturas.' : 'El Nombre es obligatorio para Boletas mayores a S/ 700.00.');
+                return;
+            }
+        }
 
         // Validar RUC para Facturas
         if (docType === '01') {

@@ -161,9 +161,16 @@ router.post('/billing/invoices', async (req, res) => {
         let { tipo, clienteDocumento, clienteNombre, clienteDireccion, observaciones, items, userId, accountId } = req.body;
         if (!tipo || !items?.length) return res.status(400).json({ error: 'tipo e items son requeridos' });
         
+        const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
+        
         // For Boletas (DNI), the address is generally empty/unnecessary per user requirements
         if (tipo !== 'factura') {
             clienteDireccion = '-';
+            // Consumidor Final Logic for Boleta <= 700
+            if (finalTotalPay <= 700 && (!clienteDocumento || String(clienteDocumento).trim() === '') && (!clienteNombre || String(clienteNombre).trim() === '')) {
+                clienteDocumento = '-';
+                clienteNombre = 'Consumidor Final';
+            }
         }
         
         // Validar RUC para Facturas (Exactamente 11 dígitos numéricos que comiencen con 10, 15, 17, 20)
@@ -187,8 +194,6 @@ router.post('/billing/invoices', async (req, res) => {
         }
 
         // Prevent double emission by checking if the requested items exceed the remaining account balance
-        const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
-        
         if (accountId) {
             const account = await Account.findByPk(accountId, {
                 include: [
@@ -319,7 +324,7 @@ router.post('/billing/invoices', async (req, res) => {
             client: {
                 number: String(clienteDocumento || ''),
                 name: clienteNombre || '',
-                type: String(tipo === 'factura' ? '6' : '1'),
+                type: String(tipo === 'factura' ? '6' : (clienteDocumento === '-' ? '0' : '1')),
                 address: clienteDireccion || ''
             },
             items: hubItems,
