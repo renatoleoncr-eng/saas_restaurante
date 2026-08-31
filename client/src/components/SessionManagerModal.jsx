@@ -54,7 +54,8 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
             method: p.method || 'efectivo',
             time: p.createdAt,
             user: p.User?.displayName || p.User?.username || 'N/A',
-            reference: p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar'
+            reference: p.Account?.Table ? formatTableName(p.Account.Table) : 'Caja/Llevar',
+            accountId: p.AccountId
         }));
 
         const expensesList = (sessionData.expenses || []).map(e => ({
@@ -428,15 +429,31 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                                 {movements.map(m => (
                                                     <div key={m.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center gap-2">
                                                         <div className="flex flex-col gap-1 overflow-hidden">
-                                                            <div className="font-bold text-gray-700 text-xs truncate" title={m.reference}>
-                                                                {m.reference}
+                                                            <div className="flex items-center gap-1.5 text-xs truncate">
+                                                                <span className="font-bold text-gray-700 truncate" title={m.reference}>
+                                                                    {m.reference}
+                                                                </span>
+                                                                {m.type === 'ingreso' && m.accountId && (
+                                                                    <>
+                                                                        <span className="text-gray-400">-</span>
+                                                                        <span className="text-blue-600 font-bold shrink-0">
+                                                                            #{m.accountId}
+                                                                        </span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                             <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
                                                                 <span className="font-mono text-gray-400">
                                                                     {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
                                                                 <span>•</span>
-                                                                <span className="truncate max-w-[80px]" title={m.user}>{m.user}</span>
+                                                                <span className="truncate max-w-[100px]" title={m.user}>{m.user}</span>
+                                                                {(!m.accountId || m.type !== 'ingreso') && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span className="capitalize text-gray-400">{m.type === 'ingreso' ? 'Ingreso' : 'Egreso'}</span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-1 shrink-0">
