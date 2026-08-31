@@ -385,29 +385,29 @@ function SessionDetailsModal({ isOpen, onClose, sessionId, details, loading }) {
                     ) : (
                         <>
                             {/* Metadata Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 bg-white p-4 rounded-xl border shadow-xs">
-                                <div className="space-y-1">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 bg-white p-4 rounded-xl border shadow-xs">
+                                <div className="space-y-1 col-span-2 md:col-span-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Apertura</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
                                         <Calendar size={13} className="text-gray-400 shrink-0" />
                                         {formatDate(session?.openedAt)}
                                     </div>
                                 </div>
-                                <div className="space-y-1">
+                                <div className="space-y-1 col-span-2 md:col-span-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Cierre</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
                                         <Clock size={13} className="text-gray-400 shrink-0" />
                                         {formatDate(session?.closedAt)}
                                     </div>
                                 </div>
-                                <div className="space-y-1">
+                                <div className="space-y-1 col-span-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Fondo Inicial</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
                                         <span className="text-gray-400 shrink-0 font-bold">S/</span>
                                         {parseFloat(session?.openingCash || 0).toFixed(2)}
                                     </div>
                                 </div>
-                                <div className="space-y-1">
+                                <div className="space-y-1 col-span-1">
                                     <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Responsable</span>
                                     <div className="flex items-center gap-1 text-[11px] font-bold text-gray-700">
                                         <User size={13} className="text-gray-400 shrink-0" />
