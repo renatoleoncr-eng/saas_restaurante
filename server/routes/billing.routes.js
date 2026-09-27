@@ -443,13 +443,32 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
 
             const rawItems = JSON.parse(invoice.items || '[]');
 
+            // SUNAT does not accept negative PriceAmount values (UBL format restriction).
+            // Distribute any discount items proportionally across positive items,
+            // same logic as invoice creation (lines 257-272).
+            const positiveItemsNC = rawItems.filter(it => parseFloat(it.amount || 0) >= 0);
+            const totalDiscountNC = rawItems
+                .filter(it => parseFloat(it.amount || 0) < 0)
+                .reduce((sum, it) => sum + Math.abs(parseFloat(it.amount || 0)), 0);
+            const grossPositiveTotalNC = positiveItemsNC.reduce((sum, it) => sum + parseFloat(it.amount || 0), 0);
+
+            const adjustedItemsNC = positiveItemsNC.map(it => {
+                const originalAmount = parseFloat(it.amount || 0);
+                if (totalDiscountNC > 0 && grossPositiveTotalNC > 0) {
+                    const ratio = originalAmount / grossPositiveTotalNC;
+                    const discountShare = parseFloat((totalDiscountNC * ratio).toFixed(2));
+                    return { ...it, amount: parseFloat((originalAmount - discountShare).toFixed(2)) };
+                }
+                return it;
+            });
+
             let total_gravada = 0;
             let total_exonerada = 0;
             let total_igv = 0;
 
-            const hubItems = rawItems.map((item, i) => {
+            const hubItems = adjustedItemsNC.map((item, i) => {
                 const lineTotal = parseFloat(item.amount || item.subtotal || 0);
-                const qty = parseInt(item.quantity || item.qty || 1);
+                const qty = Math.max(1, parseInt(item.quantity || item.qty || 1));
                 const unitTotal = lineTotal / qty;
 
                 const unitBase = isExonerado ? unitTotal : parseFloat((unitTotal / (1 + igvRate)).toFixed(6));
@@ -480,6 +499,7 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
                     codigo_tipo_internacional_tributo: 'VAT'
                 };
             });
+
 
             const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
             const finalTotalPay = parseFloat(invoice.total);
