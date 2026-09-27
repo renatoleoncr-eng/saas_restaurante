@@ -112,7 +112,10 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             // Initial Pre-fill from account for Boleta
             if (account) {
                 setDocNumber(account.clientDni || '');
-                setCustomerName(account.customerName || '');
+                // Don't pre-fill generic names — leave blank so user sees CLIENTE FINAL
+                const genericNames = ['Personal', 'Cliente', 'CLIENTE FINAL', 'CLIENTES VARIOS'];
+                const rawName = account.customerName || '';
+                setCustomerName(genericNames.includes(rawName.trim()) && !account.clientDni ? '' : rawName);
                 setCustomerAddress(account.clientAddress || '');
             }
         } else {
@@ -705,18 +708,27 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 });
             }
 
+            // Nombre final: si no hay DNI real o el nombre es genérico, usar CLIENTE FINAL
+            const hasDniReal = docNumber && docNumber.trim() !== '' && docNumber.trim() !== '00000000';
+            const genericNames = ['Personal', 'Cliente', 'CLIENTES VARIOS', ''];
+            const isGeneric = genericNames.includes((customerName || '').trim());
+            const clienteNombreFinal = hasDniReal && !isGeneric
+                ? customerName
+                : (isGeneric && !hasDniReal ? 'CLIENTE FINAL' : (customerName || 'CLIENTE FINAL'));
+
             const payload = {
                 accountId: account.id,
                 userId: user?.id || null,
                 items: baseItems,
                 clienteDocumento: docNumber,
-                clienteNombre: customerName,
+                clienteNombre: clienteNombreFinal,
                 clienteDireccion: customerAddress || '-',
                 observaciones: observaciones || '',
                 tipo: docType === '01' ? 'factura' : 'boleta'
             };
 
             const res = await axios.post(`/api/billing/invoices`, payload);
+
             const ticketUrl = res.data.sunatResponse?.url_ticket || res.data.sunatResponse?.url || res.data.sunatResponse?.pdf_url || res.data.invoice?.pdfUrl;
 
             if (res.data.success) {
