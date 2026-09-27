@@ -602,46 +602,4 @@ router.post('/billing/invoices/:id/print', async (req, res) => {
     }
 });
 
-// GET /api/billing/public/:hash — Comprobante público (sin auth)
-// Hash: btoa('makala_' + invoiceId)
-router.get('/billing/public/:hash', async (req, res) => {
-    try {
-        const { hash } = req.params;
-        let decoded;
-        try {
-            decoded = Buffer.from(hash, 'base64').toString('utf8');
-        } catch (e) {
-            return res.status(400).json({ error: 'Hash inválido' });
-        }
-
-        const match = decoded.match(/^makala_(\d+)$/);
-        if (!match) {
-            return res.status(400).json({ error: 'Hash inválido' });
-        }
-
-        const invoiceId = parseInt(match[1], 10);
-
-        const invoice = await Invoice.findByPk(invoiceId);
-        if (!invoice) {
-            return res.status(404).json({ error: 'Comprobante no encontrado' });
-        }
-
-        // Obtener config de facturación del tenant propietario
-        const config = await BillingConfig.findOne({ where: { TenantId: invoice.TenantId } });
-
-        const configData = config ? {
-            ruc: config.ruc,
-            razonSocial: config.razonSocial,
-            direccion: config.direccion,
-            igvTasa: config.igvTasa,
-        } : null;
-
-        res.json({ invoice, config: configData });
-    } catch (err) {
-        console.error('Error en comprobante público:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 module.exports = router;
-

@@ -389,7 +389,34 @@ app.use('/api/promotions', requireTenant, promotionRoutes); // promociones para 
 app.use('/api/roulette', requireTenant, rouletteRoutes);    // ruleta para pantalla cliente
 app.use('/api', requireTenant, revenueRoutes);     // ingresos (tiene apiKeyAuth propio)
 app.use('/api', requireTenant, printerAgentRouter);   // agente de impresión local (proceso sistema, sin auth de usuario)
-app.use('/api', requireTenant, billingRoutes);        // comprobante público /api/billing/public/:hash (sin auth)
+// GET /api/billing/public/:hash — Comprobante público sin autenticación
+// Hash: btoa('makala_' + invoiceId). Solo expone esta ruta, no todo billingRoutes.
+app.get('/api/billing/public/:hash', requireTenant, async (req, res) => {
+    try {
+        const { BillingConfig, Invoice } = require('./models');
+        const { hash } = req.params;
+        let decoded;
+        try { decoded = Buffer.from(hash, 'base64').toString('utf8'); } catch (e) {
+            return res.status(400).json({ error: 'Hash inválido' });
+        }
+        const match = decoded.match(/^makala_(\d+)$/);
+        if (!match) return res.status(400).json({ error: 'Hash inválido' });
+
+        const invoiceId = parseInt(match[1], 10);
+        const invoice = await Invoice.findByPk(invoiceId);
+        if (!invoice) return res.status(404).json({ error: 'Comprobante no encontrado' });
+
+        const config = await BillingConfig.findOne({ where: { TenantId: invoice.TenantId } });
+        const configData = config
+            ? { ruc: config.ruc, razonSocial: config.razonSocial, direccion: config.direccion, igvTasa: config.igvTasa }
+            : null;
+
+        res.json({ invoice, config: configData });
+    } catch (err) {
+        console.error('Error en comprobante público:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 // =============================================
