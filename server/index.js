@@ -389,6 +389,8 @@ app.use('/api/promotions', requireTenant, promotionRoutes); // promociones para 
 app.use('/api/roulette', requireTenant, rouletteRoutes);    // ruleta para pantalla cliente
 app.use('/api', requireTenant, revenueRoutes);     // ingresos (tiene apiKeyAuth propio)
 app.use('/api', requireTenant, printerAgentRouter);   // agente de impresión local (proceso sistema, sin auth de usuario)
+app.use('/api', requireTenant, billingRoutes);        // comprobante público /api/billing/public/:hash (sin auth)
+
 
 // =============================================
 // RUTAS PROTEGIDAS (tenant + auth JWT requeridos)

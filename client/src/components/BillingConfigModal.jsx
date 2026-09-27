@@ -981,7 +981,7 @@ const BillingConfigModal = ({ onClose }) => {
                         <div className="flex flex-col flex-1 h-full overflow-hidden bg-[#f8fafc]">
                             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
                                 {/* Filtros en Tarjetas */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                                     <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-sm flex flex-col gap-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento Cliente</label>
                                         <div className="relative">
@@ -1013,6 +1013,15 @@ const BillingConfigModal = ({ onClose }) => {
                                                 onChange={(e) => setFilters({...filters, hasta: e.target.value})}
                                             />
                                         </div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-[#f0f4ff] to-[#e6edff] p-4 rounded-[20px] border border-[#d6e2ff] shadow-sm flex flex-col justify-center items-center gap-1 relative overflow-hidden">
+                                        <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
+                                        <div className="absolute -left-4 -bottom-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
+                                        <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest relative z-10">Total Emitido (S/)</label>
+                                        <span className="text-[26px] font-black text-[#1d263b] tracking-tighter relative z-10">
+                                            {invoices.filter(inv => inv.status !== 'anulado').reduce((sum, inv) => sum + parseFloat(inv.total || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-blue-400/80 uppercase tracking-widest relative z-10">En el periodo seleccionado</span>
                                     </div>
                                 </div>
 

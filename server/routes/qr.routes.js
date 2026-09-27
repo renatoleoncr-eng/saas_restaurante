@@ -142,7 +142,9 @@ const consumeQrLimit = async (amount, tenantId, transaction = null) => {
                 qr.accumulated_month_key = monthKey;
                 await qr.save({ transaction });
             }
+        }
 
+        for (const qr of qrs) {
             if (qr.isUnlimited || parseFloat(qr.accumulated_month_sum) < parseFloat(qr.limitAmount)) {
                 selectedQr = qr;
                 break;
@@ -326,7 +328,9 @@ router.get('/active', async (req, res) => {
                 qr.accumulated_month_key = monthKey;
                 await qr.save();
             }
+        }
 
+        for (const qr of qrs) {
             if (qr.isUnlimited || parseFloat(qr.accumulated_month_sum) < parseFloat(qr.limitAmount)) {
                 activeQr = qr;
                 exhausted = false;

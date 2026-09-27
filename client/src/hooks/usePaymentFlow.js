@@ -218,15 +218,17 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
             return;
         }
         
-        let url = '';
-        if (successInvoice.invoice.tipo === 'factura' || successInvoice.invoice.tipo === 'boleta') {
-            url = `${window.location.origin}/api/billing/pdf/${successInvoice.invoice.id}`;
-        }
+        const hashId = btoa(`makala_${successInvoice.invoice.id}`);
+        const url = `${window.location.origin}/c/${hashId}`;
         
-        const message = encodeURIComponent(`Hola, le adjuntamos su comprobante de pago: ${url}`);
+        const inv = successInvoice.invoice;
+        const docName = inv.tipo === 'factura' ? 'Factura' : 'Boleta';
+        const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
+        const message = encodeURIComponent(`Hola ${inv.clienteNombre || ''}, le adjuntamos su ${docName} ${docId}: ${url}`);
         window.open(`https://wa.me/${whatsappPhone}?text=${message}`, '_blank');
         setShowWhatsappInput(false);
     };
+
 
     const handlePrintLocalInvoice = (invoice) => {
         if (!invoice) return;

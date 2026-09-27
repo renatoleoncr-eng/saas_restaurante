@@ -15,7 +15,8 @@ export default function PublicReceipt() {
     useEffect(() => {
         const fetchReceipt = async () => {
             try {
-                const res = await axios.get(`/api/public/comprobante/${hash}`);
+                const res = await axios.get(`/api/billing/public/${hash}`);
+
                 if (res.data && res.data.invoice) {
                     setInvoice(res.data.invoice);
                     setConfig(res.data.config);
@@ -123,10 +124,39 @@ export default function PublicReceipt() {
         }
     };
 
+    const downloadXml = () => {
+        let parsed = null;
+        if (invoice.sunatResponse) {
+            try {
+                parsed = typeof invoice.sunatResponse === 'string'
+                    ? JSON.parse(invoice.sunatResponse)
+                    : invoice.sunatResponse;
+            } catch (e) { parsed = null; }
+        }
+        if (!parsed || !parsed.xml) {
+            alert('No hay XML disponible para este comprobante.');
+            return;
+        }
+        const ruc = config?.ruc || '';
+        const tipoComp = invoice.tipo === 'factura' ? '01' : '03';
+        const xmlFilename = `${ruc}-${tipoComp}-${invoice.serie}-${String(invoice.correlativo).padStart(6, '0')}.xml`;
+        const blob = new Blob([parsed.xml], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = xmlFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     // Single action: if SUNAT PDF exists, open it; otherwise generate local
     const handlePdf = sunatPdfUrl
         ? () => window.open(sunatPdfUrl, '_blank')
         : downloadLocalPdf;
+
+
 
     const mono = "'Courier New', Courier, monospace";
 
@@ -142,26 +172,44 @@ export default function PublicReceipt() {
             flexDirection: 'column',
             alignItems: 'center'
         }}>
-            {/* Single PDF button */}
-            <div style={{ width: '100%', maxWidth: '320px', padding: '0 16px', marginBottom: '16px' }}>
+            {/* Botones PDF y XML */}
+            <div style={{ width: '100%', maxWidth: '320px', padding: '0 16px', marginBottom: '16px', display: 'flex', gap: '8px' }}>
                 <button
                     onClick={handlePdf}
                     style={{
-                        width: '100%',
+                        flex: 1,
                         backgroundColor: '#2563eb',
                         color: 'white',
                         fontWeight: 'bold',
-                        padding: '12px 16px',
+                        padding: '12px 8px',
                         borderRadius: '8px',
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: '15px',
+                        fontSize: '14px',
                         letterSpacing: '0.02em'
                     }}
                 >
                     📄 Descargar PDF
                 </button>
+                <button
+                    onClick={downloadXml}
+                    style={{
+                        flex: 1,
+                        backgroundColor: '#059669',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        padding: '12px 8px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        letterSpacing: '0.02em'
+                    }}
+                >
+                    📦 Descargar XML
+                </button>
             </div>
+
 
             {/* Ticket */}
             <div
