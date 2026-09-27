@@ -150,10 +150,15 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
                     });
                 }
                 
+                // Nombre visible: si no hay DNI/RUC real o el nombre es el genérico "Personal", usar "CLIENTE FINAL"
+                const hasDni = clientForm.dni && clientForm.dni.trim() !== '' && clientForm.dni !== '00000000';
+                const isGenericName = !clientForm.name || clientForm.name === 'Personal' || clientForm.name === 'Cliente';
+                const clienteNombreFinal = hasDni && !isGenericName ? clientForm.name : (isGenericName && !hasDni ? 'CLIENTE FINAL' : (clientForm.name || 'CLIENTE FINAL'));
+
                 const resInvoice = await axios.post('/api/billing/invoices', {
                     tipo: invoiceType,
                     clienteDocumento: clientForm.dni || '00000000',
-                    clienteNombre: clientForm.name || 'CLIENTES VARIOS',
+                    clienteNombre: clienteNombreFinal,
                     clienteDireccion: clientForm.direccion || '',
                     items: itemsToBill,
                     userId: user.id,

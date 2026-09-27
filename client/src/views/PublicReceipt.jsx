@@ -151,11 +151,30 @@ export default function PublicReceipt() {
         URL.revokeObjectURL(url);
     };
 
-    // Single action: if SUNAT PDF exists, open it; otherwise generate local
-    const handlePdf = sunatPdfUrl
-        ? () => window.open(sunatPdfUrl, '_blank')
-        : downloadLocalPdf;
+    // Download SUNAT PDF as a real file (instead of opening the viewer page)
+    const downloadSunatPdf = async () => {
+        try {
+            const res = await fetch(sunatPdfUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error('No se pudo descargar el PDF.');
+            const blob = await res.blob();
+            const filename = `${invoice.tipo === 'factura' ? 'Factura' : 'Boleta'}_${invoice.serie}-${invoice.correlativo}.pdf`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            // Fallback: if fetch fails (CORS), generate locally
+            console.warn('SUNAT PDF fetch failed, generating locally:', err);
+            await downloadLocalPdf();
+        }
+    };
 
+    // Single action: if SUNAT PDF exists, download it; otherwise generate local
+    const handlePdf = sunatPdfUrl ? downloadSunatPdf : downloadLocalPdf;
 
 
     const mono = "'Courier New', Courier, monospace";
