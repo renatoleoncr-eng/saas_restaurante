@@ -284,7 +284,8 @@ export default function AccountsHistoryTab() {
         
         const message = `Hola ${invoiceClientName || 'Cliente'}, le adjuntamos su comprobante de abono (${docName} ${docId}): ${publicUrl}`;
         const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
+        const waWindow = window.open(whatsappUrl, '_blank');
+        if (waWindow) setTimeout(() => waWindow.close(), 1500);
     };
 
     const handleViewHistory = async (id) => {

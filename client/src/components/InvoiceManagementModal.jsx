@@ -357,7 +357,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         const message = `Hola ${inv.clienteNombre || customerName}, le adjuntamos su ${docName} ${docId}: ${publicUrl}`;
         
         const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('51') ? (cleanPhone.length > 2 ? cleanPhone : '51' + cleanPhone) : '51' + cleanPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
+        const waWindow = window.open(whatsappUrl, '_blank');
+        if (waWindow) setTimeout(() => waWindow.close(), 1500);
     };
 
     const handleDirectPrint = (url) => {

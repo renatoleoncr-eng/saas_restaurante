@@ -225,7 +225,8 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
         const docName = inv.tipo === 'factura' ? 'Factura' : 'Boleta';
         const docId = `${inv.serie}-${String(inv.correlativo).padStart(6, '0')}`;
         const message = encodeURIComponent(`Hola ${inv.clienteNombre || ''}, le adjuntamos su ${docName} ${docId}: ${url}`);
-        window.open(`https://wa.me/${whatsappPhone}?text=${message}`, '_blank');
+        const waWindow = window.open(`https://wa.me/${whatsappPhone}?text=${message}`, '_blank');
+        if (waWindow) setTimeout(() => waWindow.close(), 1500);
         setShowWhatsappInput(false);
     };
 
