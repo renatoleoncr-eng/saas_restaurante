@@ -77,9 +77,12 @@ function setupAxiosInterceptors(tenantSlug) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('refreshToken');
                     localStorage.removeItem('user');
-                    if (window.location.pathname !== '/login') {
+                    const currentPath = window.location.pathname;
+                    const isPublicRoute = currentPath.startsWith('/c/') || currentPath === '/login';
+                    if (!isPublicRoute) {
                         window.location.href = '/login';
                     }
+
                 }
             }
             return Promise.reject(error);
@@ -108,8 +111,12 @@ async function refreshAndRetry(originalRequest) {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        const currentPath = window.location.pathname;
+        if (!currentPath.startsWith('/c/') && currentPath !== '/login') {
+            window.location.href = '/login';
+        }
         return Promise.reject(err);
+
     }
 }
 

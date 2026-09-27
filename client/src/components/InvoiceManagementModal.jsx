@@ -344,8 +344,10 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             publicUrl = `${window.location.origin}/c/${hashId}`;
         }
         
-        const guestPhone = account?.clientPhone || inv.clienteDocumento || '';
+        const rawPhone = (account?.clientPhone || '').replace(/\D/g, '');
+        const guestPhone = rawPhone.length === 9 && rawPhone.startsWith('9') ? rawPhone : '';
         const userPhone = window.prompt('Ingrese el número de WhatsApp del cliente (ej. 999888777):', guestPhone);
+
         if (userPhone === null) return; // cancelled
         
         const cleanPhone = userPhone.replace(/\D/g, '');
