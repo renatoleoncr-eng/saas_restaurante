@@ -806,7 +806,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     if (status === 'processed') {
                         // Attempt local sync just in case
                         try {
-                            await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, { reason: annulReason, sync_only: true });
+                            await axios.post(`/api/billing/invoices/${annulTarget.id}/mark-voided`, { reason: annulReason });
                         } catch (e) {}
                         
                         Swal.fire({
