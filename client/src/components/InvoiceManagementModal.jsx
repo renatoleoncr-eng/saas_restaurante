@@ -23,6 +23,7 @@ import {
     MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -761,28 +762,115 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const confirmAnnul = async () => {
         if (!annulTarget || !annulReason || loading) return;
         
-        setLoading(true);
-        try {
-            const res = await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, {
-                reason: annulReason
-            });
-            
-            if (res.data.success) {
-                const ncUrl = res.data.invoice?.notaCreditoUrl || res.data.sunatResponse?.url_ticket || '#';
-                fetchHistory();
-                if (onRefresh) onRefresh();
-                
-                // Show success modal for NC
-                setLastIssuedUrl(ncUrl);
-                setLastIssuedDoc(res.data.invoice);
-                setSuccessType('nc');
-                setIsSuccess(true);
+        let parsedSunat = annulTarget.sunatResponse;
+        if (typeof parsedSunat === 'string') {
+            try { parsedSunat = JSON.parse(parsedSunat); } catch (e) { parsedSunat = null; }
+        }
+        const sunatHash = parsedSunat?.hash;
+
+        if (sunatHash) {
+            setLoading(true);
+            try {
+                Swal.fire({
+                    title: 'Anulando en SUNAT...',
+                    text: 'Iniciando proceso de anulación',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const postRes = await axios.post('https://sunat.maksuites.com.pe/api/sunat/void', {
+                    hash: sunatHash,
+                    motivo: annulReason
+                });
+
+                if (postRes.data && postRes.data.success) {
+                    let status = 'processing';
+                    let attempts = 0;
+
+                    Swal.update({
+                        title: 'Consultando estado en SUNAT...',
+                        text: 'Esperando respuesta de SUNAT'
+                    });
+
+                    while (status === 'processing' && attempts < 15) {
+                        await new Promise(resolve => setTimeout(resolve, 3500));
+                        attempts++;
+                        const getRes = await axios.get(`https://sunat.maksuites.com.pe/api/sunat/void/${sunatHash}/status`);
+                        if (getRes.data && getRes.data.status) {
+                            status = getRes.data.status;
+                        }
+                    }
+
+                    if (status === 'processed') {
+                        // Attempt local sync just in case
+                        try {
+                            await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, { reason: annulReason, sync_only: true });
+                        } catch (e) {}
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Anulado!',
+                            text: 'El comprobante ha sido anulado exitosamente en SUNAT.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        fetchHistory();
+                        if (onRefresh) onRefresh();
+                        
+                        // We do not show the NC success modal here because the SUNAT API might not return a new NC PDF directly,
+                        // or it just voids the ticket.
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al anular',
+                            text: 'El estado en SUNAT devolvió error o no se completó a tiempo.'
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo iniciar la anulación en SUNAT.'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: err.response?.data?.error || err.message || 'Error al comunicarse con SUNAT.'
+                });
+            } finally {
+                setLoading(false);
+                setAnnulTarget(null);
             }
-        } catch (error) {
-            setErrorMsg(error.response?.data?.error || error.message);
-        } finally {
-            setLoading(false);
-            setAnnulTarget(null);
+        } else {
+            // Original local delete logic
+            setLoading(true);
+            try {
+                const res = await axios.post(`/api/billing/invoices/${annulTarget.id}/anular`, {
+                    reason: annulReason
+                });
+                
+                if (res.data.success) {
+                    const ncUrl = res.data.invoice?.notaCreditoUrl || res.data.sunatResponse?.url_ticket || '#';
+                    fetchHistory();
+                    if (onRefresh) onRefresh();
+                    
+                    // Show success modal for NC
+                    setLastIssuedUrl(ncUrl);
+                    setLastIssuedDoc(res.data.invoice);
+                    setSuccessType('nc');
+                    setIsSuccess(true);
+                }
+            } catch (error) {
+                setErrorMsg(error.response?.data?.error || error.message);
+            } finally {
+                setLoading(false);
+                setAnnulTarget(null);
+            }
         }
     };
 
