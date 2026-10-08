@@ -196,6 +196,21 @@ const syncDB = async () => {
         const isMySQL = sequelize.getDialect() === 'mysql';
         const syncOptions = isMySQL ? { alter: { drop: false } } : { alter: false };
 
+        
+        // PRE-SYNC MIGRATION FOR SETTING TABLE (MySQL)
+        // Must run before global sequelize.sync so that alter: { drop: false } doesn't crash on multiple primary keys
+        if (isMySQL) {
+            try {
+                const [results] = await sequelize.query("SHOW COLUMNS FROM Settings LIKE 'id'");
+                if (results.length === 0) {
+                    console.log("Migrating Settings table primary key...");
+                    await sequelize.query("ALTER TABLE Settings DROP PRIMARY KEY, ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY;");
+                }
+            } catch (err) {
+                console.error("Note: Setting PK migration skipped or failed (might already be migrated):", err.message);
+            }
+        }
+        
         await sequelize.sync(syncOptions);
         console.log(`Tables initialized/verified (alter: ${isMySQL}).`);
 
@@ -214,19 +229,6 @@ const syncDB = async () => {
         await QrAccount.sync();
         await PromotionGroup.sync();
         await Promotion.sync();
-        // PRE-SYNC MIGRATION FOR SETTING TABLE (MySQL)
-        if (isMySQL) {
-            try {
-                // Check if 'id' column exists already to avoid dropping PK if already migrated
-                const [results] = await sequelize.query("SHOW COLUMNS FROM Settings LIKE 'id'");
-                if (results.length === 0) {
-                    console.log("Migrating Settings table primary key...");
-                    await sequelize.query("ALTER TABLE Settings DROP PRIMARY KEY, ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY;");
-                }
-            } catch (err) {
-                console.error("Note: Setting PK migration skipped or failed (might already be migrated):", err.message);
-            }
-        }
 
         await Setting.sync();
         
