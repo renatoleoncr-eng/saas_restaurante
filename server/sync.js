@@ -214,7 +214,53 @@ const syncDB = async () => {
         await QrAccount.sync();
         await PromotionGroup.sync();
         await Promotion.sync();
+        // PRE-SYNC MIGRATION FOR SETTING TABLE (MySQL)
+        if (isMySQL) {
+            try {
+                // Check if 'id' column exists already to avoid dropping PK if already migrated
+                const [results] = await sequelize.query("SHOW COLUMNS FROM Settings LIKE 'id'");
+                if (results.length === 0) {
+                    console.log("Migrating Settings table primary key...");
+                    await sequelize.query("ALTER TABLE Settings DROP PRIMARY KEY, ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY;");
+                }
+            } catch (err) {
+                console.error("Note: Setting PK migration skipped or failed (might already be migrated):", err.message);
+            }
+        }
+
         await Setting.sync();
+        
+        // --- MULTI-TENANT SETTINGS MIGRATION ---
+        console.log("Migrating legacy settings keys...");
+        try {
+            const allSettings = await Setting.findAll();
+            for (const s of allSettings) {
+                // Fix printer_config_X
+                if (s.key && s.key.startsWith('printer_config_') && s.key !== 'printer_config') {
+                    const tenantIdMatch = s.key.match(/^printer_config_(\d+)$/);
+                    if (tenantIdMatch) {
+                        const tId = parseInt(tenantIdMatch[1], 10);
+                        // Update to use standard key and strict TenantId
+                        s.key = 'printer_config';
+                        s.TenantId = tId;
+                        await s.save();
+                        console.log(`Migrated ${s.key}_${tId} to printer_config for Tenant ${tId}`);
+                    }
+                }
+                // Fix roulette_config_X (which incorrectly was shared across all tenants previously if it was generic like 'standard')
+                else if (s.key && s.key.startsWith('roulette_config_') && s.key !== 'roulette_config') {
+                    const typeMatch = s.key.replace('roulette_config_', '');
+                    // Keep the type suffix in the key as intended by roulette logic (e.g., roulette_config_standard)
+                    // but assign to the default tenant if TenantId is missing.
+                    if (!s.TenantId) {
+                        // We will let the tenant creation block below handle global orphan assignment if TenantId is missing.
+                    }
+                }
+            }
+        } catch (migErr) {
+            console.error("Warning: Failed to migrate legacy Settings. This may happen if the table was just recreated.", migErr.message);
+        }
+
         console.log("Specific models synced.");
 
         // 4. Create Indexes for query performance

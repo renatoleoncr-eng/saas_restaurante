@@ -458,8 +458,7 @@ const AuditLog = sequelize.define('AuditLog', {
 const DailyMenu = sequelize.define('DailyMenu', {
     date: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
-        unique: true
+        allowNull: false
     },
     price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -831,9 +830,13 @@ const Promotion = sequelize.define('Promotion', {
 });
 
 const Setting = sequelize.define('Setting', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     key: {
         type: DataTypes.STRING,
-        primaryKey: true,
         allowNull: false
     },
     value: {
@@ -845,7 +848,10 @@ const Setting = sequelize.define('Setting', {
         allowNull: true
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    indexes: [
+        { unique: true, fields: ['TenantId', 'key'] }
+    ]
 });
 
 // =============================================

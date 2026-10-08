@@ -22,11 +22,14 @@ router.get('/', async (req, res) => {
     const { type = 'standard' } = req.query;
     const key = `roulette_config_${type}`;
     
-    let setting = await Setting.findByPk(key);
+    let setting = await Setting.findOne({ where: { key: key, TenantId: req.tenant.id } });
     
     // Fallback to legacy key
     if (!setting && type === 'standard') {
-      setting = await Setting.findByPk('roulette_config');
+      setting = await Setting.findOne({ where: { key: 'roulette_config', TenantId: req.tenant.id } });
+    }
+    if (!setting) {
+      setting = await Setting.findOne({ where: { key: key, TenantId: null } });
     }
 
     if (!setting) {
@@ -49,11 +52,18 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'La ruleta debe tener entre 2 y 6 categorías.' });
     }
 
-    await Setting.upsert({
-      key: key,
-      value: JSON.stringify(config),
-      description: `Configuración de la Ruleta Ganadora - ${type}`
-    });
+    let setting = await Setting.findOne({ where: { key: key, TenantId: req.tenant.id } });
+    
+    if (setting) {
+        await setting.update({ value: JSON.stringify(config) });
+    } else {
+        await Setting.create({
+            key: key,
+            value: JSON.stringify(config),
+            description: `Configuración de la Ruleta Ganadora - ${type}`,
+            TenantId: req.tenant.id
+        });
+    }
 
     const io = req.app.get('io');
     if (io) {

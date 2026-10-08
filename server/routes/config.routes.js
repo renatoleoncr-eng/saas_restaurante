@@ -58,12 +58,15 @@ router.put('/config', async (req, res) => {
 // GET printer settings
 router.get('/config/printers', async (req, res) => {
     try {
-        const printerKey = `printer_config_${req.tenant.id}`;
-        let setting = await Setting.findByPk(printerKey);
+        let setting = await Setting.findOne({ where: { key: 'printer_config', TenantId: req.tenant.id } });
         
-        // Fallback for migrated DBs
+        // Fallback for non-migrated DBs
         if (!setting && req.tenant.id) {
-            setting = await Setting.findByPk('printer_config');
+            setting = await Setting.findOne({ where: { key: `printer_config_${req.tenant.id}`, TenantId: null } });
+        }
+        if (!setting && req.tenant.id) {
+            // Absolute fallback for extreme legacy
+            setting = await Setting.findOne({ where: { key: 'printer_config', TenantId: null } });
         }
 
         if (setting) {
@@ -86,13 +89,19 @@ router.get('/config/printers', async (req, res) => {
 router.post('/config/printers', async (req, res) => {
     try {
         const config = req.body;
-        const printerKey = `printer_config_${req.tenant.id}`;
         
-        await Setting.upsert({
-            key: printerKey,
-            value: JSON.stringify(config),
-            description: 'Thermal printer configuration (Caja, Cocina, Barra)'
-        });
+        let setting = await Setting.findOne({ where: { key: 'printer_config', TenantId: req.tenant.id } });
+        
+        if (setting) {
+            await setting.update({ value: JSON.stringify(config) });
+        } else {
+            await Setting.create({
+                key: 'printer_config',
+                value: JSON.stringify(config),
+                description: 'Thermal printer configuration (Caja, Cocina, Barra)',
+                TenantId: req.tenant.id
+            });
+        }
 
         // Invalidate the in-memory cache so next print reads fresh config from DB
         invalidatePrinterConfigCache(req.tenant.id);
