@@ -49,9 +49,18 @@ const PaymentModal = ({
     // We also need handleFileChange if it's not exported from usePaymentFlow.
     // wait, handleFileChange from TableControl needs to be reconstructed here or exposed.
     // Let's create it locally for the modal.
-    const localHandleFileChange = (e) => {
+    const localHandleFileChange = async (e) => {
         if (e.target.files) {
-            setEvidenceFiles(prev => [...prev, ...Array.from(e.target.files)]);
+            const filesArray = Array.from(e.target.files);
+            const compressedFiles = await Promise.all(
+                filesArray.map(file => {
+                    if (file.type.startsWith('image/')) {
+                        return compressImage(file);
+                    }
+                    return file;
+                })
+            );
+            setEvidenceFiles(prev => [...prev, ...compressedFiles]);
         }
     };
 

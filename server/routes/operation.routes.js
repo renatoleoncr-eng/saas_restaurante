@@ -65,7 +65,7 @@ router.post('/accounts/open', async (req, res) => {
           transaction: t
         });
         const io = req.app.get('io');
-        if (io) io.emit('table_updated', {
+        if (io) io.to("tenant_" + req.tenant.id).emit('table_updated', {
           tableId: table.id,
           status: 'occupied'
         });
@@ -102,7 +102,7 @@ router.post('/accounts/open', async (req, res) => {
     await t.commit();
     const io = req.app.get('io');
     if (io) {
-      io.emit('table_updated', {
+      io.to("tenant_" + req.tenant.id).emit('table_updated', {
         tableId: table.id,
         status: 'occupied'
       });
@@ -292,7 +292,7 @@ router.post('/accounts/transfer', async (req, res) => {
           }
         });
         const io = req.app.get('io');
-        if (io) io.emit('table_updated', {
+        if (io) io.to("tenant_" + req.tenant.id).emit('table_updated', {
           tableId: newTable.id,
           status: 'occupied'
         });
@@ -355,7 +355,7 @@ router.post('/accounts/transfer', async (req, res) => {
 
     // 5. Notify Frontend
     const io = req.app.get('io');
-    io.emit('table_updated', {});
+    io.to("tenant_" + req.tenant.id).emit('table_updated', {});
     res.json({
       success: true,
       message: 'Mesa cambiada con éxito',
@@ -626,7 +626,7 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
     await t.commit();
     const io = req.app.get('io');
     if (io && table) {
-      io.emit('table_updated', {
+      io.to("tenant_" + req.tenant.id).emit('table_updated', {
         tableId: table.id,
         status: 'free'
       });
@@ -780,7 +780,7 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
     if (closedTable) {
       const io = req.app.get('io');
       if (io) {
-        io.emit('table_updated', {
+        io.to("tenant_" + req.tenant.id).emit('table_updated', {
           tableId: closedTable.id,
           status: 'free'
         });
@@ -885,12 +885,12 @@ router.post('/accounts/:id/cancel', async (req, res) => {
     // Notify Clients of Update (Stock Restored + Table Free)
     const io = req.app.get('io');
     if (io) {
-      io.emit('new_order', {
+      io.to("tenant_" + req.tenant.id).emit('new_order', {
         accountId: id,
         tableId: account.TableId,
         type: 'cancel'
       });
-      io.emit('table_updated', {
+      io.to("tenant_" + req.tenant.id).emit('table_updated', {
         tableId: account.TableId,
         status: 'free'
       });
@@ -2015,13 +2015,13 @@ router.post('/orders', async (req, res) => {
 
     // Notify Kitchen (Socket.io)
     const io = req.app.get('io');
-    io.emit('new_order', {
+    io.to("tenant_" + req.tenant.id).emit('new_order', {
       accountId,
       tableId: account.TableId
     });
 
     // Force Global Product Refresh
-    io.emit('product_updated', {});
+    io.to("tenant_" + req.tenant.id).emit('product_updated', {});
     console.log("Socket events emitted (Atomic Update)");
     res.json({
       success: true,
@@ -2134,11 +2134,11 @@ router.delete('/orders/:id', async (req, res) => {
         await restoreOrderStock(order, req.tenant.id, cancelOrderUserId);
         const io = req.app.get('io');
         if (io && account) {
-          io.emit('new_order', {
+          io.to("tenant_" + req.tenant.id).emit('new_order', {
             accountId: account.id,
             tableId: account.TableId
           });
-          io.emit('product_updated', {});
+          io.to("tenant_" + req.tenant.id).emit('product_updated', {});
         }
       } catch (bgErr) {
         console.error("ERROR RESTORING STOCK IN BACKGROUND:", bgErr);
@@ -2281,11 +2281,11 @@ router.put('/orders/:id/decrement', async (req, res) => {
         }
         const io = req.app.get('io');
         if (io && account) {
-          io.emit('new_order', {
+          io.to("tenant_" + req.tenant.id).emit('new_order', {
             accountId: account.id,
             tableId: account.TableId
           });
-          io.emit('product_updated', {});
+          io.to("tenant_" + req.tenant.id).emit('product_updated', {});
         }
       } catch (bgErr) {
         console.error("ERROR RESTORING STOCK IN BACKGROUND ON DECREMENT:", bgErr);
@@ -2369,7 +2369,7 @@ router.put('/orders/:id/status', async (req, res) => {
 
     // Notify Socket
     const io = req.app.get('io');
-    io.emit('order_updated', {
+    io.to("tenant_" + req.tenant.id).emit('order_updated', {
       orderId: id,
       status,
       accountId: order.AccountId
@@ -2757,13 +2757,13 @@ router.delete('/payments/:id', async (req, res) => {
         const io = req.app.get('io');
         if (io) {
           if (accountForEvent.TableId) {
-            io.emit('table_updated', {
+            io.to("tenant_" + req.tenant.id).emit('table_updated', {
               tableId: accountForEvent.TableId,
               status: 'occupied'
             });
           } else {
             // Trigger a generic refresh if it was detached
-            io.emit('product_updated');
+            io.to("tenant_" + req.tenant.id).emit('product_updated');
           }
         }
       }

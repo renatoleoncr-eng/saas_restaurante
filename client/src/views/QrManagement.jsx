@@ -1776,7 +1776,15 @@ export default function QrManagement() {
                                 <input 
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => setQrFormData(prev => ({ ...prev, imageFile: e.target.files[0] }))}
+                                    onChange={async (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            let file = e.target.files[0];
+            if (file.type.startsWith('image/')) {
+                file = await compressImage(file);
+            }
+            setQrFormData(prev => ({ ...prev, imageFile: file }));
+        }
+    }}
                                     className="w-full text-xs text-slate-400 bg-slate-950 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
                                 />
                             </div>
@@ -2007,7 +2015,20 @@ export default function QrManagement() {
                                     required
                                     multiple
                                     accept="image/*,video/*"
-                                    onChange={(e) => setSlideFormData(prev => ({ ...prev, imageFiles: e.target.files }))}
+                                    onChange={async (e) => {
+        if (e.target.files) {
+            const filesArray = Array.from(e.target.files);
+            const compressedFiles = await Promise.all(
+                filesArray.map(file => {
+                    if (file.type.startsWith('image/')) {
+                        return compressImage(file);
+                    }
+                    return file;
+                })
+            );
+            setSlideFormData(prev => ({ ...prev, imageFiles: compressedFiles }));
+        }
+    }}
                                     className="w-full text-xs text-slate-400 bg-slate-955 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
                                 />
                                 <span className="text-[9px] text-slate-500 mt-1 block">Puede seleccionar múltiples archivos de golpe (.jpg, .png, .mp4, .webm).</span>
