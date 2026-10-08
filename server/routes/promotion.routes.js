@@ -7,14 +7,18 @@ const path = require('path');
 const fs = require('fs');
 
 // Configure Multer for Promotion uploads
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+        const tenantId = req.tenant ? req.tenant.id : 'global';
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const targetDir = path.join(__dirname, '../uploads/promotions', year, month, `tenant_${tenantId}`);
+        
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+        cb(null, targetDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -186,9 +190,14 @@ router.post('/', upload.array('image', 10), async (req, res) => {
             return res.status(400).json({ error: 'Al menos una imagen es requerida' });
         }
 
+        const tenantId = req.tenant ? req.tenant.id : 'global';
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
         const createdPromotions = [];
         for (const file of files) {
-            const imageUrl = `/uploads/${file.filename}`;
+            const imageUrl = `/uploads/promotions/${year}/${month}/tenant_${tenantId}/${file.filename}`;
             const promotion = await Promotion.create({
                 name: name || file.originalname,
                 imageUrl,
