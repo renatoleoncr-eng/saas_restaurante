@@ -52,16 +52,25 @@ const PaymentModal = ({
     // Let's create it locally for the modal.
     const localHandleFileChange = async (e) => {
         if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-            const compressedFiles = await Promise.all(
-                filesArray.map(file => {
-                    if (file.type.startsWith('image/')) {
-                        return compressImage(file);
-                    }
-                    return file;
-                })
-            );
-            setEvidenceFiles(prev => [...prev, ...compressedFiles]);
+            try {
+                const filesArray = Array.from(e.target.files);
+                const compressedFiles = await Promise.all(
+                    filesArray.map(async file => {
+                        try {
+                            if (file.type.startsWith('image/')) {
+                                return await compressImage(file);
+                            }
+                            return file;
+                        } catch (err) {
+                            console.error("Error compressing file:", err);
+                            return file; // fallback to original
+                        }
+                    })
+                );
+                setEvidenceFiles(prev => [...prev, ...compressedFiles]);
+            } catch (err) {
+                console.error("Global file processing error:", err);
+            }
         }
     };
 

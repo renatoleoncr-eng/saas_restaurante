@@ -1778,13 +1778,17 @@ export default function QrManagement() {
                                     type="file"
                                     accept="image/*"
                                     onChange={async (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            let file = e.target.files[0];
-            if (file.type.startsWith('image/')) {
-                file = await compressImage(file);
+            if (e.target.files && e.target.files.length > 0) {
+                try {
+                    let file = e.target.files[0];
+                    if (file.type.startsWith('image/')) {
+                        try {
+                            file = await compressImage(file);
+                        } catch(err) {}
+                    }
+                    setQrFormData(prev => ({ ...prev, imageFile: file }));
+                } catch(err) {}
             }
-            setQrFormData(prev => ({ ...prev, imageFile: file }));
-        }
     }}
                                     className="w-full text-xs text-slate-400 bg-slate-950 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
                                 />
@@ -2018,16 +2022,22 @@ export default function QrManagement() {
                                     accept="image/*,video/*"
                                     onChange={async (e) => {
         if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-            const compressedFiles = await Promise.all(
-                filesArray.map(file => {
-                    if (file.type.startsWith('image/')) {
-                        return compressImage(file);
-                    }
-                    return file;
-                })
-            );
-            setSlideFormData(prev => ({ ...prev, imageFiles: compressedFiles }));
+            try {
+                const filesArray = Array.from(e.target.files);
+                const compressedFiles = await Promise.all(
+                    filesArray.map(async file => {
+                        try {
+                            if (file.type.startsWith('image/')) {
+                                return await compressImage(file);
+                            }
+                            return file;
+                        } catch (err) {
+                            return file;
+                        }
+                    })
+                );
+                setSlideFormData(prev => ({ ...prev, imageFiles: compressedFiles }));
+            } catch (err) {}
         }
     }}
                                     className="w-full text-xs text-slate-400 bg-slate-955 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
