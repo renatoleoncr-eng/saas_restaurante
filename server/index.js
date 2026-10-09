@@ -237,7 +237,7 @@ io.on('connection', (socket) => {
         if (tenantId) {
             io.to(`tenant_${tenantId}`).emit('show_qr_display');
         } else {
-            io.emit('show_qr_display');
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: show_qr_display');
         }
     });
     socket.on('set_client_screen_mode', (data) => {
@@ -247,7 +247,7 @@ io.on('connection', (socket) => {
             clientScreenModes[tenantId] = data.mode;
             io.to(`tenant_${tenantId}`).emit('update_client_screen_mode', { mode: data.mode });
         } else {
-            io.emit('update_client_screen_mode', { mode: data.mode });
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: update_client_screen_mode');
         }
     });
     socket.on('notify_promotions_updated', (data) => {
@@ -256,7 +256,7 @@ io.on('connection', (socket) => {
         if (tenantId) {
             io.to(`tenant_${tenantId}`).emit('promotions_updated');
         } else {
-            io.emit('promotions_updated');
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: promotions_updated');
         }
     });
     socket.on('start_projection', (data) => {
@@ -265,7 +265,7 @@ io.on('connection', (socket) => {
         if (tenantId) {
             io.to(`tenant_${tenantId}`).emit('client_start_projection', data);
         } else {
-            io.emit('client_start_projection', data);
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: client_start_projection');
         }
     });
     socket.on('stop_projection', (data) => {
@@ -274,7 +274,7 @@ io.on('connection', (socket) => {
         if (tenantId) {
             io.to(`tenant_${tenantId}`).emit('client_stop_projection');
         } else {
-            io.emit('client_stop_projection');
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: client_stop_projection');
         }
     });
     socket.on('report_roulette_winner', (data) => {
@@ -283,7 +283,7 @@ io.on('connection', (socket) => {
         if (tenantId) {
             io.to(`tenant_${tenantId}`).emit('roulette_finished_with_winner', data);
         } else {
-            io.emit('roulette_finished_with_winner', data);
+            console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: roulette_finished_with_winner');
         }
     });
     socket.on('disconnect', () => {
@@ -298,22 +298,22 @@ appEmitter.on('qr_config_changed', (tenantId) => {
         io.to(`tenant_${tenantId}`).emit('qr_config_changed');
         io.to(`tenant_${tenantId}`).emit('check_active_qr');
     } else {
-        io.emit('qr_config_changed');
-        io.emit('check_active_qr');
+        console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: qr_config_changed');
+        console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: check_active_qr');
     }
 });
 appEmitter.on('promotions_config_changed', (tenantId) => {
     if (tenantId) {
         io.to(`tenant_${tenantId}`).emit('promotions_updated');
     } else {
-        io.emit('promotions_updated');
+        console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: promotions_updated');
     }
 });
 appEmitter.on('check_active_qr', (tenantId) => {
     if (tenantId) {
         io.to(`tenant_${tenantId}`).emit('check_active_qr');
     } else {
-        io.emit('check_active_qr');
+        console.warn('[WebSockets] Emisión global bloqueada por seguridad multi-tenant: check_active_qr');
     }
 });
 
