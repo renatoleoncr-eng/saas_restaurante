@@ -71,6 +71,8 @@ const PaymentModal = ({
             } catch (err) {
                 console.error("Global file processing error:", err);
             }
+            // Always clear the input so the same file can be selected again if removed
+            e.target.value = '';
         }
     };
 

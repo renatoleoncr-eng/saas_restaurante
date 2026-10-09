@@ -1789,6 +1789,7 @@ export default function QrManagement() {
                     setQrFormData(prev => ({ ...prev, imageFile: file }));
                 } catch(err) {}
             }
+            e.target.value = '';
     }}
                                     className="w-full text-xs text-slate-400 bg-slate-950 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
                                 />
@@ -2038,6 +2039,7 @@ export default function QrManagement() {
                 );
                 setSlideFormData(prev => ({ ...prev, imageFiles: compressedFiles }));
             } catch (err) {}
+            e.target.value = '';
         }
     }}
                                     className="w-full text-xs text-slate-400 bg-slate-955 border border-slate-850 file:border-0 file:bg-slate-800 file:hover:bg-slate-750 file:text-white file:px-3 file:py-1.5 file:rounded-lg file:text-xs file:font-bold file:cursor-pointer rounded-xl p-1 cursor-pointer"
