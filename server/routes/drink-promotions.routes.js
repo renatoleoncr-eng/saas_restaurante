@@ -238,7 +238,7 @@ router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
         if (existing) {
             existing.quantity = quantity;
             await existing.save();
-            const withIng = await DrinkItemRecipe.findByPk(existing.id, { include: [{ model: Ingredient }] });
+            const withIng = await DrinkItemRecipe.findOne({ where: { id: existing.id, TenantId: req.tenant.id }, include: [{ model: Ingredient }] });
             return res.json(withIng);
         }
 
@@ -249,7 +249,7 @@ router.post('/drink-promotions/items/:itemId/recipes', async (req, res) => {
             presentation: presentation || null,
             TenantId: req.tenant.id
         });
-        const withIng = await DrinkItemRecipe.findByPk(newRecipe.id, { include: [{ model: Ingredient }] });
+        const withIng = await DrinkItemRecipe.findOne({ where: { id: newRecipe.id, TenantId: req.tenant.id }, include: [{ model: Ingredient }] });
         res.json(withIng);
     } catch (err) {
         console.error("[DrinkPromotions] POST recipe error:", err);

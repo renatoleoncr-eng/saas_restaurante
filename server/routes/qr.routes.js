@@ -62,9 +62,9 @@ const sendQrLimitWebhook = async (qrData) => {
 };
 
 // HELPER FUNCTION: Sync QR monthly sum
-const syncQrSum = async (qrId, transaction = null) => {
+const syncQrSum = async (qrId, tenantId, transaction = null) => {
     try {
-        const qr = await QrAccount.findByPk(qrId, { transaction });
+        const qr = await QrAccount.findOne({ where: { id: qrId, TenantId: tenantId }, transaction });
         if (!qr) return;
 
         const now = new Date();
@@ -184,7 +184,7 @@ router.get('/', async (req, res) => {
         });
         
         for (const qr of qrs) {
-            await syncQrSum(qr.id);
+            await syncQrSum(qr.id, req.tenant.id);
         }
 
         res.json(qrs);
@@ -294,7 +294,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const qr = await QrAccount.findByPk(id);
+        const qr = await QrAccount.findOne({ where: { id, TenantId: req.tenant.id } });
         if (!qr) return res.status(404).json({ error: 'QR no encontrado' });
 
         if (qr.imageUrl) {

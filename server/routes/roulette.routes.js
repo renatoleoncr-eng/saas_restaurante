@@ -172,7 +172,7 @@ router.post('/record-interaction', async (req, res) => {
         error: 'accountId e interaction son obligatorios'
       });
     }
-    const account = await Account.findByPk(accountId);
+    const account = await Account.findOne({ where: { id: accountId, TenantId: req.tenant.id } });
     if (!account) {
       return res.status(404).json({
         error: 'Cuenta no encontrada'

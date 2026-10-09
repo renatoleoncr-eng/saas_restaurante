@@ -365,7 +365,7 @@ router.post('/sessions/open', async (req, res) => {
         (async () => {
             try {
                 const { triggerAperturaPrint } = require('../utils/printer');
-                const openerUser = userId ? await User.findByPk(userId) : null;
+                const openerUser = userId ? await User.findOne({ where: { id: userId, TenantId: req.tenant.id } }) : null;
                 await triggerAperturaPrint(newSession, openerUser);
             } catch (pErr) {
                 console.error("Error printing opening session ticket:", pErr);
@@ -517,7 +517,7 @@ router.post('/sessions/close', async (req, res) => {
                 expected.salesSummary = salesSummary;
 
                 const { triggerCierrePrint } = require('../utils/printer');
-                const closerUser = userId ? await User.findByPk(userId) : null;
+                const closerUser = userId ? await User.findOne({ where: { id: userId, TenantId: req.tenant.id } }) : null;
                 await triggerCierrePrint(session, expected, parsedDetails, closerUser);
             } catch (pErr) {
                 console.error("Error printing closing session report:", pErr);
@@ -629,7 +629,7 @@ router.post('/sessions/:id/print', async (req, res) => {
         expected.salesSummary = salesSummary;
 
         const parsedDetails = session.closingDetails ? JSON.parse(session.closingDetails) : null;
-        const userObj = userId ? await User.findByPk(userId) : null;
+        const userObj = userId ? await User.findOne({ where: { id: userId, TenantId: req.tenant.id } }) : null;
 
         const { triggerCierrePrint } = require('../utils/printer');
         const printResult = await triggerCierrePrint(session, expected, parsedDetails, userObj);
