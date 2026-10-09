@@ -1,3 +1,4 @@
+import { compressImage } from '../utils/imageCompression';
 import React from 'react';
 import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2 } from 'lucide-react';
 import axios from 'axios';

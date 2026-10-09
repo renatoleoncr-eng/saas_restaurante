@@ -1,3 +1,4 @@
+import { compressImage } from '../utils/imageCompression';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
