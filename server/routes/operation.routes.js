@@ -419,12 +419,12 @@ if (!fs.existsSync(uploadDir)) {
 }
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Create an account-specific folder based on year, month, and ID
+    const tenantId = req.tenant ? req.tenant.id : 'global';
     const accountId = req.params.id || 'general';
     const now = new Date();
     const year = now.getFullYear().toString();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    const targetDir = path.join(uploadDir, year, month, `cuenta_${accountId}`);
+    const targetDir = path.join(uploadDir, year, month, `tenant_${tenantId}`, `cuenta_${accountId}`);
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, {
         recursive: true

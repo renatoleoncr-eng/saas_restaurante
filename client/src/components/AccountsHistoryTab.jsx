@@ -6,6 +6,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import AccountDetailsModal from './AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { compressImage } from '../utils/imageCompression';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -79,10 +80,27 @@ export default function AccountsHistoryTab() {
     const [payAmount, setPayAmount] = useState('');
     const [payMethod, setPayMethod] = useState('efectivo');
     const [payFiles, setPayFiles] = useState([]);
-    const handlePayFileChange = (e) => {
+    const handlePayFileChange = async (e) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setPayFiles(prev => [...prev, ...files]);
+            try {
+                const filesArray = Array.from(e.target.files);
+                const compressedFiles = await Promise.all(
+                    filesArray.map(async file => {
+                        try {
+                            if (file.type.startsWith('image/')) {
+                                return await compressImage(file);
+                            }
+                            return file;
+                        } catch (err) {
+                            return file;
+                        }
+                    })
+                );
+                setPayFiles(prev => [...prev, ...compressedFiles]);
+            } catch (err) {
+                console.error(err);
+            }
+            e.target.value = '';
         }
     };
     const [isPaying, setIsPaying] = useState(false);
