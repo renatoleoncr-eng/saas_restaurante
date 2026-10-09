@@ -13,8 +13,8 @@ router.get('/menu/daily', async (req, res) => {
         // Helper for Peru Local Time (UTC-5)
         const getLocalDateStr = () => {
             const now = new Date();
-            now.setHours(now.getHours() - 5);
-            return now.toISOString().split('T')[0];
+            const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+            return peruNow.toISOString().split('T')[0];
         };
 
         let queryDate = date;

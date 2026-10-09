@@ -932,8 +932,8 @@ const updateDailyMenuStock = async (menuItemId, quantity, isDeduction, tenantId,
     // Fix: Use local date (Peru GMT-5) or allow tolerance
     // Ideally we get the "Working Date" from a config, but for now shift UTC-5
     const now = new Date();
-    now.setHours(now.getHours() - 5);
-    const today = now.toISOString().split('T')[0];
+    const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = peruNow.toISOString().split('T')[0];
 
     // Find menu for today using the same transaction to see uncommitted changes
     const menu = await DailyMenu.findOne({
@@ -1092,8 +1092,8 @@ const checkStockAvailability = async (orderItems, tenantId) => {
     // D. Validate Menu Limits (DailyMenu)
     if (Object.keys(menuLimitReqs).length > 0) {
       const now = new Date();
-      now.setHours(now.getHours() - 5);
-      const today = now.toISOString().split('T')[0];
+    const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = peruNow.toISOString().split('T')[0];
       const menu = await DailyMenu.findOne({
         where: {
           date: today,

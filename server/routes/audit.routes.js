@@ -37,10 +37,9 @@ router.get('/audit-logs', async (req, res) => {
         // Date range filter
         if (dateFrom || dateTo) {
             where.createdAt = {};
-            if (dateFrom) where.createdAt[Op.gte] = new Date(dateFrom);
+            if (dateFrom) where.createdAt[Op.gte] = new Date(dateFrom + 'T00:00:00-05:00');
             if (dateTo) {
-                const end = new Date(dateTo);
-                end.setHours(23, 59, 59, 999);
+                const end = new Date(dateTo + 'T23:59:59.999-05:00');
                 where.createdAt[Op.lte] = end;
             }
         }

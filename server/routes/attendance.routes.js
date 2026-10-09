@@ -12,8 +12,8 @@ router.post('/attendance/check-in', async (req, res) => {
         const tenantId = req.tenant.id;
 
         const now = new Date();
-        now.setHours(now.getHours() - 5);
-        const today = now.toISOString().split('T')[0];
+    const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = peruNow.toISOString().split('T')[0];
 
         // Check if already checked in today (scoped to tenant)
         const existing = await Attendance.findOne({
@@ -48,8 +48,8 @@ router.post('/attendance/check-out', async (req, res) => {
         const { userId } = req.body;
         const tenantId = req.tenant.id;
         const now = new Date();
-        now.setHours(now.getHours() - 5);
-        const today = now.toISOString().split('T')[0];
+    const peruNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = peruNow.toISOString().split('T')[0];
 
         // Find open session scoped to tenant
         const attendance = await Attendance.findOne({
