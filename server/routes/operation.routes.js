@@ -1011,7 +1011,7 @@ const checkStockAvailability = async (orderItems, tenantId) => {
           }],
           where: {
             id: item.productId,
-            TenantId: req.tenant.id
+            TenantId: tenantId
           }
         });
         if (product) {
@@ -1054,7 +1054,7 @@ const checkStockAvailability = async (orderItems, tenantId) => {
       const ing = await Ingredient.findOne({
         where: {
           id: id,
-          TenantId: req.tenant.id
+          TenantId: tenantId
         }
       });
       console.log(`[StockCheck] Validating Ingredient ${id} (${ing?.name}): Req ${ingredientReqs[id].qty}, Avail ${ing?.stock}`);
@@ -1068,7 +1068,7 @@ const checkStockAvailability = async (orderItems, tenantId) => {
       const prod = await Product.findOne({
         where: {
           id: id,
-          TenantId: req.tenant.id
+          TenantId: tenantId
         }
       });
       if (!prod || parseInt(prod.stock) < productReqs[id].qty) {
@@ -1081,7 +1081,7 @@ const checkStockAvailability = async (orderItems, tenantId) => {
       const variant = await ProductVariant.findOne({
         where: {
           id: id,
-          TenantId: req.tenant.id
+          TenantId: tenantId
         }
       });
       if (!variant || parseInt(variant.stock) < variantReqs[id].qty) {
@@ -1145,7 +1145,7 @@ const accumulateRequirements = async (productId, quantity, presentation, ingredi
     }],
     where: {
       id: productId,
-      TenantId: req.tenant.id
+      TenantId: tenantId
     }
   });
   if (!product) {
