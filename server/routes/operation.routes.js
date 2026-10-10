@@ -573,11 +573,11 @@ router.post('/accounts/:id/close', upload.array('evidence', 10), async (req, res
     const year = now.getFullYear().toString();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     if (req.files && req.files.length > 0) {
-      const filePaths = req.files.map(file => `/uploads/${year}/${month}/cuenta_${id}/${file.filename}`);
+      const filePaths = req.files.map(file => `/uploads/${year}/${month}/tenant_${req.tenant.id}/cuenta_${id}/${file.filename}`);
       account.paymentEvidence = JSON.stringify(filePaths);
     } else if (req.file) {
       // Keep backwards compatibility for old single upload just in case
-      account.paymentEvidence = JSON.stringify([`/uploads/${year}/${month}/cuenta_${id}/${req.file.filename}`]);
+      account.paymentEvidence = JSON.stringify([`/uploads/${year}/${month}/tenant_${req.tenant.id}/cuenta_${id}/${req.file.filename}`]);
     }
 
     // Calculate missing amount and generate payment
@@ -713,10 +713,10 @@ router.post('/accounts/:id/pay', upload.array('evidence', 10), async (req, res) 
     const month = String(now.getMonth() + 1).padStart(2, '0');
     let evidencePath = null;
     if (req.files && req.files.length > 0) {
-      const filePaths = req.files.map(file => `/uploads/${year}/${month}/cuenta_${id}/${file.filename}`);
+      const filePaths = req.files.map(file => `/uploads/${year}/${month}/tenant_${req.tenant.id}/cuenta_${id}/${file.filename}`);
       evidencePath = JSON.stringify(filePaths);
     } else if (req.file) {
-      evidencePath = JSON.stringify([`/uploads/${year}/${month}/cuenta_${id}/${req.file.filename}`]);
+      evidencePath = JSON.stringify([`/uploads/${year}/${month}/tenant_${req.tenant.id}/cuenta_${id}/${req.file.filename}`]);
     }
 
     // Create the Partial Payment record
