@@ -361,7 +361,13 @@ const AccountDetailsModal = ({
                     )}
 
                     {/* EVIDENCIAS SECTION */}
-                    {(account.Payments?.some(p => p.evidence) || account.paymentEvidence) && (
+                    {(account.Payments?.some(p => p.evidence) || account.paymentEvidence) && (() => {
+                        const getImageUrl = (url) => {
+                            if (!url) return '';
+                            if (url.startsWith('http') || url.startsWith('data:')) return url;
+                            return url.startsWith('/') ? url : `/${url}`;
+                        };
+                        return (
                         <section>
                             <h4 className="text-sm font-bold text-gray-500 mb-3">Evidencias Adjuntas</h4>
                             <div className="bg-gray-50 border rounded-lg p-4">
@@ -375,7 +381,7 @@ const AccountDetailsModal = ({
                                             if (Array.isArray(paths)) {
                                                 return paths.map((path, i) => (
                                                     <div key={`p-${payment.id}-${i}`} className="relative group aspect-square">
-                                                        <img src={path} alt="Comprobante" className={`w-full h-full object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all ${isCurrentPayment ? 'ring-2 ring-green-500' : ''}`} onClick={() => setPreviewImage(path)} />
+                                                        <img src={getImageUrl(path)} alt="Comprobante" className={`w-full h-full object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all ${isCurrentPayment ? 'ring-2 ring-green-500' : ''}`} onClick={() => setPreviewImage(getImageUrl(path))} />
                                                         <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] text-center py-1 opacity-0 group-hover:opacity-100 transition-opacity">{formatCurrency(payment.amount)}</div>
                                                     </div>
                                                 ));
@@ -383,7 +389,7 @@ const AccountDetailsModal = ({
                                         } catch (e) {
                                             return (
                                                 <div key={`p-${payment.id}`} className="relative group aspect-square">
-                                                    <img src={payment.evidence} alt="Comprobante" className={`w-full h-full object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all ${isCurrentPayment ? 'ring-2 ring-green-500' : ''}`} onClick={() => setPreviewImage(payment.evidence)} />
+                                                    <img src={getImageUrl(payment.evidence)} alt="Comprobante" className={`w-full h-full object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all ${isCurrentPayment ? 'ring-2 ring-green-500' : ''}`} onClick={() => setPreviewImage(getImageUrl(payment.evidence))} />
                                                     <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] text-center py-1 opacity-0 group-hover:opacity-100 transition-opacity">{formatCurrency(payment.amount)}</div>
                                                 </div>
                                             );
@@ -397,12 +403,12 @@ const AccountDetailsModal = ({
                                             const paths = JSON.parse(account.paymentEvidence);
                                             if (Array.isArray(paths)) {
                                                 return paths.map((path, i) => (
-                                                    <img key={`legacy-${i}`} src={path} alt="Comprobante" className="w-full aspect-square object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all" onClick={() => setPreviewImage(path)} />
+                                                    <img key={`legacy-${i}`} src={getImageUrl(path)} alt="Comprobante" className="w-full aspect-square object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all" onClick={() => setPreviewImage(getImageUrl(path))} />
                                                 ));
                                             }
                                         } catch (e) {
                                             return (
-                                                <img src={account.paymentEvidence} alt="Comprobante" className="w-full aspect-square object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all" onClick={() => setPreviewImage(account.paymentEvidence)} />
+                                                <img src={getImageUrl(account.paymentEvidence)} alt="Comprobante" className="w-full aspect-square object-cover rounded shadow-sm border cursor-pointer hover:opacity-80 transition-all" onClick={() => setPreviewImage(getImageUrl(account.paymentEvidence))} />
                                             );
                                         }
                                         return null;
@@ -410,7 +416,8 @@ const AccountDetailsModal = ({
                                 </div>
                             </div>
                         </section>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* FOOTER TOTALS (Optional, only for ReportesView) */}
