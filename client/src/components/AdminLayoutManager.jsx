@@ -6,6 +6,7 @@ import TableControl from './TableControl';
 import ReservationModal from './ReservationModal';
 import SessionManagerModal from './SessionManagerModal';
 import OnboardingWelcome from './OnboardingWelcome';
+import CharCount from './common/CharCount';
 
 export default function AdminLayoutManager({ onGoToSection }) {
     const { areas, refreshData, reservations, tenantInfo, products } = useRestaurant();
@@ -140,14 +141,21 @@ export default function AdminLayoutManager({ onGoToSection }) {
                                 </button>
                             ) : (
                                 <div className="flex flex-col sm:flex-row gap-2 bg-gray-50 border p-2 rounded-xl max-w-md animate-in fade-in duration-200">
-                                    <input
-                                        type="text"
-                                        value={newAreaName}
-                                        onChange={e => setNewAreaName(e.target.value)}
-                                        placeholder="Nombre Nueva Fila"
-                                        className="border px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                        autoFocus
-                                    />
+                                    <div className="flex-1 flex flex-col gap-1">
+                                        <div className="flex justify-between items-center text-xs text-gray-500">
+                                            <span>Nombre Nueva Fila</span>
+                                            <CharCount current={newAreaName?.length} max={50} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            maxLength={50}
+                                            value={newAreaName}
+                                            onChange={e => setNewAreaName(e.target.value)}
+                                            placeholder="Nombre Nueva Fila"
+                                            className="border px-3 py-2 rounded-lg text-sm w-full outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                            autoFocus
+                                        />
+                                    </div>
                                     <div className="flex gap-2 justify-end">
                                         <button
                                             onClick={async () => {

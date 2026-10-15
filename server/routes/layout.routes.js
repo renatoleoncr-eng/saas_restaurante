@@ -3,6 +3,9 @@ const router = express.Router();
 const {
   logAction
 } = require('../utils/audit');
+const {
+  cleanString
+} = require('../utils/sanitize');
 
 // Local require helper to avoid circular dependencies
 const getModels = () => require('../models');
@@ -91,13 +94,14 @@ router.post('/areas', async (req, res) => {
       name,
       sortOrder
     } = req.body;
+    const cleanName = cleanString(name, 50);
     const area = await Area.create({
-      name,
+      name: cleanName,
       sortOrder,
       TenantId: req.tenant.id
     });
     await logAction(req, 'CREATE_AREA', 'Area', area.id, {
-      name,
+      name: cleanName,
       userId: req.body.userId || null
     });
     res.json(area);
@@ -123,7 +127,7 @@ router.put('/areas/:id', async (req, res) => {
       sortOrder
     } = req.body;
     await Area.update({
-      name,
+      name: name !== undefined ? cleanString(name, 50) : undefined,
       sortOrder
     }, {
       where: {
@@ -243,15 +247,16 @@ router.post('/tables', async (req, res) => {
         error: `Ya existe una mesa con el número '${number}' en esta categoría/área.`
       });
     }
+    const cleanNumber = cleanString(number, 20);
     const table = await Table.create({
-      number: String(number),
+      number: cleanNumber,
       AreaId,
       x,
       y,
       TenantId: tenantId
     });
     await logAction(req, 'CREATE_TABLE', 'Table', table.id, {
-      number: String(number),
+      number: cleanNumber,
       AreaId,
       userId: req.body.userId || null
     });
@@ -290,23 +295,24 @@ router.put('/tables/:id', async (req, res) => {
       error: "Mesa no encontrada"
     });
 
+    const cleanNumber = number !== undefined ? cleanString(number, 20) : currentTable.number;
     // Uniqueness validation if number is changing
-    if (number !== undefined && String(number) !== currentTable.number) {
+    if (number !== undefined && cleanNumber !== currentTable.number) {
       const existing = await Table.findOne({
         where: {
-          number: String(number),
+          number: cleanNumber,
           AreaId: currentTable.AreaId,
           TenantId: tenantId
         }
       });
       if (existing) {
         return res.status(400).json({
-          error: `Ya existe una mesa con el número '${number}' en esta categoría/área.`
+          error: `Ya existe una mesa con el número '${cleanNumber}' en esta categoría/área.`
         });
       }
     }
     await Table.update({
-      number: number !== undefined ? String(number) : currentTable.number,
+      number: cleanNumber,
       x,
       y,
       status

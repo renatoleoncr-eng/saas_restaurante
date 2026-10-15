@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, Plus, Trash2, Loader2, LayoutGrid } from 'lucide-react';
+import CharCount from './common/CharCount';
 
 export default function OnboardingSalonModal({ onClose, onComplete }) {
     const [areas, setAreas] = useState([
@@ -108,11 +109,15 @@ export default function OnboardingSalonModal({ onClose, onComplete }) {
                             <div key={index} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative group">
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <div className="flex-1">
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
-                                            Nombre del Área
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                Nombre del Área
+                                            </label>
+                                            <CharCount current={area.name?.length} max={50} />
+                                        </div>
                                         <input
                                             type="text"
+                                            maxLength={50}
                                             value={area.name}
                                             onChange={(e) => handleAreaChange(index, 'name', e.target.value)}
                                             placeholder="Ej. Salón Principal"

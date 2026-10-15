@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Package, Plus, Trash2, Edit2, Save, X, Minus, History, TrendingUp, TrendingDown } from 'lucide-react';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
+import CharCount from './common/CharCount';
 
 export default function IngredientManager({ readOnly = false, user, searchQuery = '' }) {
     const isWaiter = user?.role === 'waiter';
@@ -164,12 +165,19 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                 </button>
                             ) : (
                                 <div className="flex flex-col md:flex-row gap-2 p-4 bg-orange-50 rounded-lg border border-orange-100 animate-in fade-in">
-                                    <input
-                                        placeholder="Nombre Insumo (ej. Limón)"
-                                        className="border p-2 rounded flex-1 focus:ring-2 focus:ring-orange-200 outline-none"
-                                        value={editForm.id ? '' : editForm.name || ''}
-                                        onChange={e => !editForm.id && setEditForm({ ...editForm, name: e.target.value })}
-                                    />
+                                    <div className="flex-1 flex flex-col gap-1">
+                                        <div className="flex justify-between items-center text-xs text-gray-500">
+                                            <span>Nombre Insumo</span>
+                                            <CharCount current={(editForm.id ? '' : editForm.name || '').length} max={100} />
+                                        </div>
+                                        <input
+                                            maxLength={100}
+                                            placeholder="Nombre Insumo (ej. Limón)"
+                                            className="border p-2 rounded w-full focus:ring-2 focus:ring-orange-200 outline-none"
+                                            value={editForm.id ? '' : editForm.name || ''}
+                                            onChange={e => !editForm.id && setEditForm({ ...editForm, name: e.target.value })}
+                                        />
+                                    </div>
                                     <div className="flex gap-2">
                                         <input
                                             type="number"
@@ -206,7 +214,12 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                                     <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
                                         {isEditing === item.id ? (
                                             <>
-                                                <td className="p-3"><input className="border p-1 w-full rounded" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} /></td>
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-1">
+                                                        <input maxLength={100} className="border p-1 w-full rounded" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                                        <CharCount current={editForm.name?.length} max={100} />
+                                                    </div>
+                                                </td>
                                                 <td className="p-3"><span className="text-gray-400 text-sm">Use +/- para ajustar</span></td>
                                                 <td className="p-3 text-right">
                                                     <button onClick={handleSave} disabled={isSubmitting} className="text-green-600 mr-2 hover:bg-green-50 p-1 rounded"><Save size={18} /></button>
@@ -364,9 +377,13 @@ export default function IngredientManager({ readOnly = false, user, searchQuery 
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Razón / Motivo</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-bold text-gray-700">Razón / Motivo</label>
+                                    <CharCount current={adjustmentForm.reason?.length} max={255} />
+                                </div>
                                 <input
                                     type="text"
+                                    maxLength={255}
                                     className="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-blue-500 outline-none"
                                     placeholder={adjustmentItem.type === 'add' ? "Ej. Compra semanal" : "Ej. Vencimiento, Merma"}
                                     value={adjustmentForm.reason}

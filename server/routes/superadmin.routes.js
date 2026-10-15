@@ -9,6 +9,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const { generateSuperAdminToken, requireSuperAdmin, validateApiKey } = require('../middleware/superadmin.middleware');
+const { cleanOptionalString } = require('../utils/sanitize');
 const models = require('../models');
 const {
     Tenant, User, RestaurantConfig, Area, Table, Account, Order,
@@ -184,8 +185,9 @@ router.put('/tenants/:id/notes', requireSuperAdmin, async (req, res) => {
         const tenant = await Tenant.findByPk(req.params.id);
         if (!tenant) return res.status(404).json({ error: 'Restaurante no encontrado' });
 
-        await tenant.update({ internalNotes: internalNotes || null });
-        res.json({ message: 'Notas actualizadas', tenant: { id: tenant.id, internalNotes } });
+        const cleanNotes = cleanOptionalString(internalNotes, 1000);
+        await tenant.update({ internalNotes: cleanNotes });
+        res.json({ message: 'Notas actualizadas', tenant: { id: tenant.id, internalNotes: cleanNotes } });
     } catch (err) {
         console.error('[SuperAdmin] Error updating notes:', err);
         res.status(500).json({ error: 'Error actualizando notas' });

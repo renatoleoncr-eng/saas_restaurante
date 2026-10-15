@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Edit2, Save, X, Wine, ChefHat, ChevronDown, ChevronUp } from 'lucide-react';
 import RecipeModal from './RecipeModal';
+import CharCount from './common/CharCount';
 
 const TYPE_LABEL = { free: 'Libre', finished: 'Terminado', prepared: 'Preparado' };
 const TYPE_COLOR = {
@@ -30,10 +31,14 @@ function NewItemRow({ promoId, onSave, onCancel }) {
     return (
         <tr className="bg-purple-50 border-y border-purple-100 block md:table-row">
             <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
-                <label className="block md:hidden text-[10px] font-bold text-purple-700 uppercase mb-1">Nombre</label>
+                <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-bold text-purple-700 uppercase">Nombre</label>
+                    <CharCount current={form.name?.length} max={100} />
+                </div>
                 <input
                     autoFocus
                     type="text"
+                    maxLength={100}
                     placeholder="Nombre del trago"
                     className="border border-purple-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-purple-400 outline-none bg-white font-semibold"
                     value={form.name}
@@ -123,8 +128,12 @@ function EditItemRow({ item, onSave, onCancel, onOpenRecipe }) {
     return (
         <tr className="bg-blue-50 border-y border-blue-100 block md:table-row">
             <td className="p-3 md:px-4 md:py-3 block md:table-cell align-top md:align-middle">
-                <label className="block md:hidden text-[10px] font-bold text-blue-700 uppercase mb-1">Nombre</label>
+                <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-bold text-blue-700 uppercase">Nombre</label>
+                    <CharCount current={form.name?.length} max={100} />
+                </div>
                 <input autoFocus type="text"
+                    maxLength={100}
                     className="border border-blue-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-400 outline-none bg-white font-semibold"
                     value={form.name}
                     onChange={e => upd('name', e.target.value)}
@@ -389,15 +398,22 @@ export default function DrinkPromotionsConfig() {
             {/* ── Inline new-promo form ── */}
             {showNewPromoForm && (
                 <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
-                    <input
-                        autoFocus
-                        type="text"
-                        placeholder="Nombre de la categoría  (ej: 2x S/ 34.90)"
-                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none min-w-[200px]"
-                        value={newPromoForm.name}
-                        onChange={e => setNewPromoForm(f => ({ ...f, name: e.target.value }))}
-                        onKeyDown={e => e.key === 'Enter' && createPromo()}
-                    />
+                    <div className="flex-1 flex flex-col gap-1 min-w-[200px]">
+                        <div className="flex justify-between items-center text-xs text-purple-700">
+                            <span>Nombre de la categoría</span>
+                            <CharCount current={newPromoForm.name?.length} max={100} />
+                        </div>
+                        <input
+                            autoFocus
+                            type="text"
+                            maxLength={100}
+                            placeholder="Nombre de la categoría  (ej: 2x S/ 34.90)"
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                            value={newPromoForm.name}
+                            onChange={e => setNewPromoForm(f => ({ ...f, name: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && createPromo()}
+                        />
+                    </div>
                     <div className="flex items-center gap-1 border rounded-lg px-3 py-2 bg-white">
                         <span className="text-gray-400 text-sm">Precio combo S/</span>
                         <input
@@ -440,13 +456,20 @@ export default function DrinkPromotionsConfig() {
                     <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
                         {editingPromo?.id === promo.id ? (
                             <div className="flex items-center gap-2 flex-1 flex-wrap">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    className="border rounded-lg px-2 py-1 text-sm flex-1 min-w-[150px] focus:ring-2 focus:ring-purple-400 outline-none font-bold"
-                                    value={editingPromo.name}
-                                    onChange={e => setEditingPromo(p => ({ ...p, name: e.target.value }))}
-                                />
+                                <div className="flex-1 flex flex-col gap-1 min-w-[150px]">
+                                    <div className="flex justify-between items-center text-[10px] text-purple-700">
+                                        <span>Nombre</span>
+                                        <CharCount current={editingPromo.name?.length} max={100} />
+                                    </div>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        maxLength={100}
+                                        className="w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-purple-400 outline-none font-bold"
+                                        value={editingPromo.name}
+                                        onChange={e => setEditingPromo(p => ({ ...p, name: e.target.value }))}
+                                    />
+                                </div>
                                 <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-white">
                                     <span className="text-gray-400 text-sm">S/</span>
                                     <input type="number" step="0.01"

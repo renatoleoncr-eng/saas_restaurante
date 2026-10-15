@@ -13,6 +13,10 @@ const {
 const {
   Op
 } = require('sequelize');
+const {
+  cleanString,
+  cleanOptionalString
+} = require('../utils/sanitize');
 const SUNAT_HUB_URL = process.env.SUNAT_HUB_URL || 'https://sunat.maksuites.com.pe';
 
 // Convert number to Peruvian text (simple version)
@@ -60,6 +64,14 @@ router.put('/billing/config', async (req, res) => {
     fields.forEach(f => {
       if (req.body[f] !== undefined) data[f] = req.body[f];
     });
+
+    if (data.ruc !== undefined) data.ruc = cleanOptionalString(data.ruc, 11);
+    if (data.razonSocial !== undefined) data.razonSocial = cleanOptionalString(data.razonSocial, 150);
+    if (data.direccion !== undefined) data.direccion = cleanOptionalString(data.direccion, 200);
+    if (data.serieFactura !== undefined) data.serieFactura = cleanString(data.serieFactura, 10);
+    if (data.serieBoleta !== undefined) data.serieBoleta = cleanString(data.serieBoleta, 10);
+    if (data.apiToken !== undefined) data.apiToken = cleanOptionalString(data.apiToken, 255);
+
     let config = await BillingConfig.findOne({
       where: {
         TenantId: req.tenant.id
@@ -453,10 +465,10 @@ router.post('/billing/invoices', async (req, res) => {
       tipo,
       serie,
       correlativo,
-      clienteDocumento,
-      clienteNombre,
-      clienteDireccion,
-      observaciones,
+      clienteDocumento: cleanOptionalString(clienteDocumento, 11),
+      clienteNombre: cleanOptionalString(clienteNombre, 150),
+      clienteDireccion: cleanOptionalString(clienteDireccion, 200),
+      observaciones: cleanOptionalString(observaciones, 500),
       subtotal: finalTotalBase,
       igv: finalTotalIgv,
       total: finalTotalPay,
@@ -561,7 +573,7 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
     if (!config) return res.status(400).json({
       error: 'Configuración no encontrada'
     });
-    const reason = req.body.reason || req.body.motivoText || 'ANULACION DE LA OPERACION';
+    const reason = cleanString(req.body.reason || req.body.motivoText || 'ANULACION DE LA OPERACION', 255);
     if (config.facturacionElectronica && config.apiToken) {
       const isFactura = invoice.tipo === 'factura';
       const refTipoDoc = isFactura ? '01' : '03';

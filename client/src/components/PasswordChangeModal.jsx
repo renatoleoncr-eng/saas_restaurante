@@ -3,6 +3,7 @@ import axios from 'axios';
 import { X, Lock, Save } from 'lucide-react';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 export default function PasswordChangeModal({ targetUser, onClose }) {
     const { user } = useRestaurant();
@@ -83,6 +84,7 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Actual</label>
                             <input
                                 type="password"
+                                maxLength={100}
                                 className="w-full border rounded p-2"
                                 value={currentPassword}
                                 onChange={e => setCurrentPassword(e.target.value)}
@@ -95,6 +97,7 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña (Dejar en blanco si no desea cambiarla)</label>
                         <input
                             type="password"
+                            maxLength={100}
                             className="w-full border rounded p-2"
                             value={newPassword}
                             onChange={e => setNewPassword(e.target.value)}
@@ -105,6 +108,7 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nueva Contraseña</label>
                         <input
                             type="password"
+                            maxLength={100}
                             className="w-full border rounded p-2"
                             value={confirmPassword}
                             onChange={e => setConfirmPassword(e.target.value)}
@@ -112,7 +116,10 @@ export default function PasswordChangeModal({ targetUser, onClose }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">PIN de Mozo (4 dígitos, opcional)</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-gray-700">PIN de Mozo (4 dígitos, opcional)</label>
+                            <CharCount value={newPin} max={4} />
+                        </div>
                         <input
                             type="text"
                             maxLength={4}

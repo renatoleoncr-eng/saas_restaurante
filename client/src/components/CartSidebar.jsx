@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ShoppingCart, AlertCircle, Minus, Trash2, Printer } from 'lucide-react';
 import axios from 'axios';
+import CharCount from './common/CharCount';
 
 export default function CartSidebar({
     viewMode = 'desktop', // 'desktop' or 'mobile'
@@ -163,8 +164,12 @@ export default function CartSidebar({
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                            <div className="flex justify-between items-center">
+                                <label className="text-xs font-bold text-gray-600">Comentario / Nota de Consumo</label>
+                                <CharCount current={clientForm.direccion?.length} max={200} />
+                            </div>
                             <input
+                                maxLength={200}
                                 className="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 value={clientForm.direccion || ''}
                                 onChange={e => setClientForm({ ...clientForm, direccion: e.target.value })}

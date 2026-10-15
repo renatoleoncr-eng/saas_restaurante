@@ -7,6 +7,7 @@ import RecipeModal from './RecipeModal';
 import MobileTabMenu from './MobileTabMenu';
 import AccountDetailsModal from './AccountDetailsModal'; // Import Account Modal
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 export default function StockDashboard({ readOnly = false, mode = 'full', viewMode = 'full' }) {
     const { user, refreshTrigger, socket, tenantInfo } = useRestaurant(); // Get socket and tenantInfo
@@ -503,6 +504,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                         </span>
                         <input
                             type="text"
+                            maxLength={50}
                             placeholder="Buscar opción..."
                             className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
                             value={searchQuery}
@@ -591,6 +593,7 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                             </span>
                             <input
                                 type="text"
+                                maxLength={50}
                                 placeholder={activeTab === 'ingredients' ? "Buscar insumo..." : activeTab === 'menu_options' ? "Buscar opción..." : "Buscar producto..."}
                                 className="w-full pl-10 pr-10 py-3 sm:py-2.5 border border-gray-300 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base sm:text-sm font-medium shadow-sm transition-all"
                                 value={searchQuery}
@@ -658,9 +661,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium text-gray-700">Motivo</label>
+                                    <CharCount current={adjustmentForm.reason?.length} max={255} />
+                                </div>
                                 <input
                                     type="text"
+                                    maxLength={255}
                                     placeholder={adjustmentItem.type === 'add' ? "Ej. Compra, Inventario Inicial" : "Ej. Merma, Vencimiento, Consumo Personal"}
                                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={adjustmentForm.reason}
@@ -718,9 +725,13 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Definiciones Agrupadas {user?.role !== 'admin' && '(Tipo inmutable tras creación)'}</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="col-span-1 md:col-span-2">
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Producto</label>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-sm font-bold text-gray-700">Nombre del Producto</label>
+                                                    <CharCount current={editForm.name?.length} max={100} />
+                                                </div>
                                                 <input
                                                     type="text"
+                                                    maxLength={100}
                                                     placeholder="Ej. Coca Cola"
                                                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
                                                     value={editForm.name}
@@ -1009,9 +1020,14 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                                         <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2.5">
                                                             <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-2 items-stretch sm:items-center">
                                                                 <div className="sm:col-span-4">
-                                                                    <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre Presentación</label>
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase">Nombre Presentación</label>
+                                                                        <span className="hidden sm:inline"></span>
+                                                                        <CharCount current={p.name?.length} max={50} />
+                                                                    </div>
                                                                     <input
                                                                         type="text"
+                                                                        maxLength={50}
                                                                         placeholder={idx === 0 ? "Ej. Estándar / Base" : "Ej. Mediano"}
                                                                         className="variant-name-input w-full p-2 border rounded font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white animate-in"
                                                                         value={p.name}
@@ -1287,14 +1303,21 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                             <div className="flex flex-col w-full gap-2">
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
-                                                        <input
-                                                            placeholder="Nombre de la Entrada"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none w-full bg-white font-medium text-sm"
-                                                            value={editForm.name || ''}
-                                                            onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                                            autoFocus
-                                                            onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
-                                                        />
+                                                        <div className="flex-1 flex flex-col gap-1">
+                                                            <div className="flex justify-between items-center text-xs text-purple-800">
+                                                                <span>Nombre de la Entrada</span>
+                                                                <CharCount current={editForm.name?.length} max={100} />
+                                                            </div>
+                                                            <input
+                                                                maxLength={100}
+                                                                placeholder="Nombre de la Entrada"
+                                                                className="p-2 border rounded flex-1 focus:ring-2 focus:ring-purple-500 outline-none w-full bg-white font-medium text-sm"
+                                                                value={editForm.name || ''}
+                                                                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                                                autoFocus
+                                                                onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
+                                                            />
+                                                        </div>
                                                         <div className="flex flex-col gap-2 w-full sm:w-auto">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-purple-500 w-32 shrink-0">
@@ -1488,14 +1511,21 @@ export default function StockDashboard({ readOnly = false, mode = 'full', viewMo
                                             <div className="flex flex-col w-full gap-2">
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex flex-col sm:flex-row flex-1 gap-3 w-full">
-                                                        <input
-                                                            placeholder="Nombre del Segundo"
-                                                            className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none w-full bg-white font-medium text-sm"
-                                                            value={editForm.name || ''}
-                                                            onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                                            autoFocus
-                                                            onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
-                                                        />
+                                                        <div className="flex-1 flex flex-col gap-1">
+                                                            <div className="flex justify-between items-center text-xs text-pink-800">
+                                                                <span>Nombre del Segundo</span>
+                                                                <CharCount current={editForm.name?.length} max={100} />
+                                                            </div>
+                                                            <input
+                                                                maxLength={100}
+                                                                placeholder="Nombre del Segundo"
+                                                                className="p-2 border rounded flex-1 focus:ring-2 focus:ring-pink-500 outline-none w-full bg-white font-medium text-sm"
+                                                                value={editForm.name || ''}
+                                                                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                                                autoFocus
+                                                                onKeyDown={e => e.key === 'Enter' && handleSaveProduct(true)}
+                                                            />
+                                                        </div>
                                                         <div className="flex flex-col gap-2 w-full sm:w-auto">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <div className="flex items-center gap-1 border rounded bg-white px-2 focus-within:ring-2 focus-within:ring-pink-500 w-32 shrink-0">
@@ -2466,7 +2496,9 @@ const SearchableProductSelect = ({
                         setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(true)}
+                    maxLength={50}
                 />
+                {searchTerm.length > 0 && <CharCount value={searchTerm} max={50} />}
                 {(searchTerm || value) && (
                     <button
                         type="button"

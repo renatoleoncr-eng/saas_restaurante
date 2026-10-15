@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Expense, User } = require('../models');
 const { getHotelDayRange } = require('../utils/dateUtils');
+const { cleanString } = require('../utils/sanitize');
 
 // GET All Expenses (filterable by date range via query)
 router.get('/expenses', async (req, res) => {
@@ -29,6 +30,8 @@ router.get('/expenses', async (req, res) => {
 router.post('/expenses', async (req, res) => {
     try {
         const { description, amount, category, userId, date } = req.body;
+        const cleanDescription = cleanString(description, 255);
+        const cleanCategory = cleanString(category || 'otros', 50);
         const paymentMethod = 'efectivo'; // Always force cash
         const { Payment, Expense, CashSession } = require('../models');
 
@@ -73,9 +76,9 @@ router.post('/expenses', async (req, res) => {
         }
 
         const expense = await Expense.create({
-            description,
+            description: cleanDescription,
             amount,
-            category,
+            category: cleanCategory,
             paymentMethod,
             UserId: userId,
             date: date || new Date(),

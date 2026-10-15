@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { logAction } = require('../utils/audit');
+const { cleanString } = require('../utils/sanitize');
 
 const getModels = () => require('../models');
 
@@ -29,20 +30,21 @@ router.post('/drink-promotions', async (req, res) => {
     try {
         const { DrinkPromotion } = getModels();
         const { name, price, active = true } = req.body;
-        console.log("[DrinkPromotions] Creating promo:", { name, price, active });
+        const cleanName = cleanString(name, 100);
+        console.log("[DrinkPromotions] Creating promo:", { name: cleanName, price, active });
 
-        if (!name || price === undefined) return res.status(400).json({ error: 'Nombre y precio son requeridos' });
+        if (!cleanName || price === undefined) return res.status(400).json({ error: 'Nombre y precio son requeridos' });
 
         // Simplified uniqueness check scoped to tenant
         const existing = await DrinkPromotion.findOne({
-            where: { name: name.trim(), TenantId: req.tenant.id }
+            where: { name: cleanName, TenantId: req.tenant.id }
         });
 
-        if (existing) return res.status(400).json({ error: `Ya existe una promoción con el nombre "${name}".` });
+        if (existing) return res.status(400).json({ error: `Ya existe una promoción con el nombre "${cleanName}".` });
 
-        const promo = await DrinkPromotion.create({ name, price, active, TenantId: req.tenant.id });
+        const promo = await DrinkPromotion.create({ name: cleanName, price, active, TenantId: req.tenant.id });
         console.log("[DrinkPromotions] Promo created:", promo.id);
-        await logAction(req, 'CREATE_PROMO_CATEGORY', 'DrinkPromotion', promo.id, { name, price, userId: req.body.userId || null });
+        await logAction(req, 'CREATE_PROMO_CATEGORY', 'DrinkPromotion', promo.id, { name: cleanName, price, userId: req.body.userId || null });
         res.status(201).json(promo);
     } catch (err) {
         console.error("[DrinkPromotions] POST Error:", err);
@@ -58,17 +60,18 @@ router.put('/drink-promotions/:id', async (req, res) => {
         if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
         const { name, price, active } = req.body;
         if (name !== undefined) {
-            if (name.trim().toLowerCase() !== promo.name.trim().toLowerCase()) {
+            const cleanName = cleanString(name, 100);
+            if (cleanName.toLowerCase() !== promo.name.trim().toLowerCase()) {
                 const existing = await DrinkPromotion.findOne({
                     where: {
-                        name: name.trim(),
+                        name: cleanName,
                         TenantId: req.tenant.id,
                         id: { [require('sequelize').Op.ne]: req.params.id }
                     }
                 });
-                if (existing) return res.status(400).json({ error: `Ya existe otra promoción con el nombre "${name}".` });
+                if (existing) return res.status(400).json({ error: `Ya existe otra promoción con el nombre "${cleanName}".` });
             }
-            promo.name = name;
+            promo.name = cleanName;
         }
         if (price !== undefined) promo.price = price;
         if (active !== undefined) promo.active = active;
@@ -120,10 +123,11 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
             }
         });
 
+        const cleanItemName = cleanString(name, 100);
         if (existingItem) return res.status(400).json({ error: `Este trago ya existe en esta promoción.` });
 
         const item = await DrinkPromotionItem.create({
-            name,
+            name: cleanItemName,
             individualPrice,
             type,
             linkedProductId: type === 'finished' ? null : linkedProductId,
@@ -131,7 +135,7 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
             DrinkPromotionId: promo.id,
             TenantId: req.tenant.id
         });
-        await logAction(req, 'CREATE_PROMO_ITEM', 'DrinkPromotionItem', item.id, { name, promoName: promo.name, DrinkPromotionId: promo.id, userId: req.body.userId || null });
+        await logAction(req, 'CREATE_PROMO_ITEM', 'DrinkPromotionItem', item.id, { name: cleanItemName, promoName: promo.name, DrinkPromotionId: promo.id, userId: req.body.userId || null });
         res.status(201).json(item);
     } catch (err) {
         console.error("[DrinkPromotions] Item POST Error:", err);
@@ -147,17 +151,18 @@ router.put('/drink-promotions/items/:itemId', async (req, res) => {
         if (!item) return res.status(404).json({ error: 'Item no encontrado' });
         const { name, individualPrice, type, linkedProductId, stock } = req.body;
         if (name !== undefined) {
-            if (name.trim().toLowerCase() !== item.name.trim().toLowerCase()) {
+            const cleanItemName = cleanString(name, 100);
+            if (cleanItemName.toLowerCase() !== item.name.trim().toLowerCase()) {
                 const existing = await DrinkPromotionItem.findOne({
                     where: {
-                        name: name.trim(),
+                        name: cleanItemName,
                         DrinkPromotionId: item.DrinkPromotionId,
                         id: { [require('sequelize').Op.ne]: req.params.itemId }
                     }
                 });
                 if (existing) return res.status(400).json({ error: `Ya existe otro trago con este nombre en la promoción.` });
             }
-            item.name = name;
+            item.name = cleanItemName;
         }
         if (individualPrice !== undefined) item.individualPrice = individualPrice;
         if (type !== undefined) {

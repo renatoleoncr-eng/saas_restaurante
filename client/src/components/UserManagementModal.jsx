@@ -4,6 +4,7 @@ import { Users, Plus, Edit, Trash2, Key, UserPlus, X, RotateCcw } from 'lucide-r
 import PasswordChangeModal from './PasswordChangeModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
+import CharCount from './common/CharCount';
 
 export default function UserManagementModal({ onClose }) {
     const { user } = useRestaurant();
@@ -175,9 +176,13 @@ export default function UserManagementModal({ onClose }) {
                                         </h2>
                                         <form onSubmit={handleSave} className="space-y-4" autoComplete="off">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Usuario (Login)</label>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-sm font-medium text-gray-700">Usuario (Login)</label>
+                                                    <CharCount current={formData.username?.length} max={50} />
+                                                </div>
                                                 <input
                                                     type="text"
+                                                    maxLength={50}
                                                     name="username"
                                                     autoComplete="new-username"
                                                     className="w-full border p-2 rounded bg-gray-50"
@@ -195,6 +200,7 @@ export default function UserManagementModal({ onClose }) {
                                                         type="password"
                                                         name="password"
                                                         autoComplete="new-password"
+                                                        maxLength={100}
                                                         className="w-full border p-2 rounded"
                                                         value={formData.password}
                                                         onChange={e => setFormData({ ...formData, password: e.target.value })}
@@ -204,8 +210,12 @@ export default function UserManagementModal({ onClose }) {
                                             )}
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Nombre Visible</label>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-sm font-medium text-gray-700">Nombre Visible</label>
+                                                    <CharCount current={formData.displayName?.length} max={50} />
+                                                </div>
                                                 <input
+                                                    maxLength={50}
                                                     className="w-full border p-2 rounded"
                                                     value={formData.displayName}
                                                     onChange={e => setFormData({ ...formData, displayName: e.target.value })}
@@ -228,7 +238,10 @@ export default function UserManagementModal({ onClose }) {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">PIN de Mozo (4 dígitos, opcional)</label>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-sm font-medium text-gray-700">PIN de Mozo (4 dígitos, opcional)</label>
+                                                    <CharCount current={formData.pin?.length} max={4} />
+                                                </div>
                                                 <input
                                                     type="text"
                                                     maxLength={4}

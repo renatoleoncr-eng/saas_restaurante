@@ -7,6 +7,7 @@ import AccountDetailsModal from './AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { compressImage } from '../utils/imageCompression';
+import CharCount from './common/CharCount';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -409,6 +410,7 @@ export default function AccountsHistoryTab() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
                             type="text"
+                            maxLength={50}
                             placeholder="Buscar # Cuenta o Cliente..."
                             className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-64"
                             value={searchTerm}
@@ -598,10 +600,14 @@ export default function AccountsHistoryTab() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">DNI / RUC</label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-bold text-gray-700">DNI / RUC</label>
+                                    <CharCount current={editDni?.length} max={11} />
+                                </div>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
+                                        maxLength={11}
                                         className="flex-1 border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={editDni}
                                         onChange={(e) => setEditDni(e.target.value)}
@@ -620,9 +626,13 @@ export default function AccountsHistoryTab() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Cliente / Razón Social</label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-bold text-gray-700">Nombre del Cliente / Razón Social</label>
+                                    <CharCount current={editName?.length} max={150} />
+                                </div>
                                 <input
                                     type="text"
+                                    maxLength={150}
                                     className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
@@ -857,10 +867,14 @@ export default function AccountsHistoryTab() {
                                                         </button>
                                                     </div>
                                                     <div>
-                                                         <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                         <div className="flex justify-between items-center mb-1">
+                                                             <label className="block text-xs font-bold text-gray-600">Documento (DNI/RUC)</label>
+                                                             <CharCount current={invoiceClientDoc?.length} max={11} />
+                                                         </div>
                                                          <div className="relative">
                                                              <input
                                                                  type="text"
+                                                                 maxLength={11}
                                                                  placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
                                                                  value={invoiceClientDoc}
                                                                  onChange={e => {
@@ -881,9 +895,13 @@ export default function AccountsHistoryTab() {
                                                          </div>
                                                      </div>
                                                     <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">{invoiceType === 'factura' ? 'Razón Social' : 'Nombre del Cliente'}</label>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <label className="block text-xs font-bold text-gray-600">{invoiceType === 'factura' ? 'Razón Social' : 'Nombre del Cliente'}</label>
+                                                            <CharCount current={invoiceClientName?.length} max={150} />
+                                                        </div>
                                                         <input
                                                             type="text"
+                                                            maxLength={150}
                                                             placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
                                                             value={invoiceClientName}
                                                             onChange={e => setInvoiceClientName(e.target.value)}
@@ -893,9 +911,13 @@ export default function AccountsHistoryTab() {
                                                     </div>
                                                     {(invoiceType === 'factura' || (invoiceClientDoc && invoiceClientDoc.trim().length === 11)) && (
                                                         <div>
-                                                            <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <label className="block text-xs font-bold text-gray-600">Dirección Fiscal</label>
+                                                                <CharCount current={invoiceClientDir?.length} max={200} />
+                                                            </div>
                                                             <input
                                                                 type="text"
+                                                                maxLength={200}
                                                                 placeholder="Dirección Fiscal de la Empresa"
                                                                 value={invoiceClientDir}
                                                                 onChange={e => setInvoiceClientDir(e.target.value)}

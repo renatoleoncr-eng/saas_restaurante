@@ -9,6 +9,7 @@ import {
     Eye, X, ArrowUp, ArrowDown, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, Gift, History
 } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from '../components/common/CharCount';
 
 const getMediaUrl = (url) => {
     if (!url) return '';
@@ -1501,18 +1502,23 @@ export default function QrManagement() {
                                                         <td className="py-2.5">
                                                             <input
                                                                 type="text"
+                                                                maxLength={4}
                                                                 value={cat.icon}
                                                                 onChange={(e) => handleCategoryFieldChange(idx, 'icon', e.target.value)}
                                                                 className="w-12 mx-auto bg-white border border-gray-300 rounded-lg px-1.5 py-1 text-sm text-center text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
                                                             />
                                                         </td>
                                                         <td className="py-2.5 px-3">
-                                                            <input
-                                                                type="text"
-                                                                value={cat.name}
-                                                                onChange={(e) => handleCategoryFieldChange(idx, 'name', e.target.value)}
-                                                                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
-                                                            />
+                                                            <div className="flex items-center gap-1.5">
+                                                                <input
+                                                                    type="text"
+                                                                    maxLength={100}
+                                                                    value={cat.name}
+                                                                    onChange={(e) => handleCategoryFieldChange(idx, 'name', e.target.value)}
+                                                                    className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm text-gray-800 focus:outline-none focus:border-blue-500 font-semibold"
+                                                                />
+                                                                <CharCount current={cat.name?.length} max={100} />
+                                                            </div>
                                                         </td>
                                                         <td className="py-2.5 px-3">
                                                             <input
@@ -1702,9 +1708,13 @@ export default function QrManagement() {
 
                         <form onSubmit={saveQr} className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Nombre Identificador</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Nombre Identificador</label>
+                                    <CharCount current={qrFormData.name?.length} max={100} dark={true} />
+                                </div>
                                 <input 
                                     type="text"
+                                    maxLength={100}
                                     required
                                     placeholder="Ej: Yape Administrador / Plin Local"
                                     value={qrFormData.name}
@@ -1715,9 +1725,13 @@ export default function QrManagement() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Número de Celular</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Número de Celular</label>
+                                        <CharCount current={qrFormData.phoneNumber?.length} max={20} dark={true} />
+                                    </div>
                                     <input 
                                         type="text"
+                                        maxLength={20}
                                         placeholder="Opcional"
                                         value={qrFormData.phoneNumber}
                                         onChange={(e) => setQrFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
@@ -1880,9 +1894,13 @@ export default function QrManagement() {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Descripción / Razón</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Descripción / Razón</label>
+                                    <CharCount current={adjustmentData.description?.length} max={255} dark={true} />
+                                </div>
                                 <textarea 
                                     required
+                                    maxLength={255}
                                     placeholder="Ej: Depósito de prueba / Corrección de saldo duplicado"
                                     value={adjustmentData.description}
                                     onChange={(e) => setAdjustmentData(prev => ({ ...prev, description: e.target.value }))}
@@ -1930,9 +1948,13 @@ export default function QrManagement() {
 
                         <form onSubmit={saveGroup} className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Nombre del Grupo</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Nombre del Grupo</label>
+                                    <CharCount current={groupFormData.name?.length} max={100} dark={true} />
+                                </div>
                                 <input 
                                     type="text"
+                                    maxLength={100}
                                     required
                                     placeholder="Ej: Banners Fin de Semana / Bebidas HH"
                                     value={groupFormData.name}
@@ -2004,9 +2026,13 @@ export default function QrManagement() {
 
                         <form onSubmit={saveSlides} className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Nombre (Opcional - por defecto toma el nombre del archivo)</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Nombre (Opcional - por defecto toma el nombre del archivo)</label>
+                                    <CharCount current={slideFormData.name?.length} max={100} dark={true} />
+                                </div>
                                 <input 
                                     type="text"
+                                    maxLength={100}
                                     placeholder="Nombre personalizado"
                                     value={slideFormData.name}
                                     onChange={(e) => setSlideFormData(prev => ({ ...prev, name: e.target.value }))}

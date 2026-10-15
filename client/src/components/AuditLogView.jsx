@@ -6,6 +6,7 @@ import {
     RefreshCw, X, AlertCircle
 } from 'lucide-react';
 import AccountDetailsModal from './AccountDetailsModal';
+import CharCount from './common/CharCount';
 
 const ACTION_COLORS = {
     // Cancellations / deletions → red
@@ -434,17 +435,23 @@ export default function AuditLogView() {
             <div className="relative mb-4">
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                 <input
-                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    className="w-full pl-9 pr-24 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                     placeholder="Buscar en detalles (mesa, producto, usuario...)"
                     value={pendingFilters.search}
                     onChange={e => setPendingFilters(prev => ({ ...prev, search: e.target.value }))}
                     onKeyDown={e => e.key === 'Enter' && applyFilters()}
+                    maxLength={100}
                 />
-                {pendingFilters.search && (
-                    <button onClick={() => { setPendingFilters(p => ({ ...p, search: '' })); applyFilters(); }} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
-                        <X size={14} />
-                    </button>
-                )}
+                <div className="absolute right-3 top-2 flex items-center gap-1.5">
+                    {pendingFilters.search && (
+                        <>
+                            <CharCount value={pendingFilters.search} max={100} />
+                            <button onClick={() => { setPendingFilters(p => ({ ...p, search: '' })); applyFilters(); }} className="text-gray-400 hover:text-gray-600">
+                                <X size={14} />
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Expanded Filter Panel */}

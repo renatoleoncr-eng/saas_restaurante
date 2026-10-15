@@ -10,6 +10,7 @@ import axios from 'axios';
 import AccountDetailsModal from './AccountDetailsModal';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -984,11 +985,15 @@ const BillingConfigModal = ({ onClose }) => {
                                 {/* Filtros en Tarjetas */}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                                     <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-sm flex flex-col gap-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento Cliente</label>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Documento Cliente</label>
+                                            <CharCount value={filters.documento} max={11} />
+                                        </div>
                                         <div className="relative">
                                             <input 
                                                 type="text" 
                                                 placeholder="Buscar por DNI o RUC..." 
+                                                maxLength={11}
                                                 className="w-full pl-10 pr-4 py-3 bg-[#f8fafc] border border-transparent rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
                                                 value={filters.documento}
                                                 onChange={(e) => setFilters({...filters, documento: e.target.value})}
@@ -1217,7 +1222,10 @@ const BillingConfigModal = ({ onClose }) => {
                                     
                                     <div className="space-y-5">
                                         <div className="space-y-1.5">
-                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Documento (DNI/RUC)</label>
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Documento (DNI/RUC)</label>
+                                                <CharCount value={newInvoice.clienteDocumento} max={maxDocLength} />
+                                            </div>
                                             <div className="flex gap-2">
                                                 <input 
                                                     type="text" 
@@ -1261,9 +1269,13 @@ const BillingConfigModal = ({ onClose }) => {
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Razón Social / Nombre</label>
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Razón Social / Nombre</label>
+                                                <CharCount value={newInvoice.clienteNombre} max={150} />
+                                            </div>
                                             <input 
                                                 type="text" 
+                                                maxLength={150}
                                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
                                                 placeholder=""
                                                 value={newInvoice.clienteNombre}
@@ -1282,9 +1294,13 @@ const BillingConfigModal = ({ onClose }) => {
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Dirección (Opcional)</label>
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Dirección (Opcional)</label>
+                                                    <CharCount value={newInvoice.clienteDireccion} max={200} />
+                                                </div>
                                                 <input 
                                                     type="text" 
+                                                    maxLength={200}
                                                     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:font-medium placeholder:text-gray-400"
                                                     value={newInvoice.clienteDireccion}
                                                     onChange={(e) => setNewInvoice({...newInvoice, clienteDireccion: e.target.value})}
@@ -1336,9 +1352,13 @@ const BillingConfigModal = ({ onClose }) => {
                                                     />
                                                 </div>
                                                 <div className="w-full md:flex-1 space-y-1">
-                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest md:hidden">Descripción</label>
+                                                    <div className="flex justify-between items-center">
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest md:hidden">Descripción</label>
+                                                        {item.description && <CharCount value={item.description} max={255} />}
+                                                    </div>
                                                     <input 
                                                         type="text" 
+                                                        maxLength={255}
                                                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:font-medium placeholder:text-gray-400"
                                                         placeholder="Concepto..."
                                                         value={item.description}
@@ -1410,7 +1430,10 @@ const BillingConfigModal = ({ onClose }) => {
                         <form onSubmit={handleSaveConfig} className="max-w-xl mx-auto space-y-6 py-6 px-2">
                             {/* RUC */}
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">RUC de la Empresa</label>
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-bold text-gray-700">RUC de la Empresa</label>
+                                    <CharCount value={config.ruc} max={11} />
+                                </div>
                                 <div className="relative">
                                     <input 
                                         type="text" 
@@ -1437,9 +1460,13 @@ const BillingConfigModal = ({ onClose }) => {
 
                             {/* Razón Social */}
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Razón Social</label>
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-bold text-gray-700">Razón Social</label>
+                                    <CharCount value={config.razonSocial} max={150} />
+                                </div>
                                 <input 
                                     type="text" 
+                                    maxLength={150}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                     value={config.razonSocial}
                                     onChange={(e) => setConfig({...config, razonSocial: e.target.value})}
@@ -1504,9 +1531,13 @@ const BillingConfigModal = ({ onClose }) => {
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b pb-2">Configuraciones Adicionales</h3>
                                 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700">Dirección de la Empresa</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-bold text-gray-700">Dirección de la Empresa</label>
+                                        <CharCount value={config.direccion || ''} max={200} />
+                                    </div>
                                     <input 
                                         type="text" 
+                                        maxLength={200}
                                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                         placeholder="Se autocompleta al buscar RUC o ingrese manualmente"
                                         value={config.direccion || ''}
@@ -1516,18 +1547,26 @@ const BillingConfigModal = ({ onClose }) => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700">Serie Factura</label>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-bold text-gray-700">Serie Factura</label>
+                                            <CharCount value={config.serieFactura} max={4} />
+                                        </div>
                                         <input 
                                             type="text" 
+                                            maxLength={4}
                                             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-bold font-mono text-blue-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                             value={config.serieFactura}
                                             onChange={(e) => setConfig({...config, serieFactura: e.target.value.toUpperCase()})}
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700">Serie Boleta</label>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-bold text-gray-700">Serie Boleta</label>
+                                            <CharCount value={config.serieBoleta} max={4} />
+                                        </div>
                                         <input 
                                             type="text" 
+                                            maxLength={4}
                                             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-bold font-mono text-blue-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                             value={config.serieBoleta}
                                             onChange={(e) => setConfig({...config, serieBoleta: e.target.value.toUpperCase()})}
@@ -1551,6 +1590,7 @@ const BillingConfigModal = ({ onClose }) => {
                                     <label className="text-sm font-bold text-gray-700">API Token de Integración</label>
                                     <input 
                                         type="password" 
+                                        maxLength={255}
                                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base font-mono focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                                         placeholder="Ingrese el token proporcionado"
                                         value={config.apiToken}
@@ -1755,6 +1795,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                     <label className="text-xs font-bold text-gray-500 uppercase">USB Device Path</label>
                                                     <input
                                                         type="text"
+                                                        maxLength={255}
                                                         className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
                                                         placeholder="\\?\USB#VID_0456&PID_0808#..."
                                                         value={prt.path || ''}
@@ -1775,6 +1816,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                     <label className="text-xs font-bold text-gray-500 uppercase">Dirección IP de la Impresora</label>
                                                     <input
                                                         type="text"
+                                                        maxLength={50}
                                                         className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
                                                         placeholder="Ej. 192.168.1.23"
                                                         value={prt.path || ''}
@@ -1813,6 +1855,7 @@ const BillingConfigModal = ({ onClose }) => {
                                                     ) : (
                                                         <input
                                                             type="text"
+                                                            maxLength={100}
                                                             className="w-full px-3 py-2 border rounded-lg text-sm"
                                                             placeholder="Ej. POS 80 Series, Advance, Cocina"
                                                             value={prt.printerName || ''}
@@ -1915,11 +1958,15 @@ const BillingConfigModal = ({ onClose }) => {
                         </div>
                         <div className="p-6 md:p-8 space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo de la anulación</label>
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo de la anulación</label>
+                                    <CharCount value={annulReason} max={255} />
+                                </div>
                                 <input 
                                     type="text" 
                                     value={annulReason} 
                                     onChange={(e) => setAnnulReason(e.target.value)} 
+                                    maxLength={255}
                                     className="w-full bg-slate-50 border-transparent px-4 py-3.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-200 transition-all placeholder:text-slate-300" 
                                     placeholder="Ingrese el motivo de la anulación..." 
                                     disabled={isAnnulLoading}

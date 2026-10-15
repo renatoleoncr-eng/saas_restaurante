@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
+import CharCount from '../components/common/CharCount';
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -326,16 +327,20 @@ export default function SuperAdminDashboard() {
                         <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: '700', margin: 0 }}>
                             Restaurantes ({filtered.length})
                         </h2>
-                        <input
-                            placeholder="Buscar por nombre, slug o email..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            style={{
-                                ...inputStyle(false),
-                                width: 'auto', minWidth: '280px',
-                                padding: '8px 14px', fontSize: '13px'
-                            }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                                placeholder="Buscar por nombre, slug o email..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                maxLength={50}
+                                style={{
+                                    ...inputStyle(false),
+                                    width: 'auto', minWidth: '280px',
+                                    padding: '8px 14px', fontSize: '13px'
+                                }}
+                            />
+                            {search.length > 0 && <CharCount value={search} max={50} dark={true} />}
+                        </div>
                     </div>
 
                     {/* Table */}
@@ -636,10 +641,14 @@ export default function SuperAdminDashboard() {
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '12px' }}>
                         Visible solo para ti (super admin). El restaurante no las verá.
                     </p>
-                    <label style={labelStyle()}>NOTAS</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <label style={{ ...labelStyle(), marginBottom: 0 }}>NOTAS</label>
+                        <CharCount value={modalValues.notes} max={1000} dark={true} />
+                    </div>
                     <textarea
                         value={modalValues.notes}
                         onChange={(e) => setModalValues({ notes: e.target.value })}
+                        maxLength={1000}
                         rows={5}
                         placeholder="Ejemplo: Cliente VIP, pago pendiente, contacto: +51..."
                         style={{
@@ -673,6 +682,7 @@ export default function SuperAdminDashboard() {
                         type="text"
                         value={modalValues.pass}
                         onChange={(e) => setModalValues({ pass: e.target.value })}
+                        maxLength={100}
                         placeholder="Nueva contraseña..."
                         style={{ ...inputStyle(false), marginBottom: '24px', fontFamily: 'monospace' }}
                     />

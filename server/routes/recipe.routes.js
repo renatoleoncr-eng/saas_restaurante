@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Ingredient, Recipe, Product, sequelize } = require('../models');
+const { cleanString } = require('../utils/sanitize');
 
 // === INGREDIENTS ===
 
@@ -19,11 +20,13 @@ router.post('/ingredients', async (req, res) => {
     const { Op } = require('sequelize');
     try {
         const { name, unit, stock, id } = req.body;
-        const trimmedName = name ? name.trim().toLowerCase() : '';
+        const cleanName = cleanString(name, 100);
+        const cleanUnit = cleanString(unit || 'Unidades', 20);
+        const trimmedName = cleanName.toLowerCase();
         const tenantId = req.tenant.id;
 
         // Check for duplicates within this tenant
-        if (name) {
+        if (cleanName) {
             const existingIngredient = await Ingredient.findOne({
                 where: id ? {
                     TenantId: tenantId,
@@ -38,15 +41,15 @@ router.post('/ingredients', async (req, res) => {
             });
 
             if (existingIngredient) {
-                return res.status(400).json({ error: `Ya existe un insumo con el nombre "${name}".` });
+                return res.status(400).json({ error: `Ya existe un insumo con el nombre "${cleanName}".` });
             }
         }
 
         if (id) {
-            await Ingredient.update({ name, unit, stock }, { where: { id, TenantId: tenantId } });
+            await Ingredient.update({ name: cleanName, unit: cleanUnit, stock }, { where: { id, TenantId: tenantId } });
             res.json({ success: true });
         } else {
-            const newItem = await Ingredient.create({ name, unit, stock, TenantId: tenantId });
+            const newItem = await Ingredient.create({ name: cleanName, unit: cleanUnit, stock, TenantId: tenantId });
             res.json(newItem);
         }
     } catch (err) {
@@ -101,7 +104,7 @@ router.post('/ingredients/:id/movement', async (req, res) => {
             IngredientId: id,
             type: type,
             amount: moveAmount,
-            reason: reason,
+            reason: cleanString(reason || 'Ajuste Manual', 255),
             previousStock: previousStock,
             newStock: newStock,
             UserId: userId || null,

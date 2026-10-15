@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { ChefHat, Plus, Trash2, X, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 const SearchableSelect = ({ ingredients, value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -55,8 +56,10 @@ const SearchableSelect = ({ ingredients, value, onChange }) => {
                                 className="w-full bg-transparent outline-none text-sm font-medium"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
+                                maxLength={50}
                                 autoFocus
                             />
+                            {search.length > 0 && <CharCount value={search} max={50} />}
                             <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-gray-200 rounded-full text-gray-500">
                                 <X size={18} />
                             </button>

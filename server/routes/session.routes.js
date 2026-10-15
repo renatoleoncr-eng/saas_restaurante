@@ -3,6 +3,7 @@ const router = express.Router();
 const { CashSession, Payment, Expense, User, Account, Order, Product, Table } = require('../models');
 const { Op } = require('sequelize');
 const { logAction } = require('../utils/audit');
+const { cleanOptionalString } = require('../utils/sanitize');
 
 // GET /api/sessions/current - Get active session with calculated expected totals
 router.get('/sessions/current', async (req, res) => {
@@ -438,7 +439,7 @@ router.post('/sessions/close', async (req, res) => {
         session.status = 'closed';
         session.closedAt = new Date();
         session.closedBy = userId;
-        session.closingNotes = closingNotes;
+        session.closingNotes = cleanOptionalString(closingNotes, 500);
         session.closingDetails = typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails);
 
         await session.save();

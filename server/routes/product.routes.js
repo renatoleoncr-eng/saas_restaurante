@@ -3,6 +3,10 @@ const router = express.Router();
 const {
   logAction
 } = require('../utils/audit');
+const {
+  cleanString,
+  cleanOptionalString
+} = require('../utils/sanitize');
 
 // Local require helper to avoid circular dependencies
 const getModels = () => require('../models');
@@ -112,13 +116,15 @@ router.post('/products', async (req, res) => {
       });
     }
     console.time('PRODUCT_CREATE_ENDPOINT');
+    const cleanName = cleanString(name, 100);
+    const cleanCategory = cleanOptionalString(category, 50);
     const product = await Product.create({
-      name,
+      name: cleanName,
       price,
       type,
       isStockManaged,
       stock: Math.max(0, stock || 0),
-      category,
+      category: cleanCategory,
       linkedProductId: linkedProductId || null,
       requiresPreparation: finalRequiresPreparation,
       happyHourPrice: happyHourPrice || null,
@@ -133,7 +139,7 @@ router.post('/products', async (req, res) => {
     if (presentationsList && presentationsList.length > 0) {
       const seen = new Set();
       for (const p of presentationsList) {
-        const variantName = p.name || p.size || 'Estándar';
+        const variantName = cleanString(p.name || p.size || 'Estándar', 50);
         const uniqueKey = variantName.trim().toLowerCase();
         if (seen.has(uniqueKey)) {
           await t.rollback();
@@ -147,7 +153,7 @@ router.post('/products', async (req, res) => {
         const p = presentationsList[idx];
         await ProductVariant.create({
           ProductId: product.id,
-          name: p.name || p.size || 'Estándar',
+          name: cleanString(p.name || p.size || 'Estándar', 50),
           price: p.price,
           stock: Math.max(0, p.stock || 0),
           happyHourPrice: p.happyHourPrice || null,
@@ -328,12 +334,12 @@ router.put('/products/:id', async (req, res) => {
       }
     }
     await product.update({
-      name,
+      name: name !== undefined ? cleanString(name, 100) : product.name,
       price,
       type: actualType,
       stock: stock !== undefined ? Math.max(0, stock) : product.stock,
       isStockManaged: isStockManaged !== undefined ? isStockManaged : product.isStockManaged,
-      category,
+      category: category !== undefined ? cleanOptionalString(category, 50) : product.category,
       linkedProductId: linkedProductId || null,
       requiresPreparation: finalRequiresPreparation,
       happyHourPrice: happyHourPrice !== undefined ? happyHourPrice : product.happyHourPrice,
@@ -346,7 +352,7 @@ router.put('/products/:id', async (req, res) => {
     if (parsedPresentations && Array.isArray(parsedPresentations)) {
       const seen = new Set();
       for (const p of parsedPresentations) {
-        const variantName = p.name || p.size || String(p.price);
+        const variantName = cleanString(p.name || p.size || String(p.price), 50);
         const uniqueKey = variantName.trim().toLowerCase();
         if (seen.has(uniqueKey)) {
           await t.rollback();
@@ -668,7 +674,7 @@ router.post('/products/:id/movement', async (req, res) => {
       ProductVariantId: variantId || null,
       type: type,
       amount: parseFloat(amount),
-      reason: reason + (variantName ? ` [${variantName}]` : ''),
+      reason: cleanString(reason + (variantName ? ` [${variantName}]` : ''), 255),
       previousStock: previousStock,
       newStock: newStock,
       UserId: userId || null,

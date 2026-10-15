@@ -3,6 +3,7 @@ const router = express.Router();
 const { QrAccount, Payment, User, Account, sequelize } = require('../models');
 const appEmitter = require('../utils/emitter');
 const { Op } = require('sequelize');
+const { cleanString, cleanOptionalString } = require('../utils/sanitize');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -208,12 +209,12 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
         
         const newQr = await QrAccount.create({
-            name,
+            name: cleanString(name, 100),
             limitAmount: limitAmount || 0,
             isUnlimited: isUnlimited === 'true' || isUnlimited === true,
             isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : true,
             orderIndex: orderIndex || 0,
-            phoneNumber: phoneNumber || null,
+            phoneNumber: cleanOptionalString(phoneNumber, 20),
             imageUrl,
             TenantId: req.tenant.id
         });
@@ -422,7 +423,7 @@ router.post('/:id/adjust', async (req, res) => {
                 method: 'qr_adjustment',
                 evidence: JSON.stringify({
                     type: adjustmentValue > 0 ? 'income' : 'expense',
-                    description: description || `Ajuste manual de saldo - ${qr.name}`
+                    description: cleanString(description || `Ajuste manual de saldo - ${qr.name}`, 255)
                 }),
                 TenantId: req.tenant.id,
                 UserId: req.body.userId || null

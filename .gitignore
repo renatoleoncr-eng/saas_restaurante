@@ -66,4 +66,9 @@ local-printer-config.json.bak
 
 # Legacy debug & ad-hoc scripts
 server/scripts/legacy/
+patch_*.js
+fix_*.js
+audit_*.js
+temp_*.*
+AUDIT-REPORT.md
 

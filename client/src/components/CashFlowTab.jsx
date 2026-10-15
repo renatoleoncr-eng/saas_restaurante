@@ -5,6 +5,7 @@ import { Search, Calendar, Filter, ChevronDown, ChevronRight, CheckCircle, FileT
 import AccountDetailsModal from './AccountDetailsModal';
 import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 export default function CashFlowTab() {
     const { socket, user } = useRestaurant();
@@ -408,9 +409,13 @@ export default function CashFlowTab() {
                         </div>
                         <form onSubmit={handleCreateExpense} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Descripción</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-bold text-gray-700">Descripción</label>
+                                    <CharCount current={expenseForm.description?.length} max={255} />
+                                </div>
                                 <input
                                     required
+                                    maxLength={255}
                                     className="w-full border rounded p-2"
                                     placeholder="Ej: Compra de agua"
                                     value={expenseForm.description}

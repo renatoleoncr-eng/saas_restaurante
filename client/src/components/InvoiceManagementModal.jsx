@@ -26,6 +26,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -1093,29 +1094,41 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Número</label>
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Número</label>
+                                <CharCount current={docNumber?.length} max={11} />
+                            </div>
                             <div className="relative">
-                                <input type="text" value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
+                                <input type="text" maxLength={11} value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
                                 <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>
                                     {isSearchLoading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
                                 </button>
                             </div>
                         </div>
                         <div className="col-span-2 space-y-2">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Nombre / Razón Social</label>
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Nombre / Razón Social</label>
+                                <CharCount current={customerName?.length} max={150} />
+                            </div>
                             <div className="relative">
-                                 <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
+                                 <input type="text" maxLength={150} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
                             </div>
                         </div>
                         {docType === '01' && (
                             <div className="col-span-2 space-y-2">
-                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Dirección Legal</label>
-                                <input type="text" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Dirección para la Factura" />
+                                <div className="flex justify-between items-center ml-1">
+                                    <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Dirección Legal</label>
+                                    <CharCount current={customerAddress?.length} max={200} />
+                                </div>
+                                <input type="text" maxLength={200} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Dirección para la Factura" />
                             </div>
                         )}
                         <div className="col-span-2 space-y-2">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Observaciones (Opcional)</label>
-                            <input type="text" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Notas internas o para el cliente..." />
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Observaciones (Opcional)</label>
+                                <CharCount current={observaciones?.length} max={500} />
+                            </div>
+                            <input type="text" maxLength={500} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Notas internas o para el cliente..." />
                         </div>
                     </div>
 
@@ -1548,9 +1561,13 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                         </div>
                         <div className="p-6 md:p-8 space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo de la anulación</label>
+                                <div className="flex justify-between items-center ml-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo de la anulación</label>
+                                    <CharCount current={annulReason?.length} max={255} />
+                                </div>
                                 <input 
                                     type="text" 
+                                    maxLength={255}
                                     value={annulReason} 
                                     onChange={(e) => setAnnulReason(e.target.value)} 
                                     className="w-full bg-slate-50 border-transparent px-4 py-3.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-200 transition-all placeholder:text-slate-300" 

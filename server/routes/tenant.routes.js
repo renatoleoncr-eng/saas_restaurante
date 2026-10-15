@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 const { Tenant, User, sequelize } = require('../models');
 const { generateToken, generateRefreshToken } = require('../middleware/auth.middleware');
 const { seedTenantData } = require('../utils/tenantSeed');
+const { cleanString, cleanOptionalString } = require('../utils/sanitize');
 const models = require('../models');
 
 // Slug validation regex: lowercase letters, numbers, hyphens. 3-30 chars.
@@ -147,10 +148,10 @@ router.post('/register', async (req, res) => {
 
         // 1. Create tenant
         const tenant = await Tenant.create({
-            name: name.trim(),
-            slug: normalizedSlug,
-            ownerEmail: email.toLowerCase().trim(),
-            ownerPhone: cleanPhone,
+            name: cleanString(name, 100),
+            slug: cleanString(normalizedSlug, 30),
+            ownerEmail: cleanString(email.toLowerCase(), 100),
+            ownerPhone: cleanOptionalString(cleanPhone, 20),
             plan: 'demo',
             status: 'active',
             onboardingCompleted: false
@@ -159,11 +160,11 @@ router.post('/register', async (req, res) => {
         // 2. Create owner user (admin role) with custom username
         const hashedPassword = await bcrypt.hash(password, 10);
         const adminUser = await User.create({
-            username: normalizedUsername,
-            email: email.toLowerCase().trim(),
+            username: cleanString(normalizedUsername, 50),
+            email: cleanString(email.toLowerCase(), 100),
             password: hashedPassword,
             role: 'admin',
-            displayName: ownerName || 'Administrador',
+            displayName: cleanString(ownerName || 'Administrador', 50),
             active: true,
             TenantId: tenant.id
         }, { transaction: t });

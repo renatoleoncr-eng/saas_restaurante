@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChefHat, ArrowLeft, Check, X, Loader2, ExternalLink, User, Phone } from 'lucide-react';
+import CharCount from '../components/common/CharCount';
 
 // Username validation: lowercase letters, numbers, underscores, 3-20 chars
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
@@ -230,13 +231,17 @@ export default function Register() {
 
                             <div className="space-y-5">
                                 <div>
-                                    <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                        Nombre del Restaurante
-                                    </label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-blue-200/80">
+                                            Nombre del Restaurante
+                                        </label>
+                                        <CharCount value={name} max={100} dark={true} />
+                                    </div>
                                     <input
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
+                                        maxLength={100}
                                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                         placeholder="Ej: Cevichería Don Pedro"
                                         autoFocus
@@ -244,14 +249,18 @@ export default function Register() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                        Tu Subdominio
-                                    </label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-blue-200/80">
+                                            Tu Subdominio
+                                        </label>
+                                        <CharCount value={slug} max={30} dark={true} />
+                                    </div>
                                     <div className="flex items-stretch">
                                         <input
                                             type="text"
                                             value={slug}
                                             onChange={handleSlugChange}
+                                            maxLength={30}
                                             className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-l-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             placeholder="tu-restaurante"
                                         />
@@ -291,13 +300,17 @@ export default function Register() {
                                 <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wider mb-3">Tu Perfil</p>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                            Nombre Completo
-                                        </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-blue-200/80">
+                                                Nombre Completo
+                                            </label>
+                                            <CharCount value={ownerName} max={100} dark={true} />
+                                        </div>
                                         <input
                                             type="text"
                                             value={ownerName}
                                             onChange={(e) => setOwnerName(e.target.value)}
+                                            maxLength={100}
                                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             placeholder="Tu nombre completo"
                                             autoFocus
@@ -306,15 +319,19 @@ export default function Register() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                            Usuario
-                                        </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-blue-200/80">
+                                                Usuario
+                                            </label>
+                                            <CharCount value={username} max={20} dark={true} />
+                                        </div>
                                         <div className="relative">
                                             <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                                             <input
                                                 type="text"
                                                 value={username}
                                                 onChange={handleUsernameChange}
+                                                maxLength={20}
                                                 className={`w-full pl-10 pr-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 transition-all ${
                                                     usernameError ? 'border-red-500/40 focus:border-red-500/50 focus:ring-red-500/20' :
                                                     (username.length >= 3 && !usernameError) ? 'border-green-500/40 focus:border-green-500/50 focus:ring-green-500/20' :
@@ -342,6 +359,7 @@ export default function Register() {
                                             type="password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
+                                            maxLength={100}
                                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             placeholder="Mínimo 6 caracteres"
                                             required
@@ -362,13 +380,17 @@ export default function Register() {
                                 <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wider mb-3">Datos de Contacto</p>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                            Email
-                                        </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-blue-200/80">
+                                                Email
+                                            </label>
+                                            <CharCount value={email} max={100} dark={true} />
+                                        </div>
                                         <input
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
+                                            maxLength={100}
                                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             placeholder="tu@email.com"
                                             required
@@ -376,9 +398,12 @@ export default function Register() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-blue-200/80 mb-2">
-                                            Celular
-                                        </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-blue-200/80">
+                                                Celular
+                                            </label>
+                                            <CharCount value={phone} max={9} dark={true} />
+                                        </div>
                                         <div className="flex items-stretch">
                                             <div className="px-4 py-3 bg-white/[0.03] border border-r-0 border-white/10 rounded-l-xl text-slate-500 text-sm flex items-center">
                                                 <Phone size={14} className="mr-1.5" />+51
@@ -387,6 +412,7 @@ export default function Register() {
                                                 type="tel"
                                                 value={phone}
                                                 onChange={handlePhoneChange}
+                                                maxLength={9}
                                                 className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-r-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                                 placeholder="999 999 999"
                                                 required

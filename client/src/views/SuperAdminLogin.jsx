@@ -85,6 +85,7 @@ export default function SuperAdminLogin() {
                                 type={showKey ? 'text' : 'password'}
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
+                                maxLength={255}
                                 placeholder="Ingresa tu API Key"
                                 autoComplete="off"
                                 style={{

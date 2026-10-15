@@ -982,6 +982,10 @@ Payment.afterDestroy(async (payment, options) => {
     }
 });
 
+// --- DEFENSIVE SANITATION HOOK ---
+const { setupDefensiveHooks } = require('../utils/sanitize');
+setupDefensiveHooks(sequelize);
+
 module.exports = {
     sequelize,
     Tenant,

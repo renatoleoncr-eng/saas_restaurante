@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Reservation, Table, Op } = require('../models');
+const { cleanString, cleanOptionalString } = require('../utils/sanitize');
 
 // Get all reservations (optionally filter by date or status)
 router.get('/', async (req, res) => {
@@ -32,15 +33,12 @@ router.post('/', async (req, res) => {
     try {
         const { customerName, contactInfo, reservationTime, tableId, notes } = req.body;
 
-        // Basic conflict check (simplistic: check if table is reserved at same time +/- 1 hour)
-        // For Phase 4 prototype, we might skip complex conflict logic or just warn.
-
         const newReservation = await Reservation.create({
-            customerName,
-            contactInfo,
+            customerName: cleanString(customerName, 100),
+            contactInfo: cleanOptionalString(contactInfo, 100),
             reservationTime,
             TableId: tableId,
-            notes,
+            notes: cleanOptionalString(notes, 255),
             status: 'confirmed',
             TenantId: req.tenant.id
         });

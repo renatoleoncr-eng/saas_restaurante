@@ -2,6 +2,7 @@ import { compressImage } from '../utils/imageCompression';
 import React from 'react';
 import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import CharCount from './common/CharCount';
 
 const PaymentModal = ({
     showPaymentModal,
@@ -242,10 +243,14 @@ const PaymentModal = ({
                                                 <div className="border-t border-gray-100 pt-4">
                                                     {showWhatsappInput ? (
                                                         <div className="space-y-2 animate-in slide-in-from-bottom-2">
-                                                            <label className="block text-xs font-bold text-gray-500 text-left">Número de WhatsApp</label>
+                                                            <div className="flex justify-between items-center">
+                                                                <label className="block text-xs font-bold text-gray-500 text-left">Número de WhatsApp</label>
+                                                                <CharCount current={whatsappPhone?.length} max={20} />
+                                                            </div>
                                                             <div className="flex gap-2">
                                                                 <input
                                                                     type="text"
+                                                                    maxLength={20}
                                                                     placeholder="51987654321"
                                                                     value={whatsappPhone}
                                                                     onChange={e => setwhatsappPhone(e.target.value)}
@@ -552,10 +557,14 @@ const PaymentModal = ({
                                                             </div>
                                                             <div className="space-y-2 text-left">
                                                                 <div>
-                                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Documento (DNI/RUC)</label>
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <label className="block text-xs font-bold text-gray-600">Documento (DNI/RUC)</label>
+                                                                        <CharCount current={clientForm.dni?.length} max={11} />
+                                                                    </div>
                                                                     <div className="relative">
                                                                         <input 
                                                                             type="text" 
+                                                                            maxLength={11}
                                                                             placeholder={invoiceType === 'factura' ? "RUC (11 dígitos)" : "DNI (8 dígitos) u Opcional"}
                                                                             value={clientForm.dni}
                                                                             onChange={e => {
@@ -576,9 +585,13 @@ const PaymentModal = ({
                                                                     </div>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs font-bold text-gray-600 mb-1">Nombre / Razón Social</label>
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <label className="block text-xs font-bold text-gray-600">Nombre / Razón Social</label>
+                                                                        <CharCount current={clientForm.name?.length} max={150} />
+                                                                    </div>
                                                                     <input 
                                                                         type="text" 
+                                                                        maxLength={150}
                                                                         placeholder={invoiceType === 'factura' ? "Razón Social" : "Nombre del Cliente"}
                                                                         value={clientForm.name}
                                                                         onChange={e => setClientForm({...clientForm, name: e.target.value})}
@@ -588,9 +601,13 @@ const PaymentModal = ({
                                                                 </div>
                                                                 {((invoiceType === 'factura' || (clientForm.dni && clientForm.dni.trim().length === 11))) && (
                                                                     <div>
-                                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dirección Fiscal</label>
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <label className="block text-xs font-bold text-gray-600">Dirección Fiscal</label>
+                                                                            <CharCount current={clientForm.direccion?.length} max={200} />
+                                                                        </div>
                                                                         <input 
                                                                             type="text" 
+                                                                            maxLength={200}
                                                                             placeholder="Dirección Fiscal de la Empresa"
                                                                             value={clientForm.direccion || ''}
                                                                             onChange={e => setClientForm({...clientForm, direccion: e.target.value})}

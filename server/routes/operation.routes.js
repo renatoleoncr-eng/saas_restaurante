@@ -8,6 +8,10 @@ const {
 const {
   logAction
 } = require('../utils/audit');
+const {
+  cleanString,
+  cleanOptionalString
+} = require('../utils/sanitize');
 
 // --- ACCOUNTS ---
 
@@ -83,9 +87,9 @@ router.post('/accounts/open', async (req, res) => {
     }
     const account = await Account.create({
       TableId: tableId,
-      customerName: customerName || (accountType === 'staff' ? 'Personal' : 'Cliente'),
-      clientDni: clientDni || null,
-      clientAddress: clientAddress || null,
+      customerName: customerName ? cleanString(customerName, 100) : (accountType === 'staff' ? 'Personal' : 'Cliente'),
+      clientDni: cleanOptionalString(clientDni, 20),
+      clientAddress: cleanOptionalString(clientAddress, 200),
       status: 'open',
       accountType: accountType || 'standard',
       total: accountType === 'staff' && req.body.staffTotal !== undefined ? parseFloat(req.body.staffTotal) : 0,
@@ -150,9 +154,9 @@ router.put('/accounts/:id', async (req, res) => {
     if (!account) return res.status(404).json({
       error: 'Cuenta no encontrada'
     });
-    if (customerName !== undefined) account.customerName = customerName;
-    if (clientDni !== undefined) account.clientDni = clientDni;
-    if (clientAddress !== undefined) account.clientAddress = clientAddress;
+    if (customerName !== undefined) account.customerName = cleanString(customerName, 100);
+    if (clientDni !== undefined) account.clientDni = cleanOptionalString(clientDni, 20);
+    if (clientAddress !== undefined) account.clientAddress = cleanOptionalString(clientAddress, 200);
     if (accountType !== undefined && accountType !== account.accountType) {
       account.accountType = accountType;
       const {

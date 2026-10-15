@@ -5,6 +5,7 @@ import { X, Lock, Unlock, Calculator, AlertCircle, Save, CheckCircle, ArrowLeft,
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { formatTableName } from '../utils/tableUtils';
+import CharCount from './common/CharCount';
 
 export default function SessionManagerModal({ onClose, initialIsClosingMode = false }) {
     const { printingEnabled, refreshTenantInfo } = useRestaurant();
@@ -861,10 +862,14 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Notas de Cierre {getHasDifferences() && <span className="text-red-500">*</span>}
-                                </label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-semibold text-gray-700">
+                                        Notas de Cierre {getHasDifferences() && <span className="text-red-500">*</span>}
+                                    </label>
+                                    <CharCount current={closingNotes?.length} max={500} />
+                                </div>
                                 <textarea 
+                                    maxLength={500}
                                     value={closingNotes}
                                     onChange={e => setClosingNotes(e.target.value)}
                                     className="w-full border-2 border-gray-100 rounded-xl p-4 text-sm focus:border-red-500 outline-none transition-all resize-none"
@@ -907,9 +912,13 @@ export default function SessionManagerModal({ onClose, initialIsClosingMode = fa
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Concepto / Motivo</label>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Concepto / Motivo</label>
+                                    <CharCount current={expenseForm.description?.length} max={255} />
+                                </div>
                                 <input 
                                     type="text" required 
+                                    maxLength={255}
                                     value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
                                     className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none text-sm"
                                     placeholder="Ej. Compra de hielo, Pago proveedor..."

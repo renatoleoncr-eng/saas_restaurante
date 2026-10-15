@@ -15,6 +15,7 @@ import { useMenuFlow } from '../hooks/useMenuFlow';
 import { useCart } from '../hooks/useCart';
 import CartSidebar from './CartSidebar';
 import { isHappyHourActive } from '../utils/timeUtils';
+import CharCount from './common/CharCount';
 // NOTE: billingPrintUtils and billingXmlUtils are ready but NOT connected yet.
 // Connect them when ready to test the print service (Phase 1 of refactoring plan).
 // import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
@@ -1174,6 +1175,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <input
                                 type="text"
+                                maxLength={50}
                                 placeholder={selectedCategory === 'combo' ? "Buscar trago en todas las promos..." : "Buscar productos..."}
                                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                                 value={searchTerm}
@@ -1869,9 +1871,13 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-bold text-gray-700">Comentario / Nota de Consumo</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-bold text-gray-700">Comentario / Nota de Consumo</label>
+                                        <CharCount current={staffCommentInput?.length} max={200} />
+                                    </div>
                                     <input 
                                         type="text"
+                                        maxLength={200}
                                         className="w-full border p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-white" 
                                         value={staffCommentInput} 
                                         onChange={e => setStaffCommentInput(e.target.value)} 

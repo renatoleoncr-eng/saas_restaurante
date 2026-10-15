@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { X, Calendar, User, Phone, Clock } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import CharCount from './common/CharCount';
 
 export default function ReservationModal({ tableId, onClose }) {
     useModalBackHandler(true, onClose);
@@ -81,11 +82,15 @@ export default function ReservationModal({ tableId, onClose }) {
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Cliente</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-bold text-gray-700">Cliente</label>
+                            <CharCount current={form.customerName?.length} max={100} />
+                        </div>
                         <div className="relative">
                             <User className="absolute left-3 top-2.5 text-gray-400" size={18} />
                             <input
                                 required
+                                maxLength={100}
                                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="Nombre del cliente"
                                 value={form.customerName}
@@ -102,10 +107,14 @@ export default function ReservationModal({ tableId, onClose }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Contacto / Teléfono</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-bold text-gray-700">Contacto / Teléfono</label>
+                            <CharCount current={form.contactInfo?.length} max={100} />
+                        </div>
                         <div className="relative">
                             <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
                             <input
+                                maxLength={100}
                                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="Celular o email"
                                 value={form.contactInfo}
@@ -130,8 +139,12 @@ export default function ReservationModal({ tableId, onClose }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Notas</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-bold text-gray-700">Notas</label>
+                            <CharCount current={form.notes?.length} max={255} />
+                        </div>
                         <textarea
+                            maxLength={255}
                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                             placeholder="Detalles especiales..."
                             rows="2"

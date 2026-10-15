@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const { logAction } = require('../utils/audit');
+const { cleanString, cleanOptionalString } = require('../utils/sanitize');
 
 // GET ALL USERS (Admin) — scoped to tenant
 router.get('/users', async (req, res) => {
@@ -23,22 +24,26 @@ router.post('/users', async (req, res) => {
         const { username, password, displayName, role, pin, requirePinPrompt } = req.body;
         const tenantId = req.tenant.id;
 
+        const cleanUsername = cleanString(username, 50);
+        const cleanDisplayName = cleanString(displayName || 'Staff', 50);
+        const cleanPin = cleanOptionalString(pin, 4);
+
         // Check duplicate username within this tenant
-        const existing = await User.findOne({ where: { username, TenantId: tenantId } });
+        const existing = await User.findOne({ where: { username: cleanUsername, TenantId: tenantId } });
         if (existing) return res.status(400).json({ error: 'El usuario ya existe' });
 
         // Check duplicate PIN within this tenant
-        if (pin) {
-            const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
+        if (cleanPin) {
+            const existingPin = await User.findOne({ where: { pin: cleanPin, TenantId: tenantId } });
             if (existingPin) return res.status(400).json({ error: 'El PIN ya está en uso' });
         }
 
         const newUser = await User.create({
-            username,
+            username: cleanUsername,
             password,
-            displayName,
+            displayName: cleanDisplayName,
             role,
-            pin: pin || null,
+            pin: cleanPin,
             requirePinPrompt: requirePinPrompt || false,
             TenantId: tenantId
         });
@@ -59,15 +64,17 @@ router.put('/users/:id', async (req, res) => {
         const user = await User.findOne({ where: { id: req.params.id, TenantId: tenantId } });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
+        const cleanPin = cleanOptionalString(pin, 4);
+
         // Check duplicate PIN within this tenant
-        if (pin && pin !== user.pin) {
-            const existingPin = await User.findOne({ where: { pin, TenantId: tenantId } });
+        if (cleanPin && cleanPin !== user.pin) {
+            const existingPin = await User.findOne({ where: { pin: cleanPin, TenantId: tenantId } });
             if (existingPin) return res.status(400).json({ error: 'El PIN ya está en uso' });
         }
 
-        if (displayName !== undefined) user.displayName = displayName;
+        if (displayName !== undefined) user.displayName = cleanString(displayName, 50);
         if (role !== undefined) user.role = role;
-        user.pin = pin || null;
+        user.pin = cleanPin;
         if (requirePinPrompt !== undefined) user.requirePinPrompt = requirePinPrompt;
 
         await user.save();
