@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
@@ -317,34 +318,46 @@ appEmitter.on('check_active_qr', (tenantId) => {
     }
 });
 
-// Middleware for protecting static uploads (IDOR prevention)
+// Middleware for serving static uploads with automatic tenant and legacy fallback
+const uploadsBaseDir = path.join(__dirname, 'uploads');
 app.use('/uploads', async (req, res, next) => {
-    const match = req.url.match(/tenant_(\d+)/);
-    if (match) {
-        const requestedTenantId = parseInt(match[1], 10);
-        
-        // 1. If it's an API call with x-tenant-slug header, we could resolve it.
-        // But since it's an image load, we rely on Referer or Origin
-        const referer = req.headers.referer || req.headers.origin || '';
-        
-        // Very basic protection: if someone tries to hotlink or access directly without referer, 
-        // we could block, but it breaks direct sharing.
-        // For SaaS, we just want to ensure that a request coming from tenant A's dashboard
-        // doesn't load tenant B's images.
-        // In a real robust system, we would map the referer's subdomain to a TenantId 
-        // and compare it with requestedTenantId.
-        
-        // Since we don't have the Tenant object here synchronously, we will just allow it to pass
-        // to `express.static` but this wrapper is in place for future strict JWT/cookie integration.
+    try {
+        // Prevent directory traversal attacks
+        if (req.url.includes('../') || req.url.includes('..%2F')) {
+            return res.status(403).send('Forbidden');
+        }
+
+        const decodedPath = decodeURIComponent(req.path);
+        const directPath = path.join(uploadsBaseDir, decodedPath);
+
+        // 1. Direct match on disk
+        if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
+            return res.sendFile(directPath);
+        }
+
+        // 2. Fallback: If URL has /tenant_X/, check if file exists without tenant_X (legacy accounts)
+        if (decodedPath.includes('/tenant_')) {
+            const withoutTenant = path.join(uploadsBaseDir, decodedPath.replace(/\/tenant_\d+\//, '/'));
+            if (fs.existsSync(withoutTenant) && fs.statSync(withoutTenant).isFile()) {
+                return res.sendFile(withoutTenant);
+            }
+        }
+
+        // 3. Fallback: If URL does not have tenant_X, check if file exists with tenant_1
+        if (!decodedPath.includes('/tenant_')) {
+            const withTenant1 = path.join(uploadsBaseDir, decodedPath.replace(/\/(cuenta_\d+\/)/, '/tenant_1/$1'));
+            if (fs.existsSync(withTenant1) && fs.statSync(withTenant1).isFile()) {
+                return res.sendFile(withTenant1);
+            }
+        }
+
+        // 4. File genuinely not found: Return 404 instead of falling through to SPA index.html
+        return res.status(404).send('Archivo no encontrado');
+    } catch (err) {
+        console.error('Error serving upload:', err);
+        return res.status(500).send('Error al procesar archivo');
     }
-    
-    // Prevent directory traversal attacks
-    if (req.url.includes('../') || req.url.includes('..%2F')) {
-        return res.status(403).send('Forbidden');
-    }
-    
-    next();
-}, express.static(path.join(__dirname, 'uploads')));
+});
 
 // =============================================
 // RUTAS PÚBLICAS (No requieren tenant ni auth)
