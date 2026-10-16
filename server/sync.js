@@ -59,6 +59,9 @@ async function runAutomaticFix() {
         // BILLING CONFIGS
         { table: 'BillingConfigs', column: 'billingMode', type: "VARCHAR(50) DEFAULT 'libre'" },
 
+        // TABLES SOFT DELETE
+        { table: 'Tables', column: 'deletedAt', type: 'DATETIME NULL DEFAULT NULL' },
+
         // INVOICES
         { table: 'Invoices', column: 'AccountId', type: 'INTEGER' },
         { table: 'Invoices', column: 'notaCredito', type: 'VARCHAR(255)' },

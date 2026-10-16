@@ -91,7 +91,7 @@ const Table = sequelize.define('Table', {
         type: DataTypes.INTEGER,
         defaultValue: 0
     }
-});
+}, { paranoid: true });
 
 const Account = sequelize.define('Account', {
     status: {
