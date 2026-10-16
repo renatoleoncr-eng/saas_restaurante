@@ -359,7 +359,7 @@ export default function CashFlowTab() {
                                                         <span className="text-gray-500 italic font-medium">Cuenta/Mesa eliminada</span>
                                                     ) : (
                                                         <button onClick={() => setSelectedTransaction(t)} className="text-blue-600 hover:underline text-left font-bold">
-                                                            {t.details?.Table ? formatTableName(t.details.Table) : 'Mesa ?'} • #{t.details?.id || t.id}
+                                                            {formatTableName(t.details?.Table || (t.details?.TableId ? { number: t.details.TableId } : null))} • #{t.details?.id || t.id}
                                                         </button>
                                                     )
                                                 ) : (

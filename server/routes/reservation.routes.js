@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 
         const reservations = await Reservation.findAll({
             where,
-            include: [{ model: Table, include: [require('../models').Area] }],
+            include: [{ model: Table, paranoid: false, include: [require('../models').Area] }],
             order: [['reservationTime', 'ASC']]
         });
         res.json(reservations);

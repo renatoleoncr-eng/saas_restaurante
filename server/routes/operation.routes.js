@@ -2427,9 +2427,10 @@ router.get('/reports/daily', async (req, res) => {
         attributes: ['username', 'displayName']
       }, {
         model: Account,
-        attributes: ['id', 'status', 'total', 'customerName'],
+        attributes: ['id', 'status', 'total', 'customerName', 'TableId'],
         include: [{
           model: getModels().Table,
+          paranoid: false,
           attributes: ['id', 'number'],
           include: [{
             model: getModels().Area,
@@ -2484,6 +2485,7 @@ router.get('/reports/daily', async (req, res) => {
         include: [Product]
       }, {
         model: getModels().Table,
+        paranoid: false,
         include: [getModels().Area]
       }]
     });
@@ -2577,6 +2579,7 @@ router.get('/products/sales', async (req, res) => {
       where: {
         id: tableIds
       },
+      paranoid: false,
       attributes: ['id', 'number', 'AreaId'],
       include: [{
         model: Area,

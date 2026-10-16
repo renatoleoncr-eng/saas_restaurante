@@ -237,6 +237,7 @@ router.get('/accounts/specific/:id', async (req, res) => {
         model: getModels().Payment
       }, {
         model: getModels().Table,
+        paranoid: false,
         include: [getModels().Area]
       }, {
         model: getModels().Invoice
