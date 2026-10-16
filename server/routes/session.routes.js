@@ -25,7 +25,7 @@ router.get('/sessions/current', async (req, res) => {
             include: [
                 {
                     model: Account,
-                    include: [{ model: Table, include: [require('../models').Area] }]
+                    include: [{ model: Table, paranoid: false, include: [require('../models').Area] }]
                 },
                 {
                     model: User,
@@ -188,7 +188,7 @@ router.get('/sessions/:id/details', async (req, res) => {
             include: [
                 {
                     model: Account,
-                    include: [{ model: Table, include: [require('../models').Area] }]
+                    include: [{ model: Table, paranoid: false, include: [require('../models').Area] }]
                 },
                 {
                     model: User,
@@ -455,7 +455,7 @@ router.post('/sessions/close', async (req, res) => {
                 
                 const payments = await Payment.findAll({
                     where: { CashSessionId: session.id },
-                    include: [{ model: Account, include: [{ model: Table, include: [require('../models').Area] }] }]
+                    include: [{ model: Account, include: [{ model: Table, paranoid: false, include: [require('../models').Area] }] }]
                 });
 
                 const expenses = await Expense.findAll({
@@ -567,7 +567,7 @@ router.post('/sessions/:id/print', async (req, res) => {
 
         const payments = await Payment.findAll({
             where: { CashSessionId: session.id },
-            include: [{ model: Account, include: [{ model: Table, include: [require('../models').Area] }] }]
+            include: [{ model: Account, include: [{ model: Table, paranoid: false, include: [require('../models').Area] }] }]
         });
 
         const expenses = await Expense.findAll({

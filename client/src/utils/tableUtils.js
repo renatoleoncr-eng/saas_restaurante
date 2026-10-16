@@ -5,7 +5,10 @@
  * @returns {string} - Formatted name like "A1", "Salon 2", etc.
  */
 export const formatTableName = (table, area = null) => {
-    if (!table) return 'N/A';
+    if (!table) return 'Sin Mesa';
+    if (table.number === undefined || table.number === null || table.number === '') {
+        return 'Sin Mesa';
+    }
 
     const areaObj = area || table.Area;
     const areaName = areaObj?.name || table.areaName || table.areaname || '';

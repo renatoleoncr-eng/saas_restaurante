@@ -152,7 +152,7 @@ const AccountDetailsModal = ({
                     <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-lg sm:text-xl text-gray-800 truncate">{title}</h3>
                         <div className="text-xs sm:text-sm text-blue-600 font-medium mt-1 truncate">
-                            {subtitle || `#${account.id} - ${account.Table ? formatTableName(account.Table) : `Mesa #${account.TableId}`}`}
+                            {subtitle || `#${account.id} - ${account.Table ? formatTableName(account.Table) : (account.TableId ? `Mesa #${account.TableId}` : 'Sin Mesa')}`}
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">

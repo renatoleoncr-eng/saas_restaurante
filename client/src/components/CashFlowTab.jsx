@@ -462,7 +462,7 @@ export default function CashFlowTab() {
                 <AccountDetailsModal
                     account={selectedTransaction.details}
                     onClose={() => setSelectedTransaction(null)}
-                    subtitle={`#${selectedTransaction.details?.id || selectedTransaction.id} - ${formatTableName(selectedTransaction.details?.Table || { number: selectedTransaction.details?.TableId })}`}
+                    subtitle={`#${selectedTransaction.details?.id || selectedTransaction.id} - ${selectedTransaction.details?.Table ? formatTableName(selectedTransaction.details.Table) : (selectedTransaction.details?.TableId ? `Mesa #${selectedTransaction.details.TableId}` : 'Sin Mesa')}`}
                     currentPaymentId={selectedTransaction.paymentDetails?.id}
                 />
             )}

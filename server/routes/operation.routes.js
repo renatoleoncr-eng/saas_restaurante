@@ -2809,6 +2809,7 @@ router.post('/accounts/:id/print-pre-cuenta', async (req, res) => {
       },
       include: [{
         model: Table,
+        paranoid: false,
         include: [getModels().Area]
       }, {
         model: Order,
