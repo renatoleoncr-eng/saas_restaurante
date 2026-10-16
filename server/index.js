@@ -318,45 +318,23 @@ appEmitter.on('check_active_qr', (tenantId) => {
     }
 });
 
-// Middleware for serving static uploads with automatic tenant and legacy fallback
+// Middleware for serving static uploads (canonical multi-tenant structure)
 const uploadsBaseDir = path.join(__dirname, 'uploads');
-app.use('/uploads', async (req, res, next) => {
-    try {
-        // Prevent directory traversal attacks
-        if (req.url.includes('../') || req.url.includes('..%2F')) {
-            return res.status(403).send('Forbidden');
-        }
-
-        const decodedPath = decodeURIComponent(req.path);
-        const directPath = path.join(uploadsBaseDir, decodedPath);
-
-        // 1. Direct match on disk
-        if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
-            return res.sendFile(directPath);
-        }
-
-        // 2. Fallback: If URL has /tenant_X/, check if file exists without tenant_X (legacy accounts)
-        if (decodedPath.includes('/tenant_')) {
-            const withoutTenant = path.join(uploadsBaseDir, decodedPath.replace(/\/tenant_\d+\//, '/'));
-            if (fs.existsSync(withoutTenant) && fs.statSync(withoutTenant).isFile()) {
-                return res.sendFile(withoutTenant);
-            }
-        }
-
-        // 3. Fallback: If URL does not have tenant_X, check if file exists with tenant_1
-        if (!decodedPath.includes('/tenant_')) {
-            const withTenant1 = path.join(uploadsBaseDir, decodedPath.replace(/\/(cuenta_\d+\/)/, '/tenant_1/$1'));
-            if (fs.existsSync(withTenant1) && fs.statSync(withTenant1).isFile()) {
-                return res.sendFile(withTenant1);
-            }
-        }
-
-        // 4. File genuinely not found: Return 404 instead of falling through to SPA index.html
-        return res.status(404).send('Archivo no encontrado');
-    } catch (err) {
-        console.error('Error serving upload:', err);
-        return res.status(500).send('Error al procesar archivo');
+app.use('/uploads', (req, res, next) => {
+    // Prevent directory traversal attacks
+    if (req.url.includes('../') || req.url.includes('..%2F')) {
+        return res.status(403).send('Forbidden');
     }
+
+    const decodedPath = decodeURIComponent(req.path);
+    const directPath = path.join(uploadsBaseDir, decodedPath);
+
+    if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
+        return res.sendFile(directPath);
+    }
+
+    // Return 404 for missing static files instead of falling through to SPA index.html
+    return res.status(404).send('Archivo no encontrado');
 });
 
 // =============================================
