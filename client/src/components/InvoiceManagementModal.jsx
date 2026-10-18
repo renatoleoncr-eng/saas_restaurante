@@ -27,6 +27,7 @@ import Swal from 'sweetalert2';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import CharCount from './common/CharCount';
+import { getSafeDateLimits } from '../utils/dateUtils';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -98,6 +99,10 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             }
         };
     }, [socket]);
+    // TimeZone Safe Dates for Retroactive Billing (SUNAT allows max 3 days in the past)
+    const { todayLima, minLima } = getSafeDateLimits(3);
+    const [fechaEmision, setFechaEmision] = useState(todayLima);
+
     // Form fields
     const [docType, setDocType] = useState('03'); // 03 = Boleta
     const [docNumber, setDocNumber] = useState('');
@@ -750,7 +755,8 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 clienteNombre: clienteNombreFinal,
                 clienteDireccion: customerAddress || '-',
                 observaciones: observaciones || '',
-                tipo: docType === '01' ? 'factura' : 'boleta'
+                tipo: docType === '01' ? 'factura' : 'boleta',
+                fecha_emision: fechaEmision
             };
 
             const res = await axios.post(`/api/billing/invoices`, payload);
@@ -1116,7 +1122,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                             <div className="text-right shrink-0 space-y-1">
                                 <div className="text-sm font-black text-slate-800">S/ {parseFloat(doc.total).toFixed(2)}</div>
                                 <div className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
-                                    {new Date(doc.createdAt).toLocaleDateString([], {day:'2-digit', month:'2-digit'})} {new Date(doc.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                    {new Date(doc.emitidoAt || doc.createdAt).toLocaleDateString([], {day:'2-digit', month:'2-digit'})} {new Date(doc.emitidoAt || doc.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                 </div>
                             </div>
                         </div>
@@ -1194,20 +1200,46 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     </div>
 
                     {/* Voucher Details Selection */}
-                    <div className="bg-blue-50/50 border border-blue-100 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100 shrink-0">
-                                <FileText size={20} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div className="bg-blue-50/50 border border-blue-100 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100 shrink-0">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="min-w-0">
+                                    <span className="text-xs sm:text-sm font-black text-blue-900 uppercase tracking-wider block whitespace-nowrap">
+                                        {docType === '03' ? 'Boleta Elec.' : 'Factura Elec.'}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <span className="text-xs sm:text-sm font-black text-blue-900 uppercase tracking-wider block whitespace-nowrap">
-                                    {docType === '03' ? 'Boleta Elec.' : 'Factura Elec.'}
-                                </span>
-                            </div>
+                            <span className="text-xs font-black text-blue-700 bg-blue-100/90 px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0 ml-2">
+                                Serie {series}
+                            </span>
                         </div>
-                        <span className="text-xs font-black text-blue-700 bg-blue-100/90 px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0 ml-2">
-                            Serie {series}
-                        </span>
+                        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-sm min-w-0">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 shrink-0">
+                                    <Calendar size={18} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</label>
+                                        <span className="text-[9px] font-black text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded tracking-wide">MÁX 3 DÍAS</span>
+                                    </div>
+                                    <span className="text-[11px] font-bold text-slate-400 block truncate">
+                                        Día de emisión
+                                    </span>
+                                </div>
+                            </div>
+                            <input
+                                type="date"
+                                value={fechaEmision}
+                                min={minLima}
+                                max={todayLima}
+                                onChange={(e) => setFechaEmision(e.target.value)}
+                                className="bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-black text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 shadow-sm shrink-0"
+                            />
+                        </div>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100">

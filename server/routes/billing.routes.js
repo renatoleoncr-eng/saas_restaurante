@@ -245,11 +245,28 @@ router.post('/billing/invoices', async (req, res) => {
       observaciones,
       items,
       userId,
-      accountId
+      accountId,
+      fecha_emision,
+      fechaEmision
     } = req.body;
     if (!tipo || !items?.length) return res.status(400).json({
       error: 'tipo e items son requeridos'
     });
+
+    // Validar fecha de emisión retroactiva (máximo 3 días en el pasado según normativa SUNAT)
+    const todayLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+    const [y, m, d] = todayLima.split('-').map(Number);
+    const pastDate = new Date(y, m - 1, d);
+    pastDate.setDate(pastDate.getDate() - 3);
+    const minLima = pastDate.toLocaleDateString('en-CA');
+
+    let targetFecha = todayLima;
+    const requestedDate = fecha_emision || fechaEmision;
+    if (requestedDate && typeof requestedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      if (requestedDate >= minLima && requestedDate <= todayLima) {
+        targetFecha = requestedDate;
+      }
+    }
     const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
 
     // For Boletas (DNI), the address is generally empty/unnecessary per user requirements
@@ -422,6 +439,7 @@ router.post('/billing/invoices', async (req, res) => {
     const hubPayload = {
       tipo_doc: tipo === 'factura' ? '01' : '03',
       serie: serie,
+      fecha_emision: targetFecha,
       currency: 'PEN',
       company: {
         ruc: config.ruc,
@@ -461,6 +479,7 @@ router.post('/billing/invoices', async (req, res) => {
     }
 
     // Crear registro local
+    const emitidoAtDate = (targetFecha === todayLima) ? new Date() : new Date(`${targetFecha}T12:00:00-05:00`);
     const invoice = await Invoice.create({
       tipo,
       serie,
@@ -473,6 +492,7 @@ router.post('/billing/invoices', async (req, res) => {
       igv: finalTotalIgv,
       total: finalTotalPay,
       items: JSON.stringify(items),
+      emitidoAt: emitidoAtDate,
       UserId: validatedUserId,
       AccountId: accountId || null,
       TenantId: req.tenant.id
