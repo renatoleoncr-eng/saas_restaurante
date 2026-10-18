@@ -26,6 +26,57 @@ function numToText(n) {
   return `${whole} CON ${cents}/100 SOLES`;
 }
 
+// Limpieza y traducción de errores técnicos de SUNAT / Hub a español amigable
+function humanizeSunatError(errMsg) {
+  if (!errMsg || typeof errMsg !== 'string') {
+    return 'Ocurrió un problema al comunicarse con el servicio de SUNAT. Por favor, intente nuevamente.';
+  }
+
+  const lower = errMsg.toLowerCase();
+
+  // 1. Timeouts de espera
+  if (lower.includes('timeout') && lower.includes('exceeded')) {
+    return 'SUNAT tardó demasiado tiempo en responder (tiempo límite agotado). Por favor, reintente en unos minutos.';
+  }
+
+  // 2. Conexión / Red
+  if (lower.includes('network error') || lower.includes('econnrefused') || lower.includes('econnreset') || lower.includes('enotfound') || lower.includes('socket hang up')) {
+    return 'No se pudo conectar con el servidor de facturación electrónica. Verifique su conexión a internet o reintente en unos momentos.';
+  }
+
+  // 3. Fallas internas de almacenamiento en SUNAT (0132, 0133)
+  if (lower.includes('archivo backup') || lower.includes('archivo zip') || lower.includes('0132')) {
+    return 'SUNAT presenta saturación temporal en sus servidores (no puede almacenar el archivo). Espere unos minutos o cobre sin comprobante fiscal por ahora.';
+  }
+  if (lower.includes('entrada del log') || lower.includes('dejar traza') || lower.includes('0133')) {
+    return 'SUNAT se encuentra en mantenimiento temporal o interrupción de servicio. Por favor, reintente en unos minutos.';
+  }
+
+  // 4. Ticket 422 / 0130
+  if (lower.includes('obtener ticket error') || lower.includes('422') || lower.includes('ticket de proceso') || lower.includes('0130')) {
+    return 'SUNAT no pudo procesar el ticket del comprobante (Error 422 en SUNAT). Por favor, espere un momento y vuelva a intentar.';
+  }
+
+  // 5. Documento igual en proceso (0140)
+  if (lower.includes('existe un documento igual en proceso') || lower.includes('0140') || lower.includes('15 minutos')) {
+    return 'Existe un documento igual en proceso en SUNAT. Por favor, espere unos minutos antes de volver a enviar.';
+  }
+
+  // 6. Error 500 / Internal error
+  if (lower.includes('status code 500') || lower.includes('internal error')) {
+    return 'Error interno en los servidores de SUNAT. El servicio tributario está intermitente. Reintente en breve.';
+  }
+
+  // 7. Limpiar prefijos y detalles técnicos
+  let clean = errMsg
+    .replace(/^Error de SUNAT Hub( al anular)?:\s*/i, '')
+    .replace(/^SUNAT ERROR:\s*/i, '')
+    .replace(/- Detalle:.*$/is, '')
+    .trim();
+
+  return clean || 'SUNAT no pudo procesar la solicitud en este momento. Intente nuevamente.';
+}
+
 // GET /billing/config
 router.get('/billing/config', async (req, res) => {
   try {
@@ -512,8 +563,9 @@ router.post('/billing/invoices', async (req, res) => {
         sunatResponse = resHub.data;
         if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {
           await invoice.destroy();
+          const rawError = sunatResponse?.message || sunatResponse?.error || 'Error al emitir comprobante en SUNAT';
           return res.status(400).json({
-            error: sunatResponse?.message || sunatResponse?.error || 'Error al emitir comprobante en SUNAT Hub'
+            error: humanizeSunatError(rawError)
           });
         }
 
@@ -550,7 +602,7 @@ router.post('/billing/invoices', async (req, res) => {
         await invoice.destroy();
         const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
         return res.status(400).json({
-          error: `Error de SUNAT Hub: ${errMsg}`
+          error: humanizeSunatError(errMsg)
         });
       }
     }
@@ -704,8 +756,9 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
         });
         const sunatResponse = resHub.data;
         if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {
+          const rawError = sunatResponse?.message || sunatResponse?.error || 'Error al anular comprobante en SUNAT';
           return res.status(400).json({
-            error: sunatResponse?.message || sunatResponse?.error || 'Error al anular comprobante en SUNAT Hub'
+            error: humanizeSunatError(rawError)
           });
         }
         let ticketUrl = sunatResponse.url_ticket || sunatResponse.url || sunatResponse.pdf_url;
@@ -740,7 +793,7 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
       } catch (err) {
         const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
         return res.status(400).json({
-          error: `Error de SUNAT Hub al anular: ${errMsg}`
+          error: humanizeSunatError(errMsg)
         });
       }
     } else {

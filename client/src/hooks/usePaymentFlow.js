@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 
 export function usePaymentFlow({ account, clientForm, user, tableData, groupedOrders, fetchAccount, onClose }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -210,7 +211,7 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
                 }
             }
         } catch (err) {
-            alert('Error al procesar el pago: ' + (err.response?.data?.error || err.message));
+            alert('Error al procesar el pago: ' + humanizeErrorMessage(err));
             setIsConfirmingPayment(false);
         } finally {
             setIsProcessingPayment(false);

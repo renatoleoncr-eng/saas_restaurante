@@ -23,6 +23,7 @@ import {
     MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 import Swal from 'sweetalert2';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
@@ -779,7 +780,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
             }
         } catch (error) {
             console.error('Split error:', error);
-            setErrorMsg(error.response?.data?.error || 'Error al conectar con el servidor');
+            setErrorMsg(humanizeErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -871,7 +872,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: err.response?.data?.error || err.message || 'Error al comunicarse con SUNAT.'
+                    text: humanizeErrorMessage(err)
                 });
             } finally {
                 setLoading(false);
@@ -897,7 +898,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     setIsSuccess(true);
                 }
             } catch (error) {
-                setErrorMsg(error.response?.data?.error || error.message);
+                setErrorMsg(humanizeErrorMessage(error));
             } finally {
                 setLoading(false);
                 setAnnulTarget(null);

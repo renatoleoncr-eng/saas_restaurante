@@ -11,6 +11,7 @@ import AccountDetailsModal from './AccountDetailsModal';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import CharCount from './common/CharCount';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -711,7 +712,7 @@ const BillingConfigModal = ({ onClose }) => {
             }
         } catch (err) {
             console.error(err);
-            alert('❌ Error al anular: ' + (err.response?.data?.error || err.message));
+            alert('❌ Error al anular: ' + humanizeErrorMessage(err));
         } finally {
             setIsAnnulLoading(false);
             setAnnulTarget(null);
@@ -750,7 +751,7 @@ const BillingConfigModal = ({ onClose }) => {
             alert('✅ Configuración guardada correctamente.\n\nLa conexión con Sunat Hub ha sido verificada con éxito.');
             onClose(); // Cierra el modal automáticamente
         } catch (err) {
-            alert('❌ Error al guardar configuración o verificar conexión: ' + (err.response?.data?.error || err.message));
+            alert('❌ Error al guardar configuración o verificar conexión: ' + humanizeErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -876,7 +877,7 @@ const BillingConfigModal = ({ onClose }) => {
                 });
             }
         } catch (err) {
-            alert('Error al emitir: ' + (err.response?.data?.error || err.message));
+            alert('Error al emitir: ' + humanizeErrorMessage(err));
         } finally {
             setLoading(false);
         }
