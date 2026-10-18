@@ -487,7 +487,7 @@ router.post('/billing/invoices', async (req, res) => {
             Authorization: `Bearer ${config.apiToken}`,
             'Content-Type': 'application/json'
           },
-          timeout: 20000
+          timeout: 45000
         });
         sunatResponse = resHub.data;
         if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {
@@ -680,7 +680,7 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
             Authorization: `Bearer ${config.apiToken}`,
             'Content-Type': 'application/json'
           },
-          timeout: 25000
+          timeout: 45000
         });
         const sunatResponse = resHub.data;
         if (!sunatResponse || sunatResponse.success === false || sunatResponse.error) {

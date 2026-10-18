@@ -66,6 +66,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [history, setHistory] = useState([]);
     const [expandedGroups, setExpandedGroups] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
+    const [productBillingMode, setProductBillingMode] = useState('detailed'); // 'detailed' | 'consumption'
     const [activeTab, setActiveTab] = useState('emit');
     const [selectedDocId, setSelectedDocId] = useState(null);
 
@@ -226,7 +227,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         return counts;
     }, [activeHistory]);
 
-    // NEW Robust Billed Item Matching (Sequential)
+    // NEW Robust Billed Item Matching (Sequential with bundled_count support)
     const pendingItems = useMemo(() => {
         // 1. Get total count of items already billed from history
         let totalQtyBilled = 0;
@@ -236,7 +237,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 items.forEach(i => {
                     // Only count positive-amount items (skip discount lines)
                     if (parseFloat(i.amount || 0) >= 0) {
-                        totalQtyBilled += parseInt(i.quantity || i.qty || 1);
+                        totalQtyBilled += parseInt(i.bundled_count || i.quantity || i.qty || 1);
                     }
                 });
             } catch (e) {}
@@ -292,6 +293,26 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
         return parseFloat((staffDiscountInfo.totalDiscount * ratio).toFixed(2));
     }, [staffDiscountInfo, totalSelectedRaw]);
     const totalSelected = parseFloat((totalSelectedRaw - proportionalDiscount).toFixed(2));
+
+    // Consolidate selected items if in "consumption" mode
+    const effectiveInvoiceItems = useMemo(() => {
+        if (productBillingMode !== 'consumption' || selectedItems.length === 0) {
+            return selectedItems;
+        }
+
+        const consolidatedConsumptionItem = {
+            id: 'consolidated-consumption',
+            group: 'Consumos',
+            description: 'Consumo',
+            amount: parseFloat(totalSelectedRaw.toFixed(2)),
+            qty: 1,
+            icon: <ShoppingCart size={16} />,
+            bundled_ids: selectedItems.map(i => i.id),
+            bundled_count: selectedItems.length
+        };
+
+        return [consolidatedConsumptionItem];
+    }, [selectedItems, productBillingMode, totalSelectedRaw]);
 
     const totalAlreadyBilled = useMemo(() => activeHistory.reduce((acc, doc) => acc + parseFloat(doc.total || 0), 0), [activeHistory]);
     // For staff accounts, totalPossible is the real amount after discount; for standard accounts it's the sum of items
@@ -694,11 +715,14 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
         setLoading(true);
         try {
-            // Build base items list from selection
-            const baseItems = selectedItems.map(i => ({
+            // Build base items list from selection using effectiveInvoiceItems (supports detailed vs consolidated consumption)
+            const baseItems = effectiveInvoiceItems.map(i => ({
+                id: i.id,
                 description: i.description,
                 amount: i.amount,
-                quantity: i.qty
+                quantity: i.qty,
+                bundled_ids: i.bundled_ids || null,
+                bundled_count: i.bundled_count || null
             }));
 
             // For staff accounts: inject proportional discount line automatically
@@ -901,10 +925,10 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
     const renderItemsList = () => (
         <div>
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Ítems Disponibles</h3>
+            <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4 px-1">Ítems Disponibles</h3>
             {Object.keys(groupedItems).length === 0 ? (
                 <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center py-8">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">No hay ítems pendientes<br/>de facturación</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider leading-relaxed">No hay ítems pendientes<br/>de facturación</p>
                 </div>
             ) : (
                 Object.keys(groupedItems).map((groupName) => {
@@ -935,28 +959,65 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                     ${isExpanded ? 'bg-slate-50 border-slate-200' : 'bg-white border-transparent hover:bg-slate-50'}
                                 `}
                             >
-                                <div className="flex-1 flex items-center justify-between mr-6">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-[11px] font-black text-slate-700 tracking-tight capitalize">{groupName.toLowerCase()}</span>
-                                        <span className="text-[10px] font-bold text-slate-300">({groupItems.length} {groupName.toLowerCase().includes('alojamiento') ? 'noches' : 'ítems'})</span>
+                                <div className="flex-1 min-w-0 flex items-center justify-between mr-2.5 sm:mr-4">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="text-xs font-black text-slate-800 tracking-tight capitalize truncate">
+                                            {groupName.toLowerCase()}
+                                        </span>
+                                        <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap shrink-0">
+                                            ({groupItems.length} {groupName.toLowerCase().includes('alojamiento') ? 'noches' : 'ítems'})
+                                        </span>
                                     </div>
-                                    <span className="text-[11px] font-black text-slate-800">
-                                        {groupItems.reduce((acc, curr) => acc + curr.amount, 0).toFixed(2)}
+                                    <span className="text-xs font-black text-slate-900 shrink-0 ml-2 whitespace-nowrap">
+                                        S/ {groupItems.reduce((acc, curr) => acc + curr.amount, 0).toFixed(2)}
                                     </span>
                                 </div>
                                 
                                 <div className="flex items-center gap-2">
                                     <button 
                                         onClick={handleToggleGroup}
-                                        className={`text-[9px] font-black px-2 py-1 rounded-lg transition-all
-                                            ${allSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-100 hover:bg-blue-50'}
+                                        className={`text-xs font-bold px-3 py-1 rounded-lg transition-all
+                                            ${allSelected ? 'bg-blue-600 text-white shadow-sm font-black' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}
                                         `}
                                     >
                                         {allSelected ? 'QUITAR' : 'TODO'}
                                     </button>
-                                    {isExpanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                                    {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                                 </div>
                             </div>
+
+                            {groupName === 'Consumos' && (
+                                <div className="px-3.5 py-2.5 bg-slate-50 border border-t-0 border-slate-200 rounded-b-2xl flex items-center justify-between mx-1 mb-1" onClick={(e) => e.stopPropagation()}>
+                                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+                                        Concepto:
+                                    </span>
+                                    <div className="flex bg-slate-200/80 p-0.5 rounded-xl gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setProductBillingMode('detailed')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                                                productBillingMode === 'detailed' 
+                                                    ? 'bg-white text-blue-600 shadow-sm font-black' 
+                                                    : 'text-slate-500 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            Detallado
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setProductBillingMode('consumption')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                                                productBillingMode === 'consumption' 
+                                                    ? 'bg-blue-600 text-white shadow-sm font-black' 
+                                                    : 'text-slate-500 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            Consumo
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {isExpanded && (
                                 <div className="mt-2 space-y-1.5 ml-2 border-l-2 border-slate-100 pl-3">
@@ -972,18 +1033,18 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                                         : 'bg-white border-transparent hover:bg-slate-50 text-slate-600'}
                                                 `}
                                             >
-                                                <div className="flex-1 overflow-hidden">
+                                                <div className="flex-1 overflow-hidden mr-2">
                                                     <div className="flex items-center gap-2 mb-0.5">
-                                                        <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
                                                             {item.qty} UNI
                                                         </span>
-                                                        <span className="text-[10px] font-black truncate leading-tight block">{item.description}</span>
+                                                        <span className="text-xs font-bold truncate leading-tight block">{item.description}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`text-[9px] font-bold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>S/ {item.amount.toFixed(2)}</span>
+                                                        <span className={`text-[11px] font-bold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>S/ {item.amount.toFixed(2)}</span>
                                                     </div>
                                                 </div>
-                                                {isSelected && <Check size={14} strokeWidth={4} className="shrink-0" />}
+                                                {isSelected && <Check size={16} strokeWidth={3} className="shrink-0" />}
                                             </button>
                                         );
                                     })}
@@ -998,7 +1059,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
 
     const renderHistoryList = (isMobile = false) => (
         <div>
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-1">Comprobantes Emitidos</h3>
+            <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4 px-1">Comprobantes Emitidos</h3>
             <div className="space-y-3">
                 {remainingBalance > 0.01 && !isMobile && (
                     <button 
@@ -1010,14 +1071,14 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                 <FileText size={18} />
                             </div>
                             <div>
-                                <span className="text-[11px] font-black text-blue-700 uppercase tracking-widest block leading-none">Nueva Emisión</span>
+                                <span className="text-xs font-black text-blue-700 uppercase tracking-wider block leading-none">Nueva Emisión</span>
                             </div>
                         </div>
                     </button>
                 )}
 
                 {history.length === 0 && (
-                    <p className="text-[10px] font-black text-slate-300 uppercase text-center py-4 tracking-widest">Sin historial de emisiones</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase text-center py-4 tracking-wider">Sin historial de emisiones</p>
                 )}
 
                 {history.map((doc) => (
@@ -1071,13 +1132,13 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 {/* Header Area */}
                 <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Preparación</span>
+                        <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Preparación</span>
                         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tighter leading-none">Comprobante</h1>
                     </div>
                     <div className="text-right">
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL PARCIAL</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">TOTAL PARCIAL</span>
                         <div className="text-2xl md:text-3xl font-black text-slate-800 flex items-baseline justify-end gap-1 tracking-tighter leading-none">
-                            <span className="text-sm font-medium text-slate-300">S/</span>
+                            <span className="text-sm font-medium text-slate-400">S/</span>
                             {totalSelected.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                         </div>
                     </div>
@@ -1087,80 +1148,131 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Doc. Cliente</label>
-                            <div className="flex p-1 bg-slate-50 rounded-xl w-full border border-slate-100">
-                                <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '03' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('03')}>DNI</button>
-                                <button className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${docType === '01' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} onClick={() => setDocType('01')}>RUC</button>
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider ml-1">Doc. Cliente</label>
+                            <div className="flex p-1 bg-slate-100 rounded-xl w-full border border-slate-200">
+                                <button className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${docType === '03' ? 'bg-white shadow-sm text-blue-600 font-black' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDocType('03')}>DNI</button>
+                                <button className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${docType === '01' ? 'bg-white shadow-sm text-blue-600 font-black' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDocType('01')}>RUC</button>
                             </div>
                         </div>
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
-                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Número</label>
-                                <CharCount current={docNumber?.length} max={11} />
+                                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Número</label>
+                                <CharCount current={docNumber?.length} max={docType === '01' ? 11 : 8} />
                             </div>
                             <div className="relative">
-                                <input type="text" maxLength={11} value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder={docType === '03' ? "DNI" : "RUC"} />
-                                <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>
+                                <input type="text" maxLength={docType === '01' ? 11 : 8} value={docNumber} onChange={(e) => setDocNumber(e.target.value)} onBlur={handleSearchCustomer} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white focus:border-blue-400 transition-all pr-10" placeholder={docType === '03' ? "DNI" : "RUC"} />
+                                <button onClick={handleSearchCustomer} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${docNumber.length >= 8 ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
                                     {isSearchLoading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
                                 </button>
                             </div>
                         </div>
                         <div className="col-span-2 space-y-2">
                             <div className="flex justify-between items-center ml-1">
-                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Nombre / Razón Social</label>
+                                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre / Razón Social</label>
                                 <CharCount current={customerName?.length} max={150} />
                             </div>
                             <div className="relative">
-                                 <input type="text" maxLength={150} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700" />
+                                 <input type="text" maxLength={150} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white focus:border-blue-400 transition-all" />
                             </div>
                         </div>
                         {docType === '01' && (
                             <div className="col-span-2 space-y-2">
                                 <div className="flex justify-between items-center ml-1">
-                                    <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Dirección Legal</label>
+                                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Dirección Legal</label>
                                     <CharCount current={customerAddress?.length} max={200} />
                                 </div>
-                                <input type="text" maxLength={200} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Dirección para la Factura" />
+                                <input type="text" maxLength={200} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white focus:border-blue-400 transition-all" placeholder="Dirección para la Factura" />
                             </div>
                         )}
                         <div className="col-span-2 space-y-2">
                             <div className="flex justify-between items-center ml-1">
-                                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Observaciones (Opcional)</label>
+                                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Observaciones (Opcional)</label>
                                 <CharCount current={observaciones?.length} max={500} />
                             </div>
-                            <input type="text" maxLength={500} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="w-full bg-slate-50 border-transparent px-4 py-3 rounded-xl text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Notas internas o para el cliente..." />
+                            <input type="text" maxLength={500} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white focus:border-blue-400 transition-all" placeholder="Notas internas o para el cliente..." />
                         </div>
                     </div>
 
                     {/* Voucher Details Selection */}
-                    <div className="bg-blue-50/30 border border-blue-50 p-4 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm">
-                                <FileText size={16} />
+                    <div className="bg-blue-50/50 border border-blue-100 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100 shrink-0">
+                                <FileText size={20} />
                             </div>
-                            <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">{docType === '03' ? 'BOLETA' : 'FACTURA'}</span>
+                            <div className="min-w-0">
+                                <span className="text-xs sm:text-sm font-black text-blue-900 uppercase tracking-wider block whitespace-nowrap">
+                                    {docType === '03' ? 'Boleta Elec.' : 'Factura Elec.'}
+                                </span>
+                            </div>
                         </div>
-                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Serie {series}</span>
+                        <span className="text-xs font-black text-blue-700 bg-blue-100/90 px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0 ml-2">
+                            Serie {series}
+                        </span>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-50">
-                        <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Ítems Seleccionados</div>
+                    <div className="pt-4 border-t border-slate-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4">
+                            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                Ítems Seleccionados
+                            </div>
+                            {selectedItems.length > 0 && (
+                                <div className="flex items-center justify-between sm:justify-end gap-2 bg-slate-50 sm:bg-transparent p-2 sm:p-0 rounded-xl border border-slate-100 sm:border-0">
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Modo:</span>
+                                    <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => setProductBillingMode('detailed')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                                                productBillingMode === 'detailed' 
+                                                    ? 'bg-white text-blue-600 shadow-sm font-black' 
+                                                    : 'text-slate-500 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            Detallado
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setProductBillingMode('consumption')}
+                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                                                productBillingMode === 'consumption' 
+                                                    ? 'bg-blue-600 text-white shadow-sm font-black' 
+                                                    : 'text-slate-500 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            Consumo
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
-                            {selectedItems.map(item => (
-                                <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-transparent">
-                                    <span className="text-[10px] font-black text-slate-600 truncate max-w-[200px]">{item.description}</span>
-                                    <span className="text-[10px] font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
+                            {effectiveInvoiceItems.map((item, idx) => (
+                                <div key={item.id || idx} className={`flex items-center justify-between p-3 rounded-xl border ${item.id === 'consolidated-consumption' ? 'bg-blue-50/70 border-blue-200' : 'bg-slate-50 border-slate-100'}`}>
+                                    <div className="flex items-center gap-2 overflow-hidden mr-2">
+                                        {item.bundled_count ? (
+                                            <span className="text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md uppercase tracking-tight shrink-0">
+                                                {item.bundled_count} ítems
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 uppercase tracking-tight shrink-0">
+                                                {(item.qty || item.quantity || 1)}x
+                                            </span>
+                                        )}
+                                        <span className="text-xs font-bold text-slate-800 truncate max-w-[200px] sm:max-w-[240px]">{item.description}</span>
+                                    </div>
+                                    <span className="text-xs font-black text-slate-900 shrink-0">S/ {item.amount.toFixed(2)}</span>
                                 </div>
                             ))}
                             {/* Staff proportional discount row (informational, auto-applied) */}
                             {staffDiscountInfo && proportionalDiscount > 0.01 && selectedItems.length > 0 && (
                                 <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
-                                    <span className="text-[10px] font-black text-red-500 italic">DESCUENTO <span className="font-normal">(proporcional)</span></span>
-                                    <span className="text-[10px] font-black text-red-600 shrink-0">-S/ {proportionalDiscount.toFixed(2)}</span>
+                                    <span className="text-xs font-bold text-red-500 italic">DESCUENTO <span className="font-normal">(proporcional)</span></span>
+                                    <span className="text-xs font-black text-red-600 shrink-0">-S/ {proportionalDiscount.toFixed(2)}</span>
                                 </div>
                             )}
-                            {selectedItems.length === 0 && (
-                                <div className="py-8 text-center text-slate-200 text-[9px] font-bold uppercase tracking-widest border-2 border-dashed border-slate-50 flex flex-col gap-2 rounded-2xl">
+                            {effectiveInvoiceItems.length === 0 && (
+                                <div className="py-8 text-center text-slate-400 text-xs font-bold uppercase tracking-wider border-2 border-dashed border-slate-200 flex flex-col gap-2 rounded-2xl">
                                     {isMobile ? 'Seleccione ítems arriba' : 'Seleccione ítems a la izquierda'}
                                 </div>
                             )}
@@ -1168,19 +1280,19 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                         {/* Net total for this invoice */}
                         {selectedItems.length > 0 && (
                             <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Comprobante</span>
-                                <span className="text-sm font-black text-blue-700">S/ {totalSelected.toFixed(2)}</span>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Comprobante</span>
+                                <span className="text-base font-black text-blue-700">S/ {totalSelected.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-50 shrink-0">
+            <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-100 shrink-0">
                 <button 
                     onClick={handleSubmit} 
                     disabled={loading || selectedItems.length === 0}
-                    className={`w-full py-4 md:py-5 rounded-[1.2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all active:scale-[0.98]
+                    className={`w-full py-4 md:py-5 rounded-[1.2rem] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-4 transition-all active:scale-[0.98]
                         ${loading || selectedItems.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-900/20 hover:bg-black'}`}
                 >
                     {loading ? <RefreshCw className="animate-spin" size={18} /> : <><span>EMITIR COMPROBANTE</span><ArrowRight size={16} /></>}
@@ -1205,7 +1317,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     {onBack && (
                         <button 
                             onClick={onBack}
-                            className="flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-widest mb-4 hover:underline"
+                            className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-4 hover:underline"
                         >
                             <ArrowLeft size={14} /> Volver al Listado
                         </button>
@@ -1215,26 +1327,26 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded shadow-sm ${isAnulado ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
                                     {isAnulado ? 'ANULADO' : 'EMITIDO'}
                                 </span>
                             </div>
-                            <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-300' : 'text-slate-800'} flex flex-wrap items-center gap-2`}>
+                            <h2 className={`text-lg font-black tracking-tighter uppercase ${isAnulado ? 'text-slate-400' : 'text-slate-800'} flex flex-wrap items-center gap-2`}>
                                 <span>{docLabel}</span>
                                 <span className="text-slate-400 font-medium tracking-normal text-base">[{doc.serie}-{doc.correlativo}]</span>
                             </h2>
                             {isAnulado && creditNoteId && (
                                 <div className="flex items-center gap-2 pt-1">
-                                    <span className="text-[10px] font-black bg-rose-50 text-rose-500 px-2 py-0.5 rounded-lg border border-rose-100 uppercase tracking-widest shadow-sm">
+                                    <span className="text-xs font-bold bg-rose-50 text-rose-500 px-2 py-0.5 rounded-lg border border-rose-100 uppercase tracking-wider shadow-sm">
                                         NC: {creditNoteId}
                                     </span>
                                 </div>
                             )}
                         </div>
                         <div className="text-left sm:text-right">
-                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">TOTAL</span>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">TOTAL</span>
                             <div className="text-3xl font-black text-slate-800 flex items-baseline sm:justify-end gap-1 tracking-tighter leading-none">
-                                <span className="text-sm font-medium text-slate-300">S/</span>
+                                <span className="text-sm font-medium text-slate-400">S/</span>
                                 {parseFloat(doc.total).toFixed(2)}
                             </div>
                         </div>
@@ -1243,20 +1355,20 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                     {/* Client & Detail */}
                     <div className="space-y-6">
                         <div className="space-y-1">
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Cliente</span>
+                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Cliente</span>
                             <p className="text-sm font-black text-slate-700 leading-tight uppercase">{doc.clienteNombre || account.customerName || 'Varios'}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{doc.clienteDocumento || '---'}</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-tight">{doc.clienteDocumento || '---'}</p>
                         </div>
 
                         <div className="pt-4 border-t border-slate-50">
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-3">Detalle de Cobro</span>
+                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-3">Detalle de Cobro</span>
                             <div className="space-y-2">
                                 {docItems.map((it, i) => (
                                     <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50/50 rounded-lg">
-                                        <span className="text-[9px] font-black text-slate-500 max-w-[200px] truncate">
+                                        <span className="text-xs font-bold text-slate-700 max-w-[200px] truncate">
                                             {it.quantity || it.qty || 1} x {it.description || it.name}
                                         </span>
-                                        <span className="text-[10px] font-black text-slate-800 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
+                                        <span className="text-xs font-black text-slate-900 shrink-0">S/ {parseFloat(it.amount || it.price || 0).toFixed(2)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -1277,7 +1389,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                         handlePrintLocalInvoice(doc);
                                     }
                                 }}
-                                className={`flex-1 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm border
+                                className={`flex-1 px-4 py-4 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm border
                                     ${isAnulado ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 text-slate-600'}
                                 `}
                             >
@@ -1293,7 +1405,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                 </button>
                                 {!isAnulado && (
                                     <button 
-                                        onClick={() => handleAnnul(doc)}
+                                        onClick={() => handleAnnul(doc)} 
                                         className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all border border-rose-100 shadow-sm"
                                         title="Anular Documento"
                                     >
@@ -1309,7 +1421,7 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                                     href={creditNoteUrl.includes('?') ? `${creditNoteUrl}&v=${Date.now()}` : `${creditNoteUrl}?v=${Date.now()}`} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="flex-1 bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/30 text-rose-600 px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    className="flex-1 bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/30 text-rose-600 px-4 py-4 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     <FileText size={16} /> VER NOTA DE CRÉDITO
                                 </a>
