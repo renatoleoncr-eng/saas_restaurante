@@ -16,6 +16,7 @@ import { useCart } from '../hooks/useCart';
 import CartSidebar from './CartSidebar';
 import { isHappyHourActive } from '../utils/timeUtils';
 import CharCount from './common/CharCount';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 // NOTE: billingPrintUtils and billingXmlUtils are ready but NOT connected yet.
 // Connect them when ready to test the print service (Phase 1 of refactoring plan).
 // import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
@@ -68,7 +69,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 }
             }
         } catch (err) {
-            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+            alert(humanizeErrorMessage(err, 'No se encontró información para este documento.'));
         } finally {
             setIsSearchingClient(false);
         }
@@ -418,15 +419,15 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             return res.data;
         } catch (err) {
             console.error("Error auto-opening:", err);
-            const errorMsg = err.response?.data?.error || err.message || "Error desconocido";
+            const rawErrorMsg = err.response?.data?.error || err.message || "";
 
-            if (errorMsg === 'Mesa ya ocupada') {
+            if (rawErrorMsg === 'Mesa ya ocupada') {
                 console.log("Mesa ya ocupada, recargando datos...");
                 refreshData();
                 return null;
             }
 
-            alert(`Error al abrir la cuenta automaticamente: ${errorMsg}`);
+            alert(humanizeErrorMessage(err, "Error al abrir la cuenta automáticamente."));
             return null;
         }
     };
@@ -442,7 +443,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             setAccount(res.data);
             setIsEditingClient(false);
         } catch (err) {
-            alert('Error actualizando cliente');
+            alert(humanizeErrorMessage(err, 'Error al actualizar los datos del cliente.'));
         }
     };
 
@@ -637,8 +638,8 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             isSendingRef.current = false;
             return true;
         } catch (err) {
-            const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || err.message || 'Error enviando pedido';
-            setOrderError(errorMsg);
+            const errorMsg = err.response?.data?.details?.join('\n') || err.response?.data?.error || err.message;
+            setOrderError(humanizeErrorMessage(err, errorMsg || 'Error al enviar el pedido.'));
             setIsSendingOrder(false);
             isSendingRef.current = false;
             return false;
@@ -656,7 +657,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                 alert("Error al enviar pre-cuenta a la impresora.");
             }
         } catch (err) {
-            alert(err.response?.data?.error || "Error al imprimir la pre-cuenta");
+            alert(humanizeErrorMessage(err, "Error al imprimir la pre-cuenta."));
             console.error(err);
         } finally {
             setIsActionInProgress(false);
@@ -668,7 +669,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             await axios.put(`/api/orders/${orderId}/status`, { status });
             // Socket will trigger refresh via context
         } catch (err) {
-            alert("Error actualizando estado");
+            alert(humanizeErrorMessage(err, "Error al actualizar el estado del pedido."));
         }
     };
 
@@ -699,7 +700,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             refreshData();
 
         } catch (err) {
-            alert("Error eliminando pedido");
+            alert(humanizeErrorMessage(err, "Error al eliminar el pedido."));
             console.error(err);
         } finally {
             setIsActionInProgress(false);
@@ -731,7 +732,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
             refreshData();
 
         } catch (err) {
-            alert("Error reduciendo cantidad de pedido");
+            alert(humanizeErrorMessage(err, "Error al reducir la cantidad del pedido."));
             console.error(err);
         } finally {
             setIsActionInProgress(false);
@@ -761,7 +762,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                     // Refresh table status in background or just close
                     onClose();
                 } catch (e) {
-                    alert(e.response?.data?.error || "Error liberando mesa");
+                    alert(humanizeErrorMessage(e, "Error al liberar la mesa."));
                 }
                 return;
             }
@@ -778,7 +779,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                     onClose();
                     refreshData();
                 } catch (e) {
-                    alert("Error al cerrar consumo de personal");
+                    alert(humanizeErrorMessage(e, "Error al cerrar el consumo de personal."));
                 }
                 return;
             }
@@ -1915,7 +1916,7 @@ export default function TableControl({ tableId, accountId, onClose, initialShowC
                                                 setIsEditingClient(false);
                                             } catch (err) {
                                                 console.error("Error setting account to staff:", err);
-                                                alert('Error al actualizar la cuenta a consumo de trabajador');
+                                                alert(humanizeErrorMessage(err, 'Error al actualizar la cuenta a consumo de personal.'));
                                             }
                                         }
                                         setShowStaffConfirm(false);

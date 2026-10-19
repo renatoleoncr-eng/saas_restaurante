@@ -6,6 +6,7 @@ import { formatTableName } from '../utils/tableUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import InvoiceManagementModal from './InvoiceManagementModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 
 const AccountDetailsModal = ({
     account: initialAccount,
@@ -57,7 +58,7 @@ const AccountDetailsModal = ({
             setAccount(response.data);
         } catch (err) {
             console.error("Error fetching account details:", err);
-            setError("No se pudo cargar el detalle de la cuenta.");
+            setError(humanizeErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -81,7 +82,7 @@ const AccountDetailsModal = ({
                 alert("Error al enviar el ticket a la impresora.");
             }
         } catch (err) {
-            alert(err.response?.data?.error || "Error al imprimir consumos");
+            alert(humanizeErrorMessage(err));
             console.error(err);
         } finally {
             setIsPrinting(false);

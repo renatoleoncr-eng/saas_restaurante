@@ -8,6 +8,7 @@ import { formatTableName } from '../utils/tableUtils';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { compressImage } from '../utils/imageCompression';
 import CharCount from './common/CharCount';
+import { humanizeErrorMessage } from '../utils/errorUtils';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -70,7 +71,7 @@ export default function AccountsHistoryTab() {
                 }
             }
         } catch (err) {
-            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+            alert(humanizeErrorMessage(err, 'No se encontró información para este documento.'));
         } finally {
             setIsSearchingClient(false);
         }
@@ -186,7 +187,7 @@ export default function AccountsHistoryTab() {
                 }
             }
         } catch (err) {
-            alert(err.response?.data?.error || 'No se encontró información para este documento.');
+            alert(humanizeErrorMessage(err, 'No se encontró información para este documento.'));
         } finally {
             setIsSearchingInvoiceClient(false);
         }
@@ -271,7 +272,7 @@ export default function AccountsHistoryTab() {
                     setInvoiceResult({ success: true, pdf: pdfUrl, invoice: invoiceRes.data?.invoice });
                 } catch (invErr) {
                     console.error('Error emitting invoice for abono', invErr);
-                    setInvoiceResult({ success: false, error: invErr.response?.data?.error || 'Error al emitir comprobante' });
+                    setInvoiceResult({ success: false, error: humanizeErrorMessage(invErr, 'Error al emitir el comprobante electrónico.') });
                 }
                 // Don't close modal yet — show invoice result
                 loadAccounts();
@@ -281,7 +282,7 @@ export default function AccountsHistoryTab() {
             }
         } catch (error) {
             console.error("Error sending partial payment", error);
-            alert(error.response?.data?.error || "Error al registrar el abono");
+            alert(humanizeErrorMessage(error, "Error al registrar el abono."));
         } finally {
             setIsPaying(false);
         }
@@ -313,7 +314,7 @@ export default function AccountsHistoryTab() {
             setViewingHistoryAccount(res.data);
         } catch (err) {
             console.error("Error fetching history account:", err);
-            alert("Error al cargar el detalle de la cuenta.");
+            alert(humanizeErrorMessage(err, "Error al cargar el detalle de la cuenta."));
         }
     };
 
@@ -367,7 +368,7 @@ export default function AccountsHistoryTab() {
             loadAccounts();
         } catch (error) {
             console.error("Error deleting account:", error);
-            alert("Error al eliminar cuenta.");
+            alert(humanizeErrorMessage(error, "Error al eliminar la cuenta."));
         }
     };
 
@@ -382,7 +383,7 @@ export default function AccountsHistoryTab() {
             loadAccounts();
         } catch (error) {
             console.error("Error updating customer name", error);
-            alert("Hubo un problema actualizando el nombre del cliente.");
+            alert(humanizeErrorMessage(error, "Hubo un problema al actualizar el nombre del cliente."));
         }
     };
 

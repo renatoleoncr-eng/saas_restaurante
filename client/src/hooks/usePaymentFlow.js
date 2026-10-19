@@ -211,7 +211,7 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
                 }
             }
         } catch (err) {
-            alert('Error al procesar el pago: ' + humanizeErrorMessage(err));
+            alert(humanizeErrorMessage(err, 'No se pudo procesar el pago. Por favor revise e intente nuevamente.'));
             setIsConfirmingPayment(false);
         } finally {
             setIsProcessingPayment(false);
