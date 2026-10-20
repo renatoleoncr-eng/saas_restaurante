@@ -26,6 +26,12 @@ function numToText(n) {
   return `${whole} CON ${cents}/100 SOLES`;
 }
 
+const GENERIC_NAMES = ['cliente final', 'consumidor final', 'clientes varios', 'personal', 'cliente', ''];
+function isGenericName(name) {
+  if (!name || typeof name !== 'string') return true;
+  return GENERIC_NAMES.includes(name.trim().toLowerCase());
+}
+
 // Limpieza y traducción de errores técnicos de SUNAT / Hub a español amigable
 function humanizeSunatError(errMsg) {
   if (!errMsg || typeof errMsg !== 'string') {
@@ -320,24 +326,14 @@ router.post('/billing/invoices', async (req, res) => {
     }
     const finalTotalPay = parseFloat(items.reduce((acc, item) => acc + parseFloat(item.amount || item.subtotal || 0), 0).toFixed(2));
 
-    // For Boletas (DNI), the address is generally empty/unnecessary per user requirements
-    if (tipo !== 'factura') {
-      clienteDireccion = '-';
-      // Consumidor Final Logic for Boleta <= 700
-      if (finalTotalPay <= 700 && (!clienteDocumento || String(clienteDocumento).trim() === '') && (!clienteNombre || String(clienteNombre).trim() === '')) {
-        clienteDocumento = '-';
-        clienteNombre = 'Consumidor Final';
-      }
-    }
-
-    // Validar RUC para Facturas (Exactamente 11 dígitos numéricos que comiencen con 10, 15, 17, 20)
+    let clientTipoDoc = '1';
     if (tipo === 'factura') {
       if (!clienteDocumento) {
         return res.status(400).json({
           error: 'El número de RUC es requerido para emitir una factura.'
         });
       }
-      const cleanDoc = clienteDocumento.trim();
+      const cleanDoc = String(clienteDocumento).trim();
       if (cleanDoc.length !== 11 || !/^\d+$/.test(cleanDoc)) {
         return res.status(400).json({
           error: 'El RUC debe tener exactamente 11 dígitos numéricos.'
@@ -349,13 +345,59 @@ router.post('/billing/invoices', async (req, res) => {
           error: 'El RUC ingresado no es válido (debe empezar con 10, 15, 17 o 20).'
         });
       }
-    }
+      if (config.ruc && cleanDoc === config.ruc.trim()) {
+        return res.status(400).json({
+          error: 'El RUC del receptor no puede ser igual al RUC de la empresa emisora.'
+        });
+      }
+      if (!clienteNombre || String(clienteNombre).trim() === '') {
+        return res.status(400).json({
+          error: 'La Razón Social es requerida para emitir una factura.'
+        });
+      }
+      clienteDocumento = cleanDoc;
+      clienteNombre = String(clienteNombre).trim();
+      clienteDireccion = clienteDireccion && String(clienteDireccion).trim() ? String(clienteDireccion).trim() : '-';
+      clientTipoDoc = '6';
+    } else {
+      // Boleta (03)
+      clienteDireccion = '-';
+      const cleanDoc = String(clienteDocumento || '').trim();
+      const isDocEmptyOrPlaceholder = !cleanDoc || cleanDoc === '-' || cleanDoc === '00000000';
 
-    // Validar que el RUC del receptor no sea igual al RUC de la empresa emisora para Facturas
-    if (tipo === 'factura' && clienteDocumento && config.ruc && clienteDocumento.trim() === config.ruc.trim()) {
-      return res.status(400).json({
-        error: 'El RUC del receptor no puede ser igual al RUC de la empresa emisora.'
-      });
+      if (finalTotalPay > 700) {
+        // Exigencia legal SUNAT: operaciones > S/ 700 requieren documento y nombres
+        if (isDocEmptyOrPlaceholder) {
+          return res.status(400).json({
+            error: 'Por normativa SUNAT, para boletas mayores a S/ 700.00 es obligatorio consignar el DNI del cliente.'
+          });
+        }
+        if (cleanDoc.length < 8 || !/^\d+$/.test(cleanDoc)) {
+          return res.status(400).json({
+            error: 'El DNI debe tener exactamente 8 dígitos numéricos para boletas mayores a S/ 700.00.'
+          });
+        }
+        if (!clienteNombre || isGenericName(clienteNombre)) {
+          return res.status(400).json({
+            error: 'Por normativa SUNAT, para boletas mayores a S/ 700.00 debe ingresar los nombres y apellidos del cliente.'
+          });
+        }
+        clienteDocumento = cleanDoc;
+        clienteNombre = String(clienteNombre).trim();
+        clientTipoDoc = '1';
+      } else {
+        // Boleta <= S/ 700: Consumidor Final (DNI opcional)
+        if (isDocEmptyOrPlaceholder) {
+          clienteDocumento = '-';
+          clienteNombre = (!clienteNombre || isGenericName(clienteNombre)) ? 'CLIENTE FINAL' : String(clienteNombre).trim();
+          clientTipoDoc = '0';
+        } else {
+          // El cliente solicitó DNI
+          clienteDocumento = cleanDoc;
+          clienteNombre = (!clienteNombre || isGenericName(clienteNombre)) ? 'CLIENTE FINAL' : String(clienteNombre).trim();
+          clientTipoDoc = '1';
+        }
+      }
     }
 
     // Prevent double emission by checking if the requested items exceed the remaining account balance
@@ -503,10 +545,10 @@ router.post('/billing/invoices', async (req, res) => {
       total_pay: finalTotalPay,
       total_text: numToText(finalTotalPay),
       client: {
-        number: String(clienteDocumento || ''),
-        name: clienteNombre || '',
-        type: String(tipo === 'factura' ? '6' : clienteDocumento === '-' ? '0' : '1'),
-        address: clienteDireccion || ''
+        number: String(clienteDocumento || '-'),
+        name: clienteNombre || 'CLIENTE FINAL',
+        type: String(clientTipoDoc),
+        address: clienteDireccion || '-'
       },
       items: hubItems,
       legends: isExonerado ? [{
@@ -715,6 +757,11 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
       const finalTotalIgv = isExonerado ? 0 : parseFloat(total_igv.toFixed(2));
       const finalTotalPay = parseFloat(invoice.total);
       const finalTotalBase = parseFloat((finalTotalPay - finalTotalIgv).toFixed(2));
+      const isClientConsumidorFinal = !isFactura && (!invoice.clienteDocumento || invoice.clienteDocumento === '-' || invoice.clienteDocumento === '00000000');
+      const noteClientDoc = isFactura ? String(invoice.clienteDocumento || '') : (isClientConsumidorFinal ? '-' : String(invoice.clienteDocumento || ''));
+      const noteClientType = isFactura ? '6' : (isClientConsumidorFinal ? '0' : '1');
+      const noteClientName = invoice.clienteNombre || (isClientConsumidorFinal ? 'CLIENTE FINAL' : 'CLIENTES VARIOS');
+
       const hubPayload = {
         tipo_doc: '07',
         serie: noteSeries,
@@ -735,10 +782,10 @@ router.post('/billing/invoices/:id/anular', async (req, res) => {
         total_pay: finalTotalPay,
         total_text: numToText(finalTotalPay),
         client: {
-          number: String(invoice.clienteDocumento || '00000000'),
-          name: invoice.clienteNombre || 'CLIENTES VARIOS',
-          type: String(isFactura ? '6' : '1'),
-          address: invoice.clienteDireccion || ''
+          number: noteClientDoc,
+          name: noteClientName,
+          type: noteClientType,
+          address: invoice.clienteDireccion || '-'
         },
         items: hubItems,
         legends: isExonerado ? [{
