@@ -29,6 +29,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import CharCount from './common/CharCount';
 import { getSafeDateLimits } from '../utils/dateUtils';
+import { validateInvoiceForm, normalizeInvoicePayload } from '../utils/billingRules';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -692,31 +693,16 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const handleSubmit = async () => {
         if (loading || selectedItems.length === 0) return;
         
-        if (docType === '03' && totalSelected <= 700) {
-            // Permitir vacío (Consumidor Final se inyecta en el backend)
-        } else {
-            if (!customerName || customerName.trim() === '') {
-                setErrorMsg(docType === '01' ? 'La Razón Social es obligatoria para Facturas.' : 'El Nombre es obligatorio para Boletas mayores a S/ 700.00.');
-                return;
-            }
-        }
-
-        // Validar RUC para Facturas
-        if (docType === '01') {
-            if (!docNumber) {
-                setErrorMsg('El número de RUC es requerido para emitir una factura.');
-                return;
-            }
-            const cleanDoc = docNumber.trim();
-            if (cleanDoc.length !== 11 || !/^\d+$/.test(cleanDoc)) {
-                setErrorMsg('El RUC debe tener exactamente 11 dígitos numéricos.');
-                return;
-            }
-            const prefix = cleanDoc.substring(0, 2);
-            if (!['10', '15', '17', '20'].includes(prefix)) {
-                setErrorMsg('El RUC ingresado no es válido (debe empezar con 10, 15, 17 o 20).');
-                return;
-            }
+        const invoiceValidation = validateInvoiceForm({
+            tipo: docType,
+            total: totalSelected,
+            docNumber,
+            customerName,
+            customerAddress
+        });
+        if (!invoiceValidation.isValid) {
+            setErrorMsg(invoiceValidation.error);
+            return;
         }
 
         setLoading(true);
@@ -740,25 +726,18 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
                 });
             }
 
-            // Nombre final: si no hay DNI real o el nombre es genérico, usar CLIENTE FINAL
-            const hasDniReal = docNumber && docNumber.trim() !== '' && docNumber.trim() !== '00000000';
-            const genericNames = ['Personal', 'Cliente', 'CLIENTES VARIOS', ''];
-            const isGeneric = genericNames.includes((customerName || '').trim());
-            const clienteNombreFinal = hasDniReal && !isGeneric
-                ? customerName
-                : (isGeneric && !hasDniReal ? 'CLIENTE FINAL' : (customerName || 'CLIENTE FINAL'));
-
-            const payload = {
+            const payload = normalizeInvoicePayload({
+                tipo: docType === '01' ? 'factura' : 'boleta',
+                total: totalSelected,
+                docNumber,
+                customerName,
+                customerAddress,
+                items: baseItems,
                 accountId: account.id,
                 userId: user?.id || null,
-                items: baseItems,
-                clienteDocumento: docNumber,
-                clienteNombre: clienteNombreFinal,
-                clienteDireccion: customerAddress || '-',
-                observaciones: observaciones || '',
-                tipo: docType === '01' ? 'factura' : 'boleta',
-                fecha_emision: fechaEmision
-            };
+                fechaEmision,
+                observaciones
+            });
 
             const res = await axios.post(`/api/billing/invoices`, payload);
 

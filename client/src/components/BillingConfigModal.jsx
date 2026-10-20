@@ -12,6 +12,7 @@ import { useRestaurant } from '../contexts/RestaurantContext';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import CharCount from './common/CharCount';
 import { humanizeErrorMessage } from '../utils/errorUtils';
+import { validateInvoiceForm, normalizeInvoicePayload } from '../utils/billingRules';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
@@ -834,24 +835,17 @@ const BillingConfigModal = ({ onClose }) => {
     };
 
     const handleEmit = async () => {
-        // LOGIC: Validate required fields before emitting (same as Gestion Mak)
-        if (!newInvoice.clienteDocumento || !newInvoice.clienteNombre) {
-            alert('El número de documento y el nombre son obligatorios');
+        const total = calculateTotal();
+        const invoiceValidation = validateInvoiceForm({
+            tipo: newInvoice.tipo,
+            total,
+            docNumber: newInvoice.clienteDocumento,
+            customerName: newInvoice.clienteNombre,
+            customerAddress: newInvoice.clienteDireccion
+        });
+        if (!invoiceValidation.isValid) {
+            alert(invoiceValidation.error);
             return;
-        }
-
-        // Validar RUC para Facturas
-        if (newInvoice.tipo === 'factura') {
-            const cleanDoc = (newInvoice.clienteDocumento || '').trim();
-            if (cleanDoc.length !== 11 || !/^\d+$/.test(cleanDoc)) {
-                alert('El RUC debe tener exactamente 11 dígitos numéricos.');
-                return;
-            }
-            const prefix = cleanDoc.substring(0, 2);
-            if (!['10', '15', '17', '20'].includes(prefix)) {
-                alert('El RUC ingresado no es válido (debe empezar con 10, 15, 17 o 20).');
-                return;
-            }
         }
 
         if (!newInvoice.items.some(i => i.description && parseFloat(i.amount) > 0)) {
@@ -862,7 +856,17 @@ const BillingConfigModal = ({ onClose }) => {
         if (loading) return;
         setLoading(true);
         try {
-            const res = await axios.post('/api/billing/invoices', newInvoice);
+            const payload = normalizeInvoicePayload({
+                tipo: newInvoice.tipo,
+                total,
+                docNumber: newInvoice.clienteDocumento,
+                customerName: newInvoice.clienteNombre,
+                customerAddress: newInvoice.clienteDireccion,
+                items: newInvoice.items,
+                accountId: null
+            });
+
+            const res = await axios.post('/api/billing/invoices', payload);
             if (res.data.success) {
                 alert('Comprobante emitido correctamente');
                 setActiveTab('history');

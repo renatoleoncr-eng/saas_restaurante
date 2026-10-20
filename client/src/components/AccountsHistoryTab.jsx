@@ -9,6 +9,7 @@ import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { compressImage } from '../utils/imageCompression';
 import CharCount from './common/CharCount';
 import { humanizeErrorMessage } from '../utils/errorUtils';
+import { validateInvoiceForm, normalizeInvoicePayload } from '../utils/billingRules';
 
 const WhatsAppIcon = ({ size = 16, className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -216,13 +217,16 @@ export default function AccountsHistoryTab() {
             return;
         }
         // Validate invoice fields if issuing
-        if (issueInvoice && invoiceType === 'factura') {
-            if (!invoiceClientDoc || invoiceClientDoc.trim().length !== 11) {
-                alert('Para factura se requiere un RUC de 11 dígitos.');
-                return;
-            }
-            if (!invoiceClientName.trim()) {
-                alert('Para factura se requiere la Razón Social.');
+        if (issueInvoice) {
+            const invoiceValidation = validateInvoiceForm({
+                tipo: invoiceType,
+                total: payAmount,
+                docNumber: invoiceClientDoc,
+                customerName: invoiceClientName,
+                customerAddress: invoiceClientDir
+            });
+            if (!invoiceValidation.isValid) {
+                alert(invoiceValidation.error);
                 return;
             }
         }
@@ -244,11 +248,12 @@ export default function AccountsHistoryTab() {
             // Step 2: Issue invoice if requested
             if (issueInvoice) {
                 try {
-                    const invoiceRes = await axios.post('/api/billing/invoices', {
+                    const invoicePayload = normalizeInvoicePayload({
                         tipo: invoiceType,
-                        clienteDocumento: invoiceClientDoc.trim() || (invoiceType === 'factura' ? '' : '00000000'),
-                        clienteNombre: invoiceClientName.trim() || 'CLIENTES VARIOS',
-                        clienteDireccion: invoiceClientDir.trim() || '',
+                        total: payAmount,
+                        docNumber: invoiceClientDoc,
+                        customerName: invoiceClientName,
+                        customerAddress: invoiceClientDir,
                         items: [{
                             description: `Abono parcial - Cuenta #${payAccount.id}${payAccount.clientName ? ` (${payAccount.clientName})` : ''}`,
                             quantity: 1,
@@ -257,6 +262,8 @@ export default function AccountsHistoryTab() {
                         userId: user?.id,
                         accountId: payAccount.id
                     });
+
+                    const invoiceRes = await axios.post('/api/billing/invoices', invoicePayload);
 
                     // Parse PDF URL from sunat response
                     let pdfUrl = null;

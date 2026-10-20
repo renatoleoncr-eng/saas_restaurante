@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { generatePrintableHtml, triggerIframePrint } from '../utils/billingPrintUtils';
 import { humanizeErrorMessage } from '../utils/errorUtils';
+import { validateInvoiceForm, normalizeInvoicePayload } from '../utils/billingRules';
 
 export function usePaymentFlow({ account, clientForm, user, tableData, groupedOrders, fetchAccount, onClose }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -82,22 +83,18 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
         }
 
         if (issueInvoice) {
-            if (invoiceType === 'factura') {
-                if (!clientForm.dni || clientForm.dni.length !== 11) {
-                    alert('Para emitir una Factura es obligatorio ingresar un RUC válido de 11 dígitos. Por favor, ingréselo en el formulario.');
-                    setIsConfirmingPayment(false);
-                    setIsProcessingPayment(false);
-                    return;
-                }
-            } else if (invoiceType === 'boleta') {
-                if (!clientForm.dni) {
-                    const proceed = window.confirm('No ha ingresado un documento. La boleta se emitirá a "CLIENTES VARIOS". ¿Desea continuar o prefiere cancelar para ingresar los datos del cliente?');
-                    if (!proceed) {
-                        setIsConfirmingPayment(false);
-                        setIsProcessingPayment(false);
-                        return;
-                    }
-                }
+            const invoiceValidation = validateInvoiceForm({
+                tipo: invoiceType,
+                total: enteredAmount,
+                docNumber: clientForm.dni,
+                customerName: clientForm.name,
+                customerAddress: clientForm.direccion
+            });
+            if (!invoiceValidation.isValid) {
+                alert(invoiceValidation.error);
+                setIsConfirmingPayment(false);
+                setIsProcessingPayment(false);
+                return;
             }
         }
 
@@ -151,20 +148,18 @@ export function usePaymentFlow({ account, clientForm, user, tableData, groupedOr
                     });
                 }
                 
-                // Nombre visible: si no hay DNI/RUC real o el nombre es el genérico "Personal", usar "CLIENTE FINAL"
-                const hasDni = clientForm.dni && clientForm.dni.trim() !== '' && clientForm.dni !== '00000000';
-                const isGenericName = !clientForm.name || clientForm.name === 'Personal' || clientForm.name === 'Cliente';
-                const clienteNombreFinal = hasDni && !isGenericName ? clientForm.name : (isGenericName && !hasDni ? 'CLIENTE FINAL' : (clientForm.name || 'CLIENTE FINAL'));
-
-                const resInvoice = await axios.post('/api/billing/invoices', {
+                const invoicePayload = normalizeInvoicePayload({
                     tipo: invoiceType,
-                    clienteDocumento: clientForm.dni || '00000000',
-                    clienteNombre: clienteNombreFinal,
-                    clienteDireccion: clientForm.direccion || '',
+                    total: enteredAmount,
+                    docNumber: clientForm.dni,
+                    customerName: clientForm.name,
+                    customerAddress: clientForm.direccion,
                     items: itemsToBill,
                     userId: user.id,
                     accountId: account.id
                 });
+
+                const resInvoice = await axios.post('/api/billing/invoices', invoicePayload);
                 resInvoiceData = resInvoice.data;
             }
 

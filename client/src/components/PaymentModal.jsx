@@ -3,6 +3,7 @@ import React from 'react';
 import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import CharCount from './common/CharCount';
+import { validateInvoiceForm } from '../utils/billingRules';
 
 const PaymentModal = ({
     showPaymentModal,
@@ -36,15 +37,15 @@ const PaymentModal = ({
         confirmPayment, handleShareWhatsapp, handlePrintLocalInvoice, handleDownloadLocalXml
     } = paymentFlow;
 
-    // We will extract isInvoiceDataMissing & isStaffCommentMissing logic that was hardcoded
     const totalToPay = parseFloat(payAmount) || 0;
-    const isInvoiceDataMissing = issueInvoice && (
-        (invoiceType === 'factura' && (!clientForm.dni || clientForm.dni.trim().length !== 11 || !clientForm.name || !clientForm.direccion)) ||
-        (invoiceType === 'boleta' && (
-            (totalToPay > 700 && (!clientForm.dni || clientForm.dni.trim().length < 8 || !clientForm.name || clientForm.name.trim() === '')) ||
-            (clientForm.dni && clientForm.dni.trim() !== '' && (!clientForm.name || clientForm.name.trim() === ''))
-        ))
-    );
+    const invoiceValidation = issueInvoice ? validateInvoiceForm({
+        tipo: invoiceType,
+        total: totalToPay,
+        docNumber: clientForm.dni,
+        customerName: clientForm.name,
+        customerAddress: clientForm.direccion
+    }) : { isValid: true, error: null };
+    const isInvoiceDataMissing = issueInvoice && !invoiceValidation.isValid;
     const isPayDisabled = isConfirmingPayment || isProcessingPayment || isInvoiceDataMissing;
     const isStaff = account?.type === 'staff';
     
@@ -649,11 +650,14 @@ const PaymentModal = ({
                                     const enteredVal = parseFloat(payAmount) || 0;
                                     const isAmountInvalid = isNaN(enteredVal) || enteredVal <= 0 || (account && enteredVal > (remaining + 0.01));
                                     const isEvidenceMandatory = ['tarjeta', 'yape', 'transferencia'].includes(paymentMethod);
-                                    const isInvoiceDataMissing = issueInvoice && (
-                                        !clientForm.dni?.trim() || 
-                                        !clientForm.name?.trim() || 
-                                        ((invoiceType === 'factura' || clientForm.dni?.trim().length === 11) && !clientForm.direccion?.trim())
-                                    );
+                                    const currentInvoiceValidation = issueInvoice ? validateInvoiceForm({
+                                        tipo: invoiceType,
+                                        total: enteredVal,
+                                        docNumber: clientForm.dni,
+                                        customerName: clientForm.name,
+                                        customerAddress: clientForm.direccion
+                                    }) : { isValid: true, error: null };
+                                    const isInvoiceDataMissing = issueInvoice && !currentInvoiceValidation.isValid;
                                     const isStaffCommentMissing = isStaff && (!clientForm.direccion || !clientForm.direccion.trim());
                                     const isPayDisabled = isProcessingPayment || (isEvidenceMandatory && evidenceFiles.length === 0) || isAmountInvalid || isInvoiceDataMissing || isStaffCommentMissing;
                                     const isPartial = enteredVal < (remaining - 0.01);
@@ -670,9 +674,9 @@ const PaymentModal = ({
                                                     * El monto a pagar no puede superar el saldo pendiente de S/ {remaining.toFixed(2)}.
                                                 </p>
                                             )}
-                                            {issueInvoice && isInvoiceDataMissing && (
+                                            {issueInvoice && !currentInvoiceValidation.isValid && (
                                                 <p className="text-xs text-red-500 font-bold mb-2 text-center animate-pulse">
-                                                    * Busque/complete los datos del cliente {(invoiceType === 'factura' || clientForm.dni?.trim().length === 11) ? '(DNI/RUC, nombre y dirección)' : '(DNI y nombre)'} para cobrar.
+                                                    * {currentInvoiceValidation.error}
                                                 </p>
                                             )}
                                             {isStaffCommentMissing && (
