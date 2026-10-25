@@ -65,7 +65,12 @@ const sendQrLimitWebhook = async (qrData) => {
 // HELPER FUNCTION: Sync QR monthly sum
 const syncQrSum = async (qrId, tenantId, transaction = null) => {
     try {
-        const qr = await QrAccount.findOne({ where: { id: qrId, TenantId: tenantId }, transaction });
+        if (tenantId && typeof tenantId === 'object') {
+            transaction = tenantId;
+            tenantId = null;
+        }
+        const qrWhere = tenantId ? { id: qrId, TenantId: tenantId } : { id: qrId };
+        const qr = await QrAccount.findOne({ where: qrWhere, transaction });
         if (!qr) return;
 
         const now = new Date();
@@ -74,7 +79,7 @@ const syncQrSum = async (qrId, tenantId, transaction = null) => {
 
         // Fetch all payments for this QR
         const allPayments = await Payment.findAll({
-            where: { qr_id: qrId },
+            where: { qr_id: qrId, ...(qr.TenantId ? { TenantId: qr.TenantId } : {}) },
             transaction
         });
 
