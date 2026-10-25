@@ -246,7 +246,22 @@ router.get('/accounts/specific/:id', async (req, res) => {
     if (!account) return res.status(404).json({
       error: "Cuenta no encontrada"
     });
-    res.json(account);
+    const accountJson = account.toJSON();
+    const { ProductMovement } = getModels();
+    if (ProductMovement) {
+      const { Op } = require('sequelize');
+      const restored = await ProductMovement.findAll({
+        where: {
+          AccountId: id,
+          TenantId: req.tenant.id,
+          reason: { [Op.like]: 'Restauraci%' }
+        },
+        include: [Product],
+        order: [['createdAt', 'ASC']]
+      });
+      accountJson.RestoredMovements = restored;
+    }
+    res.json(accountJson);
   } catch (err) {
     console.error("Error fetching specific account:", err);
     res.status(500).json({

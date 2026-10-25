@@ -151,7 +151,14 @@ const AccountDetailsModal = ({
                     style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
                 >
                     <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-lg sm:text-xl text-gray-800 truncate">{title}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-bold text-lg sm:text-xl text-gray-800 truncate">{title}</h3>
+                            {account?.status === 'cancelled' && (
+                                <span className="text-[10px] font-black bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                    Cuenta Anulada
+                                </span>
+                            )}
+                        </div>
                         <div className="text-xs sm:text-sm text-blue-600 font-medium mt-1 truncate">
                             {account?.Table ? `#${account.id} - ${formatTableName(account.Table)}` : (subtitle || `#${account?.id} - ${account?.TableId ? `Mesa #${account.TableId}` : 'Sin Mesa'}`)}
                         </div>
@@ -216,6 +223,13 @@ const AccountDetailsModal = ({
                     style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
                 >
 
+                    {account?.status === 'cancelled' && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-xs sm:text-sm font-medium flex flex-col gap-1">
+                            <span className="font-bold text-red-900 uppercase tracking-wide text-xs">Cuenta Anulada / Cancelada</span>
+                            <span>Esta cuenta fue dada de baja y el stock de sus productos fue repuesto al inventario.</span>
+                        </div>
+                    )}
+
                     {/* CONSUMOS SECTION */}
                     <section>
                         <h4 className="text-sm font-bold text-gray-500 mb-3">Consumos / Cargos a la Mesa</h4>
@@ -230,27 +244,45 @@ const AccountDetailsModal = ({
                                         })() : ord.notes) 
                                         : (ord.Product?.name || 'Producto Desconocido');
                                     const displayNotes = isCombo ? null : ord.notes;
+                                    const isCancelled = ord.status === 'cancelled' || account.status === 'cancelled';
 
                                     return (
-                                        <div key={idx} className="bg-orange-50/50 border border-orange-100/50 rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4">
+                                        <div key={idx} className={`${isCancelled ? 'bg-red-50/40 border-red-100' : 'bg-orange-50/50 border-orange-100/50'} border rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4`}>
                                             <div>
-                                                <div className="text-sm text-gray-800 font-medium">
-                                                    <span className="text-orange-600 font-bold">{ord.quantity}x</span> {productName}
+                                                <div className={`text-sm font-medium ${isCancelled ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                                                    <span className={`${isCancelled ? 'text-red-500' : 'text-orange-600'} font-bold`}>{ord.quantity}x</span> {productName}
                                                     {ord.presentation && <span className="text-blue-500 font-medium ml-1">({ord.presentation})</span>}
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-2">
-                                                    {new Date(ord.createdAt || new Date()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                <div className="text-xs text-gray-400 mt-2 flex items-center gap-2 flex-wrap">
+                                                    <span>{new Date(ord.createdAt || new Date()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                                    {isCancelled && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase">Anulado</span>}
                                                     {displayNotes && <span className="italic block mt-1 text-gray-500">{displayNotes}</span>}
                                                 </div>
                                             </div>
-                                            <div className="font-bold text-orange-600 text-sm whitespace-nowrap">
+                                            <div className={`font-bold text-sm whitespace-nowrap ${isCancelled ? 'line-through text-gray-400' : 'text-orange-600'}`}>
                                                 + {formatCurrency(ord.priceAtOrder && !isNaN(ord.priceAtOrder) ? (ord.priceAtOrder * ord.quantity) : (ord.Product?.price || 0) * ord.quantity)}
                                             </div>
                                         </div>
                                     );
                                 })
+                            ) : account.RestoredMovements && account.RestoredMovements.length > 0 ? (
+                                account.RestoredMovements.map((mov, idx) => (
+                                    <div key={idx} className="bg-red-50/40 border border-red-100 rounded-lg p-3 sm:p-4 flex justify-between items-start gap-4">
+                                        <div>
+                                            <div className="text-sm text-gray-500 font-medium line-through">
+                                                <span className="text-red-500 font-bold">{parseFloat(mov.amount)}x</span> {mov.Product?.name || mov.reason}
+                                            </div>
+                                            <div className="text-xs text-gray-400 mt-2 flex items-center gap-2 flex-wrap">
+                                                <span>Eliminado: {new Date(mov.createdAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase">Eliminado / Stock Repuesto</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
                             ) : (
-                                <div className="text-sm text-gray-400 italic p-4 bg-gray-50 rounded-lg border">Sin consumos registrados.</div>
+                                <div className="text-sm text-gray-400 italic p-4 bg-gray-50 rounded-lg border">
+                                    {account?.status === 'cancelled' ? 'Cuenta anulada sin consumos activos.' : 'Sin consumos registrados.'}
+                                </div>
                             )}
                         </div>
                     </section>

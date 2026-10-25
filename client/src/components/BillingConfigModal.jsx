@@ -1107,12 +1107,23 @@ const BillingConfigModal = ({ onClose }) => {
                                                                 </td>
                                                                 <td className="p-4 align-middle">
                                                                     {inv.AccountId ? (
-                                                                        <button 
-                                                                            onClick={() => setSelectedAccountId(inv.AccountId)}
-                                                                            className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest shadow-sm hover:bg-blue-100 transition-colors cursor-pointer"
-                                                                        >
-                                                                            Cuenta #{inv.AccountId}
-                                                                        </button>
+                                                                        <div className="flex flex-col items-start gap-1">
+                                                                            <button 
+                                                                                onClick={() => setSelectedAccountId(inv.AccountId)}
+                                                                                className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase tracking-widest shadow-sm transition-colors cursor-pointer ${
+                                                                                    inv.Account?.status === 'cancelled' || !inv.Account
+                                                                                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                                                                                        : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                                                                                }`}
+                                                                            >
+                                                                                Cuenta #{inv.AccountId}
+                                                                            </button>
+                                                                            {(inv.Account?.status === 'cancelled' || !inv.Account) && (
+                                                                                <span className="text-[9px] font-black text-red-600 uppercase tracking-wider">
+                                                                                    {!inv.Account ? 'Eliminada' : 'Anulada'}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                     ) : (
                                                                         <span className="text-[11px] font-bold text-gray-400">-</span>
                                                                     )}
