@@ -1,12 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { X, Loader2, FileText, Receipt, Printer } from 'lucide-react';
+import { X, Loader2, FileText, Receipt, Printer, ExternalLink } from 'lucide-react';
 import { formatTableName } from '../utils/tableUtils';
 import { useRestaurant } from '../contexts/RestaurantContext';
 import InvoiceManagementModal from './InvoiceManagementModal';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { humanizeErrorMessage } from '../utils/errorUtils';
+
+const getSunatUrls = (sunatResp) => {
+    if (!sunatResp) return { pdf: null, xml: null };
+    let parsed = sunatResp;
+    if (typeof sunatResp === 'string') {
+        try { parsed = JSON.parse(sunatResp); } catch (e) { parsed = null; }
+    }
+    if (!parsed) return { pdf: null, xml: null };
+    let pdf = parsed.url_ticket || parsed.links?.pdf || parsed.pdf || parsed.pdf_url || parsed.url_pdf || parsed.url || null;
+    let xml = parsed.links?.xml || parsed.xml || parsed.xml_url || parsed.url_xml || null;
+
+    if (pdf && typeof pdf === 'string') {
+        if (pdf.includes('72.61.57.199') || pdf.includes('maksuites') || pdf.includes('bluzcx')) {
+            pdf = pdf.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+        }
+    }
+    if (xml && typeof xml === 'string') {
+        if (xml.includes('72.61.57.199') || xml.includes('maksuites') || xml.includes('bluzcx')) {
+            xml = xml.replace(/:\d+/g, '').replace(/http:\/\/[\w.-]+/g, 'https://proxy-sunat.bluzcx.easypanel.host');
+        }
+    }
+    return { pdf, xml };
+};
 
 const AccountDetailsModal = ({
     account: initialAccount,
@@ -26,6 +49,21 @@ const AccountDetailsModal = ({
     const [error, setError] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [invoiceModalTab, setInvoiceModalTab] = useState('emit');
+    const [printingInvoiceId, setPrintingInvoiceId] = useState(null);
+
+    const handlePrintInvoice = async (inv) => {
+        if (printingInvoiceId) return;
+        try {
+            setPrintingInvoiceId(inv.id);
+            await axios.post(`/api/billing/invoices/${inv.id}/print`);
+            alert('✅ Comprobante enviado a la impresora térmica.');
+        } catch (e) {
+            alert('❌ Error al imprimir comprobante: ' + (e.response?.data?.error || humanizeErrorMessage(e)));
+        } finally {
+            setPrintingInvoiceId(null);
+        }
+    };
 
     // Handle nested back buttons
     useModalBackHandler(showInvoiceModal, () => setShowInvoiceModal(false));
@@ -182,23 +220,26 @@ const AccountDetailsModal = ({
                                 <span className="hidden sm:inline">Imprimir Consumos</span>
                             </button>
                         )}
-                        {account.status === 'closed' && (
+                        {(account.status === 'closed' || (account.Invoices && account.Invoices.length > 0)) && (
                             <button
+                                type="button"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
+                                    setInvoiceModalTab(account.Invoices && account.Invoices.length > 0 ? 'history' : 'emit');
                                     setShowInvoiceModal(true);
                                 }}
-                                className={`relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors ${
+                                className={`relative z-10 pointer-events-auto px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-colors border shadow-sm ${
                                     account.Invoices?.some(i => i.status !== 'anulado') 
-                                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                        : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/30'
+                                        ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200'
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600'
                                 }`}
+                                title={account.Invoices?.some(i => i.status !== 'anulado') ? 'Ver / Gestionar Comprobantes' : 'Emitir Comprobante Electrónico'}
                             >
                                 {account.Invoices?.some(i => i.status !== 'anulado') ? (
-                                    <><FileText size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px]" /> <span>Comprobantes</span></>
+                                    <><FileText size={16} className="shrink-0 sm:w-[18px] sm:h-[18px]" /> <span>Comprobante</span></>
                                 ) : (
-                                    <><Receipt size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px]" /> <span>Facturar</span></>
+                                    <><Receipt size={16} className="shrink-0 sm:w-[18px] sm:h-[18px]" /> <span>Facturar</span></>
                                 )}
                             </button>
                         )}
@@ -364,31 +405,82 @@ const AccountDetailsModal = ({
                     {/* COMPROBANTES SECTION */}
                     {account.Invoices && account.Invoices.length > 0 && (
                         <section>
-                            <h4 className="text-sm font-bold text-gray-500 mb-3">Comprobantes Emitidos</h4>
+                            <div className="flex justify-between items-center mb-3">
+                                <h4 className="text-sm font-bold text-gray-500">Comprobantes Emitidos</h4>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInvoiceModalTab('history');
+                                        setShowInvoiceModal(true);
+                                    }}
+                                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                                >
+                                    <FileText size={14} /> Gestionar
+                                </button>
+                            </div>
                             <div className="space-y-3">
-                                {account.Invoices.map((inv, idx) => (
-                                    <div key={idx} className="bg-blue-50/50 border border-blue-100/50 rounded-lg p-3 sm:p-4 flex justify-between items-center gap-4">
-                                        <div>
-                                            <div className="font-bold text-blue-800 text-sm uppercase">
-                                                {inv.tipo === 'factura' ? 'Factura' : 'Boleta'} Electrónica
+                                {account.Invoices.map((inv, idx) => {
+                                    const { pdf } = getSunatUrls(inv.sunatResponse);
+                                    return (
+                                        <div key={idx} className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-blue-800 text-sm uppercase">
+                                                        {inv.tipo === 'factura' ? 'Factura' : 'Boleta'} Electrónica
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${inv.status === 'anulado' ? 'bg-rose-100 text-rose-700' : 'bg-green-100 text-green-700'}`}>
+                                                        {inv.status === 'anulado' ? 'ANULADA' : (inv.sunatResponse ? 'Aceptado SUNAT' : 'Local')}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm font-mono font-bold text-gray-700 mt-1">
+                                                    {inv.serie}-{String(inv.correlativo).padStart(6, '0')}
+                                                </div>
+                                                <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                                                    <span>{new Date(inv.emitidoAt || inv.createdAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span className="font-bold text-blue-700">• {formatCurrency(inv.total)}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-sm font-mono font-bold text-gray-700 mt-1">
-                                                {inv.serie}-{String(inv.correlativo).padStart(6, '0')}
-                                            </div>
-                                            <div className="text-xs text-gray-400 mt-2">
-                                                {new Date(inv.emitidoAt || inv.createdAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                                {pdf && (
+                                                    <a
+                                                        href={pdf}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shadow-sm"
+                                                        title="Ver PDF en SUNAT"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                        <span>Ver PDF</span>
+                                                    </a>
+                                                )}
+                                                {inv.status !== 'anulado' && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={printingInvoiceId === inv.id}
+                                                        onClick={() => handlePrintInvoice(inv)}
+                                                        className="px-2.5 py-1.5 bg-white hover:bg-orange-50 text-orange-600 border border-orange-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shadow-sm disabled:opacity-50"
+                                                        title="Imprimir Ticket Térmico"
+                                                    >
+                                                        <Printer size={14} />
+                                                        <span>{printingInvoiceId === inv.id ? '...' : 'Imprimir'}</span>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setInvoiceModalTab('history');
+                                                        setShowInvoiceModal(true);
+                                                    }}
+                                                    className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shadow-sm"
+                                                    title="Gestionar Comprobante"
+                                                >
+                                                    <FileText size={14} />
+                                                    <span>Gestionar</span>
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="font-bold text-blue-700 text-sm">
-                                                {formatCurrency(inv.total)}
-                                            </div>
-                                            <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${inv.status === 'anulado' ? 'bg-rose-100 text-rose-700' : 'bg-green-100 text-green-700'}`}>
-                                                {inv.status === 'anulado' ? 'ANULADA' : (inv.sunatResponse ? 'Aceptado SUNAT' : 'Local')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
                     )}
@@ -494,6 +586,7 @@ const AccountDetailsModal = ({
             {showInvoiceModal && (
                 <InvoiceManagementModal 
                     account={account} 
+                    initialTab={invoiceModalTab}
                     onClose={() => setShowInvoiceModal(false)}
                     onRefresh={() => fetchAccount(account.id)}
                 />

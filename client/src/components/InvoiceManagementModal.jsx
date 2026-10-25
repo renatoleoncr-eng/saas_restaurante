@@ -61,7 +61,7 @@ const getSunatUrls = (sunatResp) => {
     return { pdf, xml };
 };
 
-const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
+const InvoiceManagementModal = ({ account, onClose, onRefresh, initialTab = null }) => {
     useModalBackHandler(true, onClose);
 
     const { socket, user } = useRestaurant();
@@ -70,7 +70,13 @@ const InvoiceManagementModal = ({ account, onClose, onRefresh }) => {
     const [expandedGroups, setExpandedGroups] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
     const [productBillingMode, setProductBillingMode] = useState('detailed'); // 'detailed' | 'consumption'
-    const [activeTab, setActiveTab] = useState('emit');
+    const [activeTab, setActiveTab] = useState(() => {
+        if (initialTab) return initialTab;
+        if (account?.status === 'cancelled' || account?.Invoices?.some(i => i.status !== 'anulado')) {
+            return 'history';
+        }
+        return 'emit';
+    });
     const [selectedDocId, setSelectedDocId] = useState(null);
 
     const [annulTarget, setAnnulTarget] = useState(null);
