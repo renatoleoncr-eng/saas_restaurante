@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import CharCount from '../components/common/CharCount';
+import QrPreviewModal from '../components/common/QrPreviewModal';
 
 const getMediaUrl = (url) => {
     if (!url) return '';
@@ -33,6 +34,7 @@ export default function QrManagement() {
     const [qrs, setQrs] = useState([]);
     const [showQrModal, setShowQrModal] = useState(false);
     const [editingQr, setEditingQr] = useState(null);
+    const [viewingQr, setViewingQr] = useState(null);
     const [qrFormData, setQrFormData] = useState({
         name: '',
         phoneNumber: '',
@@ -805,13 +807,18 @@ export default function QrManagement() {
                                                     {/* QR foto */}
                                                     <td className="py-3 px-4">
                                                         {qr.imageUrl ? (
-                                                            <div className="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden shadow-sm cursor-pointer group">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setViewingQr({ imageUrl: qr.imageUrl, name: qr.name, phoneNumber: qr.phoneNumber })}
+                                                                className="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden shadow-sm cursor-pointer group hover:border-blue-500 hover:ring-2 hover:ring-blue-400/50 transition-all text-left p-0 block focus:outline-none"
+                                                                title="Clic para ver/maximizar QR"
+                                                            >
                                                                 <img
                                                                     src={getMediaUrl(qr.imageUrl)}
                                                                     alt={qr.name}
                                                                     className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                                                 />
-                                                            </div>
+                                                            </button>
                                                         ) : (
                                                             <div className="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center text-gray-400">
                                                                 <QrCode className="w-5 h-5" />
@@ -2093,6 +2100,12 @@ export default function QrManagement() {
                     </div>
                 </div>
             )}
+
+            <QrPreviewModal
+                isOpen={Boolean(viewingQr)}
+                onClose={() => setViewingQr(null)}
+                qrData={viewingQr}
+            />
 
         </div>
     );

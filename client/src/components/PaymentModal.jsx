@@ -1,10 +1,12 @@
 import { compressImage } from '../utils/imageCompression';
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2, FileText } from 'lucide-react';
+import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2, FileText, Maximize2, QrCode } from 'lucide-react';
 import axios from 'axios';
 import CharCount from './common/CharCount';
 import { validateInvoiceForm } from '../utils/billingRules';
+import { getMediaUrl } from '../utils/mediaUtils';
+import QrPreviewModal from './common/QrPreviewModal';
 
 const PaymentModal = ({
     showPaymentModal,
@@ -49,6 +51,8 @@ const PaymentModal = ({
     const isInvoiceDataMissing = issueInvoice && !invoiceValidation.isValid;
     const isPayDisabled = isConfirmingPayment || isProcessingPayment || isInvoiceDataMissing;
     const isStaff = account?.type === 'staff';
+    const [viewingQr, setViewingQr] = useState(null);
+    const selectedQr = qrsList?.find(q => String(q.id) === String(selectedQrId));
     
     // We also need handleFileChange if it's not exported from usePaymentFlow.
     // wait, handleFileChange from TableControl needs to be reconstructed here or exposed.
@@ -79,8 +83,10 @@ const PaymentModal = ({
         }
     };
 
-    return createPortal(
-        <div className="fixed inset-0 bg-black/60 z-[120] flex justify-center items-start overflow-y-auto p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    return (
+        <>
+            {createPortal(
+                <div className="fixed inset-0 bg-black/60 z-[120] flex justify-center items-start overflow-y-auto p-4 backdrop-blur-sm animate-in fade-in duration-200">
             {successInvoice ? (
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200 my-auto">
                     {/* Premium Green/Mint Gradient Header */}
@@ -420,6 +426,7 @@ const PaymentModal = ({
                                             {qrsList.map(qr => (
                                                 <button
                                                     key={qr.id}
+                                                    type="button"
                                                     disabled={isConfirmingPayment}
                                                     onClick={() => setSelectedQrId(qr.id)}
                                                     className={`w-full p-3 rounded-lg border text-left flex justify-between items-center transition-all ${
@@ -436,6 +443,45 @@ const PaymentModal = ({
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Previsualización del QR seleccionado: solo miniatura y celular */}
+                                        {selectedQr && (
+                                            <div className="mt-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                {selectedQr.imageUrl ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setViewingQr(selectedQr)}
+                                                        className="relative w-16 h-16 bg-white rounded-lg overflow-hidden border border-gray-300 shrink-0 p-1 cursor-pointer hover:border-blue-500 hover:ring-2 hover:ring-blue-400/50 active:scale-95 transition-all group"
+                                                        title="Toca para maximizar QR"
+                                                    >
+                                                        <img
+                                                            src={getMediaUrl(selectedQr.imageUrl)}
+                                                            alt="QR"
+                                                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                                        />
+                                                    </button>
+                                                ) : (
+                                                    <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 shrink-0 flex items-center justify-center text-gray-400">
+                                                        <QrCode size={24} />
+                                                    </div>
+                                                )}
+
+                                                <div className="flex-1 min-w-0">
+                                                    {selectedQr.phoneNumber ? (
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                                                Celular
+                                                            </span>
+                                                            <span className="text-base font-bold text-gray-800 font-mono">
+                                                                {selectedQr.phoneNumber}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">Sin celular registrado</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -758,6 +804,13 @@ const PaymentModal = ({
                         )}
                     </div>,
                     document.body
+            )}
+            <QrPreviewModal
+                isOpen={Boolean(viewingQr)}
+                onClose={() => setViewingQr(null)}
+                qrData={viewingQr}
+            />
+        </>
     );
 };
 export default PaymentModal;
