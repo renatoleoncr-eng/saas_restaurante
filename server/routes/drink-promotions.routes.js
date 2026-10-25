@@ -119,7 +119,8 @@ router.post('/drink-promotions/:id/items', async (req, res) => {
         const existingItem = await DrinkPromotionItem.findOne({
             where: {
                 name: name.trim(),
-                DrinkPromotionId: promo.id
+                DrinkPromotionId: promo.id,
+                TenantId: req.tenant.id
             }
         });
 
@@ -157,6 +158,7 @@ router.put('/drink-promotions/items/:itemId', async (req, res) => {
                     where: {
                         name: cleanItemName,
                         DrinkPromotionId: item.DrinkPromotionId,
+                        TenantId: req.tenant.id,
                         id: { [require('sequelize').Op.ne]: req.params.itemId }
                     }
                 });

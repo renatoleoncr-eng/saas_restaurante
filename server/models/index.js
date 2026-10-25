@@ -931,7 +931,8 @@ Payment.beforeCreate(async (payment, options) => {
             throw new Error('Debe seleccionar un QR específico para el pago con Yape/Plin.');
         } else {
             const QrAccount = sequelize.models.QrAccount;
-            const qr = await QrAccount.findByPk(payment.qr_id, { transaction: options.transaction });
+            const qrWhere = payment.TenantId ? { id: payment.qr_id, TenantId: payment.TenantId } : { id: payment.qr_id };
+            const qr = await QrAccount.findOne({ where: qrWhere, transaction: options.transaction });
             if (qr && !qr.isUnlimited) {
                 const newSum = parseFloat(qr.accumulated_month_sum || 0) + parseFloat(payment.amount);
                 if (newSum > parseFloat(qr.limitAmount)) {
@@ -946,7 +947,7 @@ Payment.afterCreate(async (payment, options) => {
     if (payment.qr_id) {
         try {
             const { syncQrSum } = require('../routes/qr.routes');
-            await syncQrSum(payment.qr_id, options.transaction);
+            await syncQrSum(payment.qr_id, payment.TenantId, options.transaction);
         } catch (err) {
             console.error("[Payment Hook] Error in afterCreate:", err);
         }
@@ -958,13 +959,13 @@ Payment.afterUpdate(async (payment, options) => {
         const { syncQrSum } = require('../routes/qr.routes');
         if (payment.changed('qr_id')) {
             const oldQrId = payment.previous('qr_id');
-            if (oldQrId) await syncQrSum(oldQrId, options.transaction);
-            if (payment.qr_id) await syncQrSum(payment.qr_id, options.transaction);
+            if (oldQrId) await syncQrSum(oldQrId, payment.TenantId, options.transaction);
+            if (payment.qr_id) await syncQrSum(payment.qr_id, payment.TenantId, options.transaction);
         } else if (payment.qr_id && (
             payment.changed('amount') ||
             payment.changed('method')
         )) {
-            await syncQrSum(payment.qr_id, options.transaction);
+            await syncQrSum(payment.qr_id, payment.TenantId, options.transaction);
         }
     } catch (err) {
         console.error("[Payment Hook] Error in afterUpdate:", err);
@@ -975,7 +976,7 @@ Payment.afterDestroy(async (payment, options) => {
     if (payment.qr_id) {
         try {
             const { syncQrSum } = require('../routes/qr.routes');
-            await syncQrSum(payment.qr_id, options.transaction);
+            await syncQrSum(payment.qr_id, payment.TenantId, options.transaction);
         } catch (err) {
             console.error("[Payment Hook] Error in afterDestroy:", err);
         }

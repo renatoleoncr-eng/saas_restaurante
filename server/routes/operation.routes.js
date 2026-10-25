@@ -13,6 +13,19 @@ const {
   cleanOptionalString
 } = require('../utils/sanitize');
 
+const isHappyHourActive = (startStr, endStr) => {
+  if (!startStr || !endStr) return false;
+  const now = new Date();
+  const currentHours = String(now.getHours()).padStart(2, '0');
+  const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+  const currentTimeStr = `${currentHours}:${currentMinutes}`;
+  if (startStr <= endStr) {
+    return currentTimeStr >= startStr && currentTimeStr <= endStr;
+  } else {
+    return currentTimeStr >= startStr || currentTimeStr <= endStr;
+  }
+};
+
 // --- ACCOUNTS ---
 
 // Open a new Account for a Table

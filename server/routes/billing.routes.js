@@ -934,10 +934,11 @@ router.post('/billing/invoices/:id/mark-voided', async (req, res) => {
 
     // Return order status
     if (invoice.orderId) {
-      const Order = require('../models/Order');
+      const { Order } = require('../models');
       const order = await Order.findOne({
         where: {
-          id: invoice.orderId
+          id: invoice.orderId,
+          TenantId: req.tenant.id
         }
       });
       if (order) {
