@@ -1,6 +1,7 @@
 import { compressImage } from '../utils/imageCompression';
 import React from 'react';
-import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { CheckCircle, Check, AlertCircle, Printer, Image, Camera, X, Info, Loader2, FileText } from 'lucide-react';
 import axios from 'axios';
 import CharCount from './common/CharCount';
 import { validateInvoiceForm } from '../utils/billingRules';
@@ -78,19 +79,36 @@ const PaymentModal = ({
         }
     };
 
-    return (
-                (
-                    <div className="absolute inset-0 bg-black/60 z-[60] flex justify-center items-start overflow-y-auto p-4">
-                        {successInvoice ? (
-                            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200 my-auto">
-                                {/* Premium Green/Mint Gradient Header */}
-                                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-center text-white relative">
-                                    <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-3 shadow-inner">
-                                        <CheckCircle size={36} className="text-white" />
-                                    </div>
-                                    <h2 className="text-xl font-extrabold tracking-tight">¡Comprobante Emitido!</h2>
-                                    <p className="text-emerald-100 text-xs mt-1">El comprobante se generó y registró correctamente</p>
-                                </div>
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 z-[120] flex justify-center items-start overflow-y-auto p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            {successInvoice ? (
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200 my-auto">
+                    {/* Premium Green/Mint Gradient Header */}
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-center text-white relative">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSuccessInvoice(null);
+                                setwhatsappPhone('');
+                                setShowWhatsappInput(false);
+                                setShowPaymentModal(false);
+                                if (isLastPaymentPartial) {
+                                    fetchAccount();
+                                } else {
+                                    onClose();
+                                }
+                            }}
+                            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                            aria-label="Cerrar"
+                        >
+                            <X size={20} />
+                        </button>
+                        <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-3 shadow-inner">
+                            <CheckCircle size={36} className="text-white" />
+                        </div>
+                        <h2 className="text-xl font-extrabold tracking-tight">¡Comprobante Emitido!</h2>
+                        <p className="text-emerald-100 text-xs mt-1">El comprobante se generó y registró correctamente</p>
+                    </div>
 
                                 {/* Voucher Body */}
                                 <div className="p-6 space-y-4">
@@ -205,25 +223,33 @@ const PaymentModal = ({
                                         return (
                                             <div className="space-y-4">
                                                 <div className="flex gap-2 pt-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            if (pdf) {
-                                                                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                                                                    window.location.href = pdf;
-                                                                } else {
-                                                                    window.open(pdf, '_blank');
+                                                    {pdf ? (
+                                                        <a
+                                                            href={pdf}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 cursor-pointer"
+                                                        >
+                                                            <FileText size={16} />
+                                                            Ver PDF
+                                                        </a>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (printingEnabled) {
+                                                                    axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`).catch(() => {});
                                                                 }
-                                                            } else if (printingEnabled) {
-                                                                axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`).catch(() => {});
-                                                            }
-                                                        }}
-                                                        className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200"
-                                                    >
-                                                        <Printer size={16} />
-                                                        {pdf ? 'Ver PDF' : (printingEnabled ? 'Imprimir' : 'Comprobante')}
-                                                    </button>
+                                                            }}
+                                                            className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 cursor-pointer"
+                                                        >
+                                                            <Printer size={16} />
+                                                            {printingEnabled ? 'Imprimir' : 'Comprobante'}
+                                                        </button>
+                                                    )}
                                                     {printingEnabled && (
                                                         <button
+                                                            type="button"
                                                             onClick={async () => {
                                                                 try {
                                                                     await axios.post(`/api/billing/invoices/${successInvoice.invoice.id}/print`);
@@ -232,7 +258,7 @@ const PaymentModal = ({
                                                                     alert("Error al enviar a la impresora.");
                                                                 }
                                                             }}
-                                                            className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200"
+                                                            className="flex-1 py-3 px-4 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm text-sm bg-slate-800 border-slate-800 text-white hover:bg-slate-900 hover:shadow-slate-200 cursor-pointer"
                                                         >
                                                             <Printer size={16} />
                                                             Imprimir
@@ -258,15 +284,17 @@ const PaymentModal = ({
                                                                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                                                                 />
                                                                 <button
+                                                                    type="button"
                                                                     onClick={handleShareWhatsapp}
                                                                     disabled={!whatsappPhone.trim()}
-                                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
                                                                 >
                                                                     Enviar
                                                                 </button>
                                                                 <button
+                                                                    type="button"
                                                                     onClick={() => setShowWhatsappInput(false)}
-                                                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                                                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                                                                 >
                                                                     X
                                                                 </button>
@@ -274,8 +302,9 @@ const PaymentModal = ({
                                                         </div>
                                                     ) : (
                                                         <button
+                                                            type="button"
                                                             onClick={() => setShowWhatsappInput(true)}
-                                                            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all active:scale-95 shadow-md hover:shadow-emerald-200 flex items-center justify-center gap-2 text-sm"
+                                                            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all active:scale-95 shadow-md hover:shadow-emerald-200 flex items-center justify-center gap-2 text-sm cursor-pointer"
                                                         >
                                                             <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                                                                 <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.982L2 22l5.233-1.372a9.954 9.954 0 0 0 4.781 1.218h.004c5.502 0 9.987-4.478 9.988-9.984C22.008 6.478 17.521 2 12.012 2zm6.935 14.177c-.285.807-1.42 1.48-1.956 1.58-.466.086-1.077.126-1.722-.08-.415-.133-.943-.327-1.605-.595-2.822-1.139-4.646-3.99-4.786-4.179-.142-.19-1.157-1.528-1.157-2.917 0-1.39.73-2.072 1.01-2.355.28-.28.618-.35.823-.35.205 0 .41.002.59.01.19.01.446-.073.7.535.263.63.898 2.167.978 2.327.08.16.133.348.028.563-.106.216-.16.348-.316.53-.158.18-.33.4-.47.53-.158.146-.323.305-.14.618.18.305.8 1.3 1.713 2.112.915.811 1.685 1.06 1.99 1.182.305.123.48.103.66-.1.18-.205.776-.897.98-1.206.205-.308.41-.256.69-.153.284.103 1.8.847 2.11 1.002.312.155.518.23.593.36.075.13.075.753-.21 1.56z"/>
@@ -290,6 +319,7 @@ const PaymentModal = ({
 
                                     {/* Finalize Button */}
                                     <button
+                                        type="button"
                                         onClick={() => {
                                             setSuccessInvoice(null);
                                             setwhatsappPhone('');
@@ -301,7 +331,7 @@ const PaymentModal = ({
                                                 onClose();
                                             }
                                         }}
-                                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm mt-2"
+                                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm mt-2 cursor-pointer"
                                     >
                                         <Check size={18} className="stroke-[3]" />
                                         {isLastPaymentPartial ? 'Finalizar Abono' : 'Finalizar y Liberar Mesa'}
@@ -726,8 +756,8 @@ const PaymentModal = ({
                                 })()}
                             </div>
                         )}
-                    </div>
-                )
+                    </div>,
+                    document.body
     );
 };
 export default PaymentModal;

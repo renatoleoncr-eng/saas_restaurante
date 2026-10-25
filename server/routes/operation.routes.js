@@ -488,7 +488,7 @@ const restoreOrderStock = async (order, tenantId, actionUserId = null) => {
                 }],
                 where: {
                   id: sub.drinkItemId,
-                  TenantId: req.tenant.id
+                  TenantId: tenantId
                 }
               });
               if (drinkItem && drinkItem.DrinkItemRecipes && drinkItem.DrinkItemRecipes.length > 0) {
@@ -1328,7 +1328,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
               const acc = await Account.findOne({
                 where: {
                   id: accountId,
-                  TenantId: req.tenant.id
+                  TenantId: tenantId
                 }
               });
               if (acc && acc.accountType === 'staff') {
@@ -1378,7 +1378,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
         const acc = await Account.findOne({
           where: {
             id: accountId,
-            TenantId: req.tenant.id
+            TenantId: tenantId
           }
         });
         if (acc && acc.accountType === 'staff') {
@@ -1476,7 +1476,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
         const acc = await Account.findOne({
           where: {
             id: accountId,
-            TenantId: req.tenant.id
+            TenantId: tenantId
           }
         });
         if (acc && acc.accountType === 'staff') {
@@ -1556,7 +1556,7 @@ const processStockChange = async (productId, quantity, isDeduction, presentation
         const acc = await Account.findOne({
           where: {
             id: accountId,
-            TenantId: req.tenant.id
+            TenantId: tenantId
           }
         });
         if (acc && acc.accountType === 'staff') {
