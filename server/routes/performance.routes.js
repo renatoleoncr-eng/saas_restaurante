@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const {
     Payment, Account, Expense, Table, Area,
-    Order, Product, User, DrinkPromotion
+    Order, Product, User, DrinkPromotion, ProductVariant
 } = require('../models');
 const { requireRole } = require('../middleware/auth.middleware');
 
@@ -402,10 +402,11 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             .slice(0, 10);
 
         // 8. Distribución de Ventas (Top Productos más vendidos: Carta y Promociones 2x1/Combos)
-        const [productsWithFk, ordersWithoutFk, drinkPromos] = await Promise.all([
+        const [productsWithFk, ordersWithoutFk, drinkPromos, variantCountsRaw] = await Promise.all([
             Order.findAll({
                 attributes: [
                     'ProductId',
+                    'presentation',
                     [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
                     [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
                 ],
@@ -418,9 +419,9 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 include: [{
                     model: Product,
                     paranoid: false,
-                    attributes: ['id', 'name', 'category', 'type']
+                    attributes: ['id', 'name', 'category', 'type', 'presentations']
                 }],
-                group: ['ProductId', 'Product.id', 'Product.name', 'Product.category', 'Product.type'],
+                group: ['ProductId', 'Order.presentation', 'Product.id', 'Product.name', 'Product.category', 'Product.type', 'Product.presentations'],
                 raw: true,
                 nest: true
             }),
@@ -444,8 +445,55 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             DrinkPromotion.findAll({
                 where: { TenantId: tenantId },
                 raw: true
+            }),
+            ProductVariant.findAll({
+                attributes: ['ProductId', [sequelize.fn('COUNT', sequelize.col('id')), 'variantCount']],
+                where: { TenantId: tenantId },
+                group: ['ProductId'],
+                raw: true
             })
         ]);
+
+        const variantCountMap = new Map();
+        variantCountsRaw.forEach(v => {
+            variantCountMap.set(v.ProductId, parseInt(v.variantCount || 0, 10));
+        });
+
+        const productsMap = new Map();
+        for (const r of productsWithFk) {
+            const baseName = (r.Product?.name || `Producto #${r.ProductId}`).trim();
+            const pres = (r.presentation && r.presentation.trim()) || '';
+            const variantCount = variantCountMap.get(r.ProductId) || 0;
+            let legacyVariantCount = 0;
+            if (r.Product?.presentations) {
+                try {
+                    const parsed = typeof r.Product.presentations === 'string' ? JSON.parse(r.Product.presentations) : r.Product.presentations;
+                    if (Array.isArray(parsed)) legacyVariantCount = parsed.length;
+                } catch (_) {}
+            }
+            const hasMultipleVariants = (variantCount > 1 || legacyVariantCount > 1);
+            let displayName = baseName;
+            if (hasMultipleVariants && pres && !['estandar', 'estándar', 'general', 'default'].includes(pres.toLowerCase())) {
+                displayName = `${baseName} (${pres})`;
+            }
+
+            const qty = parseInt(r.quantity || 0, 10);
+            const tot = parseFloat(r.total || 0);
+
+            if (productsMap.has(displayName)) {
+                const existing = productsMap.get(displayName);
+                existing.quantity += qty;
+                existing.total += tot;
+            } else {
+                productsMap.set(displayName, {
+                    productId: r.ProductId,
+                    name: displayName,
+                    category: r.Product?.category || r.Product?.type || 'Carta',
+                    quantity: qty,
+                    total: tot
+                });
+            }
+        }
 
         const promoVariantsMap = new Map();
         for (const r of ordersWithoutFk) {
@@ -499,18 +547,25 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             }
         }
 
-        const topProducts = [
-            ...productsWithFk.map(r => ({
-                productId: r.ProductId,
-                name: r.Product?.name || `Producto #${r.ProductId}`,
-                category: r.Product?.category || r.Product?.type || 'Carta',
-                quantity: parseInt(r.quantity || 0, 10),
-                total: parseFloat(r.total || 0)
-            })),
-            ...Array.from(promoVariantsMap.values())
-        ]
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 10);
+        const consolidatedMap = new Map();
+
+        for (const p of productsMap.values()) {
+            consolidatedMap.set(p.name, p);
+        }
+
+        for (const promo of promoVariantsMap.values()) {
+            if (consolidatedMap.has(promo.name)) {
+                const item = consolidatedMap.get(promo.name);
+                item.quantity += promo.quantity;
+                item.total += promo.total;
+            } else {
+                consolidatedMap.set(promo.name, promo);
+            }
+        }
+
+        const topProducts = Array.from(consolidatedMap.values())
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 10);
 
         // 9. Distribución de Ingresos por Método de Pago
         const paymentMethodsRaw = await Payment.findAll({

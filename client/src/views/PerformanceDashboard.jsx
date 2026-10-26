@@ -503,7 +503,7 @@ export default function PerformanceDashboard() {
                                 <YAxis
                                     dataKey="name"
                                     type="category"
-                                    width={140}
+                                    width={165}
                                     axisLine={false}
                                     tickLine={false}
                                     tick={{ fontSize: 11, fill: '#4b5563' }}
