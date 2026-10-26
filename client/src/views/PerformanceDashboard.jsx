@@ -5,8 +5,7 @@ import {
     BarChart, Bar, AreaChart, Area, LabelList
 } from 'recharts';
 import {
-    TrendingUp, Calendar, Users, DollarSign, Utensils,
-    Receipt, LayoutGrid, CreditCard, RefreshCw, AlertCircle, Award
+    TrendingUp, Calendar, Users, RefreshCw, AlertCircle, Award
 } from 'lucide-react';
 import { useRestaurant } from '../contexts/RestaurantContext';
 
@@ -55,7 +54,6 @@ export default function PerformanceDashboard() {
         fetchStats();
     }, [year, month, startDay, endDay]);
 
-    // Manejar cambio de mes
     const handleMonthChange = (newMonth) => {
         const m = parseInt(newMonth, 10);
         setMonth(m);
@@ -64,7 +62,6 @@ export default function PerformanceDashboard() {
         if (endDay > maxDays || endDay === daysInMonth) setEndDay(maxDays);
     };
 
-    // Accesos directos de rango
     const setRangeAll = () => {
         setStartDay(1);
         setEndDay(daysInMonth);
@@ -83,85 +80,73 @@ export default function PerformanceDashboard() {
     const kpis = data?.kpis || {};
     const availableYears = data?.availableYears || [now.getFullYear()];
     const isFullMonth = startDay <= 1 && endDay >= daysInMonth;
-    const rangeSubtitle = isFullMonth ? '' : ` (Días ${startDay} al ${endDay})`;
+    const rangeText = isFullMonth ? '' : ` (Días ${startDay} - ${endDay})`;
 
-    // Formateador de moneda en soles
     const formatCurrency = (val) => {
         return `S/ ${Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
-    const formatCurrencyShort = (val) => {
-        return `S/ ${Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-    };
-
     return (
-        <div className="p-3 sm:p-6 lg:p-8 bg-gray-50 min-h-screen overflow-y-auto">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-                <div>
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-800 flex items-center gap-2">
-                        <TrendingUp className="text-blue-600 h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
-                        Performance del Restaurante
-                    </h1>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                        Analítica gerencial, rotación de mesas, evolución de ventas y productividad operativa
-                    </p>
-                </div>
+        <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+            {/* Header: visible en desktop, limpio en móvil para ganar espacio */}
+            <header className="mb-4 md:mb-8 hidden md:flex items-center justify-between">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                    <TrendingUp className="text-blue-600" />
+                    Performance del Restaurante
+                </h1>
                 <button
                     onClick={fetchStats}
                     disabled={loading}
-                    className="self-start sm:self-auto flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition active:scale-95 disabled:opacity-50"
                 >
                     <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     Actualizar
                 </button>
-            </div>
+            </header>
 
-            {/* Selectores y Filtros */}
-            <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 sm:mb-8 grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-end">
-                {/* Selector de Año */}
+            {/* Selectores (Estilo Gestión Mak) */}
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 md:mb-8 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 items-end">
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wider">Año</label>
+                    <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Año</label>
                     <div className="relative">
                         <select
                             value={year}
                             onChange={(e) => setYear(parseInt(e.target.value, 10))}
-                            className="w-full pl-3 pr-8 py-2 text-sm font-medium border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white cursor-pointer"
+                            className="w-full pl-3 pr-8 py-1.5 md:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
                         >
                             {availableYears.map(y => (
                                 <option key={y} value={y}>{y}</option>
                             ))}
                         </select>
-                        <Calendar className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                        <Calendar className="absolute right-2.5 top-2 md:top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
 
-                {/* Selector de Mes */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wider">Mes</label>
+                    <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Mes</label>
                     <div className="relative">
                         <select
                             value={month}
                             onChange={(e) => handleMonthChange(e.target.value)}
-                            className="w-full pl-3 pr-8 py-2 text-sm font-medium border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white cursor-pointer"
+                            className="w-full pl-3 pr-8 py-1.5 md:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
                         >
                             {months.map((m, i) => (
                                 <option key={i + 1} value={i + 1}>{m}</option>
                             ))}
                         </select>
-                        <Calendar className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                        <Calendar className="absolute right-2.5 top-2 md:top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
 
-                {/* Selector de Rango de Días */}
                 <div className="col-span-2 md:col-span-1">
                     <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">Rango de Días</label>
-                        <div className="flex items-center gap-1.5 text-[11px] bg-gray-100 px-2 py-0.5 rounded-md font-medium">
+                        <label className="block text-xs md:text-sm font-medium text-gray-700">Rango del Día (de - a)</label>
+                        <div className="flex items-center gap-1.5 text-[11px] bg-gray-100 px-2 py-0.5 rounded-md">
                             <button
                                 type="button"
                                 onClick={setRangeAll}
-                                className={`transition hover:text-blue-700 ${isFullMonth ? 'text-blue-600 font-bold' : 'text-gray-600'}`}
+                                className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                                title="Mes completo"
                             >
                                 Todo
                             </button>
@@ -169,7 +154,8 @@ export default function PerformanceDashboard() {
                             <button
                                 type="button"
                                 onClick={setRangeQ1}
-                                className={`transition hover:text-blue-700 ${startDay === 1 && endDay === 15 ? 'text-blue-600 font-bold' : 'text-gray-600'}`}
+                                className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                                title="Primera quincena (1 - 15)"
                             >
                                 1ª Q
                             </button>
@@ -177,125 +163,128 @@ export default function PerformanceDashboard() {
                             <button
                                 type="button"
                                 onClick={setRangeQ2}
-                                className={`transition hover:text-blue-700 ${startDay === 16 && endDay === daysInMonth ? 'text-blue-600 font-bold' : 'text-gray-600'}`}
+                                className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                                title={`Segunda quincena (16 - ${daysInMonth})`}
                             >
                                 2ª Q
                             </button>
                         </div>
                     </div>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2">
                         <input
                             type="number"
                             min="1"
                             max={daysInMonth}
                             value={startDay}
                             onChange={(e) => setStartDay(Math.max(1, Math.min(parseInt(e.target.value, 10) || 1, daysInMonth)))}
-                            className="w-1/2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                            className="w-1/2 px-3 py-1.5 md:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
-                        <span className="text-gray-400 text-xs font-bold">a</span>
                         <input
                             type="number"
                             min={startDay}
                             max={daysInMonth}
                             value={endDay}
                             onChange={(e) => setEndDay(Math.max(startDay, Math.min(parseInt(e.target.value, 10) || daysInMonth, daysInMonth)))}
-                            className="w-1/2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                            className="w-1/2 px-3 py-1.5 md:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Error Banner */}
+            {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
-                    <AlertCircle className="shrink-0 h-5 w-5" />
+                <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-8 border border-red-100 flex items-center gap-2">
+                    <AlertCircle size={18} />
                     <span className="text-sm font-medium">{error}</span>
                 </div>
             )}
 
-            {/* KPI Cards Superiores */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
-                {/* Ingresos Totales */}
-                <div className="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 transition hover:shadow-md">
-                    <div className="p-2.5 sm:p-3 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 shrink-0 font-bold text-base sm:text-lg">
-                        S/
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Ingresos</p>
-                        <h4 className="text-base sm:text-xl lg:text-2xl font-black text-gray-800 truncate">
-                            {formatCurrency(kpis.ingresos)}
-                        </h4>
-                        <span className="text-[10px] text-gray-400 font-medium">Ventas reales del periodo</span>
-                    </div>
-                </div>
-
-                {/* % Ocupación de Mesas */}
-                <div className="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 transition hover:shadow-md">
-                    <div className="p-2.5 sm:p-3 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 shrink-0">
-                        <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Ocupación Mesas</p>
-                        <h4 className="text-base sm:text-xl lg:text-2xl font-black text-gray-800 truncate">
-                            {Number(kpis.occupancyRate || 0).toFixed(1)}%
-                        </h4>
-                        <span className="text-[10px] text-gray-400 font-medium">Capacidad diaria usada</span>
+            {/* KPI Cards (Exacto diseño y proporciones de Gestión Mak) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
+                {/* 1. Ingresos */}
+                <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="p-2 md:p-3 bg-indigo-50 rounded-lg flex items-center justify-center w-9 h-9 md:w-12 md:h-12 shrink-0">
+                            <span className="text-indigo-600 font-bold text-base md:text-lg">S/</span>
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Ingresos</p>
+                            <h4 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
+                                {(kpis.ingresos || 0).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            </h4>
+                        </div>
                     </div>
                 </div>
 
-                {/* Ticket Promedio */}
-                <div className="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 transition hover:shadow-md">
-                    <div className="p-2.5 sm:p-3 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 shrink-0 font-bold text-base sm:text-lg">
-                        S/
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Ticket Promedio</p>
-                        <h4 className="text-base sm:text-xl lg:text-2xl font-black text-gray-800 truncate">
-                            {formatCurrency(kpis.avgTicket)}
-                        </h4>
-                        <span className="text-[10px] text-gray-400 font-medium">Consumo por cuenta</span>
+                {/* 2. Ocupación Mesas */}
+                <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="p-2 md:p-3 bg-blue-50 rounded-lg flex items-center justify-center w-9 h-9 md:w-12 md:h-12 shrink-0">
+                            <Users className="text-blue-600 h-5 w-5 md:h-6 md:w-6" />
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Ocupación</p>
+                            <h4 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
+                                {Number(kpis.occupancyRate || 0).toFixed(1)}%
+                            </h4>
+                        </div>
                     </div>
                 </div>
 
-                {/* Cantidad de Cuentas */}
-                <div className="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 transition hover:shadow-md">
-                    <div className="p-2.5 sm:p-3 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 shrink-0">
-                        <Receipt className="w-5 h-5 sm:w-6 sm:h-6" />
+                {/* 3. Ticket Promedio */}
+                <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="p-2 md:p-3 bg-green-50 rounded-lg flex items-center justify-center w-9 h-9 md:w-12 md:h-12 shrink-0">
+                            <span className="text-green-600 font-bold text-base md:text-lg">S/</span>
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">TICKET PROM.</p>
+                            <h4 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
+                                {(kpis.avgTicket || 0).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            </h4>
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Cuentas del Mes</p>
-                        <h4 className="text-base sm:text-xl lg:text-2xl font-black text-gray-800 truncate">
-                            {kpis.totalAccounts || 0}
-                        </h4>
-                        <span className="text-[10px] text-gray-400 font-medium">Cuentas atendidas</span>
+                </div>
+
+                {/* 4. Cuentas del Mes */}
+                <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="p-2 md:p-3 bg-orange-50 rounded-lg flex items-center justify-center w-9 h-9 md:w-12 md:h-12 shrink-0">
+                            <TrendingUp className="text-orange-600 h-5 w-5 md:h-6 md:w-6" />
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">Cuentas</p>
+                            <h4 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
+                                {kpis.totalAccounts || 0}
+                            </h4>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* SECCIÓN 1: EVOLUTIVOS ANUALES (Ingresos vs Gastos & Ocupación) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            {/* FILA 1: EVOLUTIVOS ANUALES (2 columnas) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Evolutivo Mensual: Ingresos vs Gastos */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-emerald-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Evolutivo Mensual {year}</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">Ene - Dic</span>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-emerald-400 pl-4 uppercase tracking-tight">
+                        Evolutivo Mensual {year}
                     </h3>
-                    <div className="h-[280px] sm:h-[320px]">
+                    <div className="h-[300px]">
                         <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                             <AreaChart data={data?.evolution || []}>
                                 <defs>
                                     <linearGradient id="colorIncRest" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
                                         <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorExpRest" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
+                                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1} />
                                         <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(val) => `S/ ${val}`} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `S/ ${val}`} />
                                 <Tooltip
                                     formatter={(val) => [formatCurrency(val), '']}
                                     labelFormatter={(label, payload) => {
@@ -304,15 +293,15 @@ export default function PerformanceDashboard() {
                                         }
                                         return label;
                                     }}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+                                <Legend verticalAlign="top" height={36} />
                                 <Area
                                     type="monotone"
                                     name="Ingresos Reales"
                                     dataKey="ingresos"
                                     stroke="#10b981"
-                                    strokeWidth={2.5}
+                                    strokeWidth={2}
                                     fillOpacity={1}
                                     fill="url(#colorIncRest)"
                                 />
@@ -330,13 +319,12 @@ export default function PerformanceDashboard() {
                     </div>
                 </div>
 
-                {/* Evolutivo de % de Ocupación de Mesas */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-teal-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Evolutivo de % Ocupación {year}</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">Rotación mesas</span>
+                {/* Evolutivo de % de Ocupación */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-teal-500 pl-4 uppercase tracking-tight">
+                        Evolutivo de % de Ocupación {year}
                     </h3>
-                    <div className="h-[280px] sm:h-[320px]">
+                    <div className="h-[300px]">
                         <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                             <AreaChart data={data?.evolution || []}>
                                 <defs>
@@ -346,22 +334,27 @@ export default function PerformanceDashboard() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-                                <YAxis axisLine={false} tickLine={false} domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(val) => `${val}%`} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    domain={[0, 100]}
+                                    tickFormatter={(val) => `${val}%`}
+                                />
                                 <Tooltip
-                                    formatter={(val) => [`${Number(val || 0).toFixed(1)}%`, 'Tasa Ocupación']}
+                                    formatter={(val) => [`${Number(val || 0).toFixed(1)}%`, 'Tasa de Ocupación']}
                                     labelFormatter={(label, payload) => {
                                         if (payload && payload[0]?.payload?.fullName) {
                                             return `${payload[0].payload.fullName} ${year}`;
                                         }
                                         return label;
                                     }}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+                                <Legend verticalAlign="top" height={36} />
                                 <Area
                                     type="monotone"
-                                    name="% Ocupación Mesas"
+                                    name="% Ocupación"
                                     dataKey="ocupacion"
                                     stroke="#0d9488"
                                     strokeWidth={2.5}
@@ -376,20 +369,24 @@ export default function PerformanceDashboard() {
                 </div>
             </div>
 
-            {/* SECCIÓN 2: MÉTRICAS DIARIAS (Comparativo Diario vs Mes Anterior & Volumen Diario) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            {/* FILA 2: MÉTRICAS DIARIAS (2 columnas) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                 {/* Comparativo Diario de Ingresos */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-blue-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Comparativo Diario de Ingresos</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">vs Mes Anterior</span>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-blue-400 pl-4 uppercase tracking-tight">
+                        Comparativo Diario{rangeText}
                     </h3>
-                    <div className="h-[280px] sm:h-[320px]">
+                    <div className="h-[300px]">
                         <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                             <LineChart data={data?.dailyComparison || []}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(val) => `S/ ${val}`} />
+                                <XAxis
+                                    dataKey="day"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    label={{ value: 'Día del Mes', position: 'insideBottom', offset: -5 }}
+                                />
+                                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `S/ ${val}`} />
                                 <Tooltip
                                     formatter={(val, name) => [
                                         formatCurrency(val),
@@ -401,25 +398,25 @@ export default function PerformanceDashboard() {
                                         }
                                         return `Día ${label}`;
                                     }}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+                                <Legend verticalAlign="top" height={36} />
                                 <Line
                                     type="monotone"
                                     name="Mes Seleccionado"
                                     dataKey="current"
                                     stroke="#3b82f6"
                                     strokeWidth={3}
-                                    dot={{ r: 3, fill: '#3b82f6' }}
+                                    dot={{ r: 4 }}
                                     activeDot={{ r: 6 }}
                                 />
                                 <Line
                                     type="monotone"
                                     name="Mes Anterior"
                                     dataKey="previous"
-                                    stroke="#cbd5e1"
+                                    stroke="#d1d5db"
                                     strokeWidth={2}
-                                    strokeDasharray="4 4"
+                                    strokeDasharray="5 5"
                                     dot={false}
                                 />
                             </LineChart>
@@ -427,29 +424,28 @@ export default function PerformanceDashboard() {
                     </div>
                 </div>
 
-                {/* Volumen Diario: Cuentas y Mesas Atendidas */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-cyan-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Cuentas y Mesas por Día{rangeSubtitle}</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">Volumen</span>
+                {/* Mesas y Cuentas por Día */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-cyan-400 pl-4 uppercase tracking-tight">
+                        Mesas Ocupadas por Día{rangeText}
                     </h3>
-                    <div className="h-[280px] sm:h-[320px]">
+                    <div className="h-[300px]">
                         <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                             <BarChart data={data?.dailyVolumeData || []}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                                <YAxis axisLine={false} tickLine={false} />
                                 <Tooltip
                                     formatter={(val, name) => [`${val} ${name === 'cuentas' ? 'cuentas' : 'mesas'}`, name === 'cuentas' ? 'Cuentas' : 'Mesas']}
                                     labelFormatter={(label) => `Día ${label}`}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
-                                <Bar dataKey="cuentas" name="Cuentas Atendidas" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="cuentas" position="top" fill="#6b7280" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
+                                <Legend verticalAlign="top" height={36} />
+                                <Bar dataKey="mesas" name="Mesas Ocupadas" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                                    <LabelList dataKey="mesas" position="top" fill="#6b7280" fontSize={11} formatter={(val) => val > 0 ? val : ''} />
                                 </Bar>
-                                <Bar dataKey="mesas" name="Mesas Ocupadas" fill="#06b6d4" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="mesas" position="top" fill="#6b7280" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
+                                <Bar dataKey="cuentas" name="Cuentas Atendidas" fill="#10b981" radius={[4, 4, 0, 0]}>
+                                    <LabelList dataKey="cuentas" position="top" fill="#6b7280" fontSize={11} formatter={(val) => val > 0 ? val : ''} />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
@@ -457,13 +453,88 @@ export default function PerformanceDashboard() {
                 </div>
             </div>
 
-            {/* SECCIÓN 3: PREFERENCIAS, PRODUCTIVIDAD Y DISTRIBUCIÓN */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-                {/* Ranking de Productividad por Usuario */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 col-span-1 lg:col-span-1">
-                    <div className="flex items-center justify-between mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-indigo-500 pl-3 sm:pl-4">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-800 uppercase tracking-tight">
-                            Productividad
+            {/* FILA 3: PREFERENCIAS DE MESAS & DISTRIBUCIÓN DE VENTAS (2 columnas amplias) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                {/* Preferencias de Mesas */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-cyan-500 pl-4 uppercase tracking-tight">
+                        Preferencias de Mesas{rangeText}
+                    </h3>
+                    <div className="h-[380px]">
+                        <ResponsiveContainer width="99%" height="100%">
+                            <BarChart
+                                data={(data?.topTables || []).map(t => ({
+                                    ...t,
+                                    displayName: `Mesa ${t.tableNumber} (${t.areaName})`
+                                }))}
+                                layout="vertical"
+                            >
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="displayName"
+                                    type="category"
+                                    width={125}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#4b5563' }}
+                                />
+                                <Tooltip
+                                    formatter={(val, name, item) => [
+                                        `${val} cuentas atendidas (${formatCurrency(item.payload.total)})`,
+                                        'Cuentas'
+                                    ]}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                />
+                                <Bar dataKey="count" fill="#0284c7" radius={[0, 4, 4, 0]} barSize={32}>
+                                    <LabelList dataKey="count" position="right" fill="#6b7280" fontSize={12} formatter={(val) => `${val} c.`} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Distribución de Ventas (Top Productos) */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-orange-500 pl-4 uppercase tracking-tight">
+                        Distribución de Ventas{rangeText}
+                    </h3>
+                    <div className="h-[380px]">
+                        <ResponsiveContainer width="99%" height="100%">
+                            <BarChart data={data?.topProducts || []} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="name"
+                                    type="category"
+                                    width={140}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#4b5563' }}
+                                />
+                                <Tooltip
+                                    formatter={(val, name, item) => [
+                                        `${val} unidades (${formatCurrency(item.payload.total)})`,
+                                        'Cantidad'
+                                    ]}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                />
+                                <Bar dataKey="quantity" fill="#f97316" radius={[0, 4, 4, 0]} barSize={32}>
+                                    <LabelList dataKey="quantity" position="right" fill="#6b7280" fontSize={12} formatter={(val) => `${val} u.`} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* FILA 4: PRODUCTIVIDAD & MÉTODOS DE PAGO (2 columnas amplias) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                {/* Ranking de Productividad */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-6 border-l-8 border-indigo-400 pl-4">
+                        <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">
+                            Productividad por Usuario
                         </h3>
                         <div className="flex bg-gray-100 p-0.5 rounded-lg text-xs font-semibold">
                             <button
@@ -481,48 +552,48 @@ export default function PerformanceDashboard() {
                         </div>
                     </div>
 
-                    <div className="h-[300px]">
+                    <div className="h-[280px]">
                         {productivityTab === 'orders' ? (
                             <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                                 <BarChart
-                                    data={data?.userProductivity?.byOrders?.slice(0, 7) || []}
+                                    data={data?.userProductivity?.byOrders || []}
                                     layout="vertical"
-                                    margin={{ left: 10, right: 30 }}
+                                    margin={{ right: 40 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                                     <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={90} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
+                                    <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
                                     <Tooltip
                                         formatter={(val, name, item) => [
                                             `${formatCurrency(val)} (${item.payload.ordersCount || 0} órdenes)`,
                                             'Ventas'
                                         ]}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                     />
-                                    <Bar dataKey="total" fill="#6366f1" radius={[0, 6, 6, 0]} barSize={26}>
-                                        <LabelList dataKey="total" position="right" fill="#4b5563" fontSize={11} formatter={(v) => formatCurrencyShort(v)} />
+                                    <Bar dataKey="total" fill="#818cf8" radius={[0, 4, 4, 0]} barSize={30}>
+                                        <LabelList dataKey="total" position="right" fill="#6b7280" fontSize={11} formatter={(v) => `S/ ${Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`} />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
                             <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                                 <BarChart
-                                    data={data?.userProductivity?.byPayments?.slice(0, 7) || []}
+                                    data={data?.userProductivity?.byPayments || []}
                                     layout="vertical"
-                                    margin={{ left: 10, right: 30 }}
+                                    margin={{ right: 40 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                                     <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={90} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
+                                    <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
                                     <Tooltip
                                         formatter={(val, name, item) => [
                                             `${formatCurrency(val)} (${item.payload.paymentCount || 0} pagos)`,
                                             'Cobrado'
                                         ]}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                     />
-                                    <Bar dataKey="total" fill="#8b5cf6" radius={[0, 6, 6, 0]} barSize={26}>
-                                        <LabelList dataKey="total" position="right" fill="#4b5563" fontSize={11} formatter={(v) => formatCurrencyShort(v)} />
+                                    <Bar dataKey="total" fill="#a78bfa" radius={[0, 4, 4, 0]} barSize={30}>
+                                        <LabelList dataKey="total" position="right" fill="#6b7280" fontSize={11} formatter={(v) => `S/ ${Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`} />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -530,89 +601,22 @@ export default function PerformanceDashboard() {
                     </div>
                 </div>
 
-                {/* Preferencia de Mesas */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 col-span-1 lg:col-span-1">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-sky-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Preferencia de Mesas</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">Rotación</span>
+                {/* Métodos de Pago */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-violet-400 pl-4 uppercase tracking-tight">
+                        Métodos de Pago{rangeText}
                     </h3>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
-                            <BarChart
-                                data={(data?.topTables || []).slice(0, 7).map(t => ({
-                                    ...t,
-                                    displayName: `${t.tableNumber} (${t.areaName})`
-                                }))}
-                                layout="vertical"
-                                margin={{ left: 10, right: 30 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="displayName" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
-                                <Tooltip
-                                    formatter={(val, name, item) => [
-                                        `${val} cuentas atendidas (${formatCurrency(item.payload.total)})`,
-                                        'Cuentas'
-                                    ]}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
-                                />
-                                <Bar dataKey="count" fill="#0284c7" radius={[0, 6, 6, 0]} barSize={26}>
-                                    <LabelList dataKey="count" position="right" fill="#4b5563" fontSize={11} formatter={(v) => `${v} c.`} />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Distribución de Ventas (Top Productos & Métodos de Pago) */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 col-span-1 lg:col-span-1">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 border-l-4 sm:border-l-8 border-amber-500 pl-3 sm:pl-4 uppercase tracking-tight flex items-center justify-between">
-                        <span>Top Productos Vendidos</span>
-                        <span className="text-xs font-medium text-gray-400 normal-case">Unidades</span>
-                    </h3>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
-                            <BarChart
-                                data={(data?.topProducts || []).slice(0, 7)}
-                                layout="vertical"
-                                margin={{ left: 10, right: 30 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4b5563' }} />
-                                <Tooltip
-                                    formatter={(val, name, item) => [
-                                        `${val} unidades (${formatCurrency(item.payload.total)})`,
-                                        'Cantidad'
-                                    ]}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
-                                />
-                                <Bar dataKey="quantity" fill="#f59e0b" radius={[0, 6, 6, 0]} barSize={26}>
-                                    <LabelList dataKey="quantity" position="right" fill="#4b5563" fontSize={11} formatter={(v) => `${v} u.`} />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* SECCIÓN 4: DESGLOSE DE MÉTODOS DE PAGO */}
-            {data?.paymentMethods && data.paymentMethods.length > 0 && (
-                <div className="mt-6 sm:mt-8 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 border-l-4 sm:border-l-8 border-violet-500 pl-3 sm:pl-4 uppercase tracking-tight">
-                        Distribución de Ingresos por Método de Pago
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                        {data.paymentMethods.map((pm, idx) => (
-                            <div key={idx} className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-2 gap-4">
+                        {(data?.paymentMethods || []).map((pm, idx) => (
+                            <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
                                 <span className="text-xs font-bold text-gray-500 uppercase">{pm.method}</span>
-                                <h4 className="text-base sm:text-xl font-black text-gray-800 mt-1">{formatCurrency(pm.total)}</h4>
-                                <span className="text-[11px] text-gray-400 font-medium">{pm.count} transacciones</span>
+                                <h4 className="text-lg md:text-xl font-bold text-gray-800 mt-2">{formatCurrency(pm.total)}</h4>
+                                <span className="text-[11px] text-gray-400 font-medium mt-1">{pm.count} transacciones</span>
                             </div>
                         ))}
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

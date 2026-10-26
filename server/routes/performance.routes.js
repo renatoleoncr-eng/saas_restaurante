@@ -401,38 +401,64 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
 
-        // 8. Distribución de Ventas (Top Productos más vendidos)
-        const topProductsRaw = await Order.findAll({
-            attributes: [
-                'ProductId',
-                [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
-                [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
-            ],
-            where: {
-                TenantId: tenantId,
-                status: { [Op.ne]: 'cancelled' },
-                createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
-            },
-            include: [{
-                model: Product,
-                paranoid: false,
-                attributes: ['id', 'name', 'category', 'type']
-            }],
-            group: ['ProductId', 'Product.id', 'Product.name', 'Product.category', 'Product.type'],
-            raw: true,
-            nest: true
-        });
+        // 8. Distribución de Ventas (Top Productos más vendidos: Carta y Promociones 2x1/Combos)
+        const [productsWithFk, combosWithoutFk] = await Promise.all([
+            Order.findAll({
+                attributes: [
+                    'ProductId',
+                    [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
+                    [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
+                ],
+                where: {
+                    TenantId: tenantId,
+                    status: { [Op.ne]: 'cancelled' },
+                    ProductId: { [Op.ne]: null },
+                    createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
+                },
+                include: [{
+                    model: Product,
+                    paranoid: false,
+                    attributes: ['id', 'name', 'category', 'type']
+                }],
+                group: ['ProductId', 'Product.id', 'Product.name', 'Product.category', 'Product.type'],
+                raw: true,
+                nest: true
+            }),
+            Order.findAll({
+                attributes: [
+                    'notes',
+                    [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
+                    [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
+                ],
+                where: {
+                    TenantId: tenantId,
+                    status: { [Op.ne]: 'cancelled' },
+                    ProductId: null,
+                    createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
+                },
+                group: ['notes'],
+                raw: true
+            })
+        ]);
 
-        const topProducts = topProductsRaw
-            .map(r => ({
+        const topProducts = [
+            ...productsWithFk.map(r => ({
                 productId: r.ProductId,
                 name: r.Product?.name || `Producto #${r.ProductId}`,
-                category: r.Product?.category || r.Product?.type || 'General',
+                category: r.Product?.category || r.Product?.type || 'Carta',
+                quantity: parseInt(r.quantity || 0, 10),
+                total: parseFloat(r.total || 0)
+            })),
+            ...combosWithoutFk.map(r => ({
+                productId: null,
+                name: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Promoción 2x1',
+                category: 'Promoción 2x1',
                 quantity: parseInt(r.quantity || 0, 10),
                 total: parseFloat(r.total || 0)
             }))
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 10);
+        ]
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 10);
 
         // 9. Distribución de Ingresos por Método de Pago
         const paymentMethodsRaw = await Payment.findAll({
