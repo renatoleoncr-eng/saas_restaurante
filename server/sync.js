@@ -58,6 +58,11 @@ async function runAutomaticFix() {
 
         // BILLING CONFIGS
         { table: 'BillingConfigs', column: 'billingMode', type: "VARCHAR(50) DEFAULT 'libre'" },
+        // TENANTS EXTENSIONS
+        { table: 'Tenants', column: 'storageLimitMb', type: 'INTEGER DEFAULT 50' },
+        { table: 'Tenants', column: 'internalNotes', type: 'TEXT' },
+        { table: 'Tenants', column: 'ownerPhone', type: 'VARCHAR(255)' },
+        { table: 'Tenants', column: 'onboardingCompleted', type: 'BOOLEAN DEFAULT 0' },
 
         // TABLES SOFT DELETE
         { table: 'Tables', column: 'deletedAt', type: 'DATETIME NULL DEFAULT NULL' },
