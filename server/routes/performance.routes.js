@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const {
     Payment, Account, Expense, Table, Area,
-    Order, Product, User
+    Order, Product, User, DrinkPromotion
 } = require('../models');
 const { requireRole } = require('../middleware/auth.middleware');
 
@@ -402,7 +402,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             .slice(0, 10);
 
         // 8. Distribución de Ventas (Top Productos más vendidos: Carta y Promociones 2x1/Combos)
-        const [productsWithFk, combosWithoutFk] = await Promise.all([
+        const [productsWithFk, ordersWithoutFk, drinkPromos] = await Promise.all([
             Order.findAll({
                 attributes: [
                     'ProductId',
@@ -424,8 +424,11 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 raw: true,
                 nest: true
             }),
-            Order.findOne({
+            Order.findAll({
                 attributes: [
+                    'priceAtOrder',
+                    'presentation',
+                    'notes',
                     [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
                     [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
                 ],
@@ -435,20 +438,66 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     ProductId: null,
                     createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
+                group: ['priceAtOrder', 'presentation', 'notes'],
+                raw: true
+            }),
+            DrinkPromotion.findAll({
+                where: { TenantId: tenantId },
                 raw: true
             })
         ]);
 
-        const comboQty = parseInt(combosWithoutFk?.quantity || 0, 10);
-        const comboTotal = parseFloat(combosWithoutFk?.total || 0);
+        const promoVariantsMap = new Map();
+        for (const r of ordersWithoutFk) {
+            const price = parseFloat(r.priceAtOrder || 0);
+            const qty = parseInt(r.quantity || 0, 10);
+            const total = parseFloat(r.total || 0);
+            if (qty <= 0) continue;
 
-        const promoItems = comboQty > 0 ? [{
-            productId: null,
-            name: 'Promociones 2x1',
-            category: '2x1 / Promos',
-            quantity: comboQty,
-            total: comboTotal
-        }] : [];
+            const isCombo = (r.notes && r.notes.includes(' + ')) || !!r.presentation;
+
+            let itemName = '';
+            let category = '2x1 / Promos';
+
+            if (isCombo) {
+                // Caso A: Es un Combo 2x1 -> Determinar nombre de la variante (ej: "Promo 2 x s/35", "Promo 2 x s/ 40", "Promo 2x50")
+                let variant = (r.presentation && r.presentation.trim()) || '';
+                if (!variant) {
+                    const matched = drinkPromos.find(p => Math.abs(parseFloat(p.price) - price) < 0.05);
+                    if (matched) {
+                        variant = matched.name;
+                    } else {
+                        variant = price > 0 ? `2x S/ ${price.toFixed(0)}` : 'Promoción 2x1';
+                    }
+                }
+                
+                // Formato uniforme: "Promo 2 x s/35"
+                if (!variant.toLowerCase().startsWith('promo')) {
+                    itemName = `Promo ${variant}`;
+                } else {
+                    itemName = variant;
+                }
+            } else {
+                // Caso B: Es un trago individual pedido desde la pestaña 2x1 (ej. "Margarita clasica", "Mojito clasico")
+                const rawNote = (r.notes || '').replace(/^2x1:\s*/i, '').trim();
+                itemName = rawNote || (price > 0 ? `Bebida (S/ ${price.toFixed(0)})` : 'Bebida');
+                category = 'Bebidas';
+            }
+
+            if (promoVariantsMap.has(itemName)) {
+                const prev = promoVariantsMap.get(itemName);
+                prev.quantity += qty;
+                prev.total += total;
+            } else {
+                promoVariantsMap.set(itemName, {
+                    productId: null,
+                    name: itemName,
+                    category,
+                    quantity: qty,
+                    total
+                });
+            }
+        }
 
         const topProducts = [
             ...productsWithFk.map(r => ({
@@ -458,7 +507,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 quantity: parseInt(r.quantity || 0, 10),
                 total: parseFloat(r.total || 0)
             })),
-            ...promoItems
+            ...Array.from(promoVariantsMap.values())
         ]
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10);
