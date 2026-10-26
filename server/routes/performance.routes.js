@@ -424,9 +424,8 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 raw: true,
                 nest: true
             }),
-            Order.findAll({
+            Order.findOne({
                 attributes: [
-                    'notes',
                     [sequelize.fn('SUM', sequelize.col('quantity')), 'quantity'],
                     [sequelize.fn('SUM', sequelize.literal('quantity * COALESCE(priceAtOrder, 0)')), 'total']
                 ],
@@ -436,10 +435,20 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     ProductId: null,
                     createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
-                group: ['notes'],
                 raw: true
             })
         ]);
+
+        const comboQty = parseInt(combosWithoutFk?.quantity || 0, 10);
+        const comboTotal = parseFloat(combosWithoutFk?.total || 0);
+
+        const promoItems = comboQty > 0 ? [{
+            productId: null,
+            name: 'Promociones 2x1',
+            category: '2x1 / Promos',
+            quantity: comboQty,
+            total: comboTotal
+        }] : [];
 
         const topProducts = [
             ...productsWithFk.map(r => ({
@@ -449,13 +458,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 quantity: parseInt(r.quantity || 0, 10),
                 total: parseFloat(r.total || 0)
             })),
-            ...combosWithoutFk.map(r => ({
-                productId: null,
-                name: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Promoción 2x1',
-                category: 'Promoción 2x1',
-                quantity: parseInt(r.quantity || 0, 10),
-                total: parseFloat(r.total || 0)
-            }))
+            ...promoItems
         ]
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10);
