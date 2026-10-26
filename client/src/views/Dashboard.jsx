@@ -12,10 +12,11 @@ import DrinkPromotionsConfig from '../components/DrinkPromotionsConfig';
 import BillingConfigModal from '../components/BillingConfigModal';
 import QrManagement from './QrManagement';
 import AuditLogView from '../components/AuditLogView';
+import PerformanceDashboard from './PerformanceDashboard';
 import { 
     LogOut, LayoutGrid, Utensils, Package, ChevronLeft, ChevronRight, 
     Users, User, ChevronUp, Key, TrendingUp, FileText, Wine, CreditCard, Settings,
-    Tv, Menu, ClipboardList
+    Tv, Menu, ClipboardList, BarChart3
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -73,9 +74,9 @@ export default function Dashboard() {
     // Role-based and module-based view protection
     useEffect(() => {
         const restrictedViews = {
-            waiter: ['drink_promos', 'audit'],
-            cashier: ['drink_promos', 'audit'], 
-            kitchen: ['carta', 'insumos', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit']
+            waiter: ['drink_promos', 'audit', 'performance'],
+            cashier: ['drink_promos', 'audit', 'performance'], 
+            kitchen: ['carta', 'insumos', 'menu', 'reports', 'drink_promos', 'qr_management', 'audit', 'performance']
         };
 
         // Module-gated views: redirect if module is disabled
@@ -194,6 +195,9 @@ export default function Dashboard() {
         }
         if (currentView === 'audit') {
             return <AuditLogView />;
+        }
+        if (currentView === 'performance') {
+            return <PerformanceDashboard />;
         }
 
         switch (user.role) {
@@ -425,6 +429,18 @@ export default function Dashboard() {
                             >
                                 <ClipboardList size={20} />
                                 {!isCollapsed && <span>Auditoría</span>}
+                            </button>
+                        )}
+
+                        {/* Performance - Admin Only */}
+                        {user.role === 'admin' && (
+                            <button
+                                onClick={() => { setCurrentView('performance'); if (window.innerWidth < 768) setIsCollapsed(true); }}
+                                title="Performance"
+                                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${currentView === 'performance' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} ${isCollapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <TrendingUp size={20} />
+                                {!isCollapsed && <span>Performance</span>}
                             </button>
                         )}
 
