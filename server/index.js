@@ -43,6 +43,7 @@ const expenseRoutes = require('./routes/expense.routes');
 const accountRoutes = require('./routes/account.routes');
 const drinkPromotionRoutes = require('./routes/drink-promotions.routes');
 const sessionRoutes = require('./routes/session.routes');
+const performanceRoutes = require('./routes/performance.routes');
 const revenueRoutes = require('./routes/revenue.routes');
 const billingRoutes = require('./routes/billing.routes');
 const qrRoutes = require('./routes/qr.routes');
@@ -452,6 +453,7 @@ app.use('/api', requireTenant, authMiddleware, expenseRoutes);        // gastos
 app.use('/api', requireTenant, authMiddleware, accountRoutes);        // cuentas
 app.use('/api', requireTenant, authMiddleware, drinkPromotionRoutes); // promociones de bebidas
 app.use('/api', requireTenant, authMiddleware, sessionRoutes);        // sesiones de caja
+app.use('/api', requireTenant, authMiddleware, performanceRoutes);    // estadísticas y performance analítico
 
 // Reservation Auto-Release Logic (Run every minute)
 setInterval(async () => {
