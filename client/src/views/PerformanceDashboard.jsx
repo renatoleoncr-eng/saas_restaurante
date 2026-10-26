@@ -286,7 +286,7 @@ export default function PerformanceDashboard() {
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                 <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `S/ ${val}`} />
                                 <Tooltip
-                                    formatter={(val) => [formatCurrency(val), '']}
+                                    formatter={(val, name) => [formatCurrency(val), name]}
                                     labelFormatter={(label, payload) => {
                                         if (payload && payload[0]?.payload?.fullName) {
                                             return `${payload[0].payload.fullName} ${year}`;
@@ -390,7 +390,7 @@ export default function PerformanceDashboard() {
                                 <Tooltip
                                     formatter={(val, name) => [
                                         formatCurrency(val),
-                                        name === 'current' ? 'Mes Seleccionado' : 'Mes Anterior'
+                                        name === 'current' || name === 'Mes Seleccionado' ? 'Mes Seleccionado' : 'Mes Anterior'
                                     ]}
                                     labelFormatter={(label, payload) => {
                                         if (payload && payload[0]) {
@@ -424,7 +424,7 @@ export default function PerformanceDashboard() {
                     </div>
                 </div>
 
-                {/* Mesas y Cuentas por Día */}
+                {/* Mesas Ocupadas por Día */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-cyan-400 pl-4 uppercase tracking-tight">
                         Mesas Ocupadas por Día{rangeText}
@@ -436,16 +436,12 @@ export default function PerformanceDashboard() {
                                 <XAxis dataKey="day" axisLine={false} tickLine={false} />
                                 <YAxis axisLine={false} tickLine={false} />
                                 <Tooltip
-                                    formatter={(val, name) => [`${val} ${name === 'cuentas' ? 'cuentas' : 'mesas'}`, name === 'cuentas' ? 'Cuentas' : 'Mesas']}
+                                    formatter={(val) => [`${val} mesas`, 'Ocupadas']}
                                     labelFormatter={(label) => `Día ${label}`}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Legend verticalAlign="top" height={36} />
-                                <Bar dataKey="mesas" name="Mesas Ocupadas" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="mesas" position="top" fill="#6b7280" fontSize={11} formatter={(val) => val > 0 ? val : ''} />
-                                </Bar>
-                                <Bar dataKey="cuentas" name="Cuentas Atendidas" fill="#10b981" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="cuentas" position="top" fill="#6b7280" fontSize={11} formatter={(val) => val > 0 ? val : ''} />
+                                <Bar dataKey="mesas" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                                    <LabelList dataKey="mesas" position="top" fill="#6b7280" fontSize={12} formatter={(val) => val > 0 ? val : ''} />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
