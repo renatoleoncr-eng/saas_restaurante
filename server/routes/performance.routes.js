@@ -120,13 +120,21 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             Payment.findOne({
                 attributes: [
                     [sequelize.fn('SUM', sequelize.col('amount')), 'totalIncome'],
-                    [sequelize.fn('COUNT', sequelize.col('id')), 'totalPayments']
+                    [sequelize.fn('COUNT', sequelize.col('Payment.id')), 'totalPayments']
                 ],
                 where: {
                     TenantId: tenantId,
                     method: { [Op.ne]: 'qr_adjustment' },
                     createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
+                include: [{
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }],
                 raw: true
             }),
             Account.findOne({
@@ -137,6 +145,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 where: {
                     TenantId: tenantId,
                     status: 'closed',
+                    accountType: 'standard',
                     closedAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
                 raw: true
@@ -169,6 +178,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             where: {
                 TenantId: tenantId,
                 status: 'closed',
+                accountType: 'standard',
                 TableId: { [Op.ne]: null },
                 closedAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
@@ -197,7 +207,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
         const [yearlyIncomeRaw, yearlyExpensesRaw, yearlyAccountsRaw, yearlyOccupancyRaw] = await Promise.all([
             Payment.findAll({
                 attributes: [
-                    [getMonthExpr('createdAt'), 'stat_month'],
+                    [getMonthExpr('Payment.createdAt'), 'stat_month'],
                     [sequelize.fn('SUM', sequelize.col('amount')), 'total']
                 ],
                 where: {
@@ -205,6 +215,14 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     method: { [Op.ne]: 'qr_adjustment' },
                     createdAt: { [Op.between]: [yearlyRange.start, yearlyRange.end] }
                 },
+                include: [{
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }],
                 group: ['stat_month'],
                 raw: true
             }),
@@ -228,6 +246,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 where: {
                     TenantId: tenantId,
                     status: 'closed',
+                    accountType: 'standard',
                     closedAt: { [Op.between]: [yearlyRange.start, yearlyRange.end] }
                 },
                 group: ['stat_month'],
@@ -242,6 +261,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 where: {
                     TenantId: tenantId,
                     status: 'closed',
+                    accountType: 'standard',
                     TableId: { [Op.ne]: null },
                     closedAt: { [Op.between]: [yearlyRange.start, yearlyRange.end] }
                 },
@@ -297,7 +317,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
         const [currentDailyRaw, prevDailyRaw] = await Promise.all([
             Payment.findAll({
                 attributes: [
-                    [getDayExpr('createdAt'), 'stat_day'],
+                    [getDayExpr('Payment.createdAt'), 'stat_day'],
                     [sequelize.fn('SUM', sequelize.col('amount')), 'total']
                 ],
                 where: {
@@ -305,12 +325,20 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     method: { [Op.ne]: 'qr_adjustment' },
                     createdAt: { [Op.between]: [fullMonthRange.start, fullMonthRange.end] }
                 },
+                include: [{
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }],
                 group: ['stat_day'],
                 raw: true
             }),
             Payment.findAll({
                 attributes: [
-                    [getDayExpr('createdAt'), 'stat_day'],
+                    [getDayExpr('Payment.createdAt'), 'stat_day'],
                     [sequelize.fn('SUM', sequelize.col('amount')), 'total']
                 ],
                 where: {
@@ -318,6 +346,14 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     method: { [Op.ne]: 'qr_adjustment' },
                     createdAt: { [Op.between]: [prevMonthRange.start, prevMonthRange.end] }
                 },
+                include: [{
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }],
                 group: ['stat_day'],
                 raw: true
             })
@@ -346,6 +382,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             where: {
                 TenantId: tenantId,
                 status: 'closed',
+                accountType: 'standard',
                 closedAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
             group: ['stat_day'],
@@ -373,6 +410,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             where: {
                 TenantId: tenantId,
                 status: 'closed',
+                accountType: 'standard',
                 TableId: { [Op.ne]: null },
                 closedAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
@@ -416,11 +454,21 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     ProductId: { [Op.ne]: null },
                     createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
-                include: [{
-                    model: Product,
-                    paranoid: false,
-                    attributes: ['id', 'name', 'category', 'type', 'presentations']
-                }],
+                include: [
+                    {
+                        model: Product,
+                        paranoid: false,
+                        attributes: ['id', 'name', 'category', 'type', 'presentations']
+                    },
+                    {
+                        model: Account,
+                        attributes: [],
+                        where: {
+                            status: 'closed',
+                            accountType: 'standard'
+                        }
+                    }
+                ],
                 group: ['ProductId', 'Order.presentation', 'Product.id', 'Product.name', 'Product.category', 'Product.type', 'Product.presentations'],
                 raw: true,
                 nest: true
@@ -439,6 +487,14 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                     ProductId: null,
                     createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
                 },
+                include: [{
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }],
                 group: ['priceAtOrder', 'presentation', 'notes'],
                 raw: true
             }),
@@ -572,13 +628,21 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             attributes: [
                 'method',
                 [sequelize.fn('SUM', sequelize.col('amount')), 'total'],
-                [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+                [sequelize.fn('COUNT', sequelize.col('Payment.id')), 'count']
             ],
             where: {
                 TenantId: tenantId,
                 method: { [Op.ne]: 'qr_adjustment' },
                 createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
+            include: [{
+                model: Account,
+                attributes: [],
+                where: {
+                    status: 'closed',
+                    accountType: 'standard'
+                }
+            }],
             group: ['method'],
             raw: true
         });
@@ -599,7 +663,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
         });
 
         // 10. Ranking de Productividad por Usuario
-        // 10a. Mozos / Staff por órdenes tomadas
+        // 10a. Mozos / Staff por órdenes tomadas (solo de cuentas cerradas estándar de clientes)
         const userOrdersRaw = await Order.findAll({
             attributes: [
                 'UserId',
@@ -612,10 +676,20 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 UserId: { [Op.ne]: null },
                 createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
-            include: [{
-                model: User,
-                attributes: ['id', 'displayName', 'username', 'role']
-            }],
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'displayName', 'username', 'role']
+                },
+                {
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }
+            ],
             group: ['UserId', 'User.id', 'User.displayName', 'User.username', 'User.role'],
             raw: true,
             nest: true
@@ -631,7 +705,7 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             }))
             .sort((a, b) => b.total - a.total);
 
-        // 10b. Cajeros / Staff por cobros procesados
+        // 10b. Cajeros / Staff por cobros procesados (solo cuentas cerradas estándar)
         const userPaymentsRaw = await Payment.findAll({
             attributes: [
                 'UserId',
@@ -644,10 +718,20 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
                 UserId: { [Op.ne]: null },
                 createdAt: { [Op.between]: [currentRange.start, currentRange.end] }
             },
-            include: [{
-                model: User,
-                attributes: ['id', 'displayName', 'username', 'role']
-            }],
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'displayName', 'username', 'role']
+                },
+                {
+                    model: Account,
+                    attributes: [],
+                    where: {
+                        status: 'closed',
+                        accountType: 'standard'
+                    }
+                }
+            ],
             group: ['UserId', 'User.id', 'User.displayName', 'User.username', 'User.role'],
             raw: true,
             nest: true
