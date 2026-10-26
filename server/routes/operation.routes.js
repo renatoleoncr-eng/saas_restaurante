@@ -1727,7 +1727,7 @@ router.post('/orders', async (req, res) => {
           ProductId: null,
           quantity: item.quantity || 1,
           notes: item.notes || item.name || 'Combo',
-          presentation: null,
+          presentation: item.presentation || item.comboName || null,
           status: 'served',
           priceAtOrder: finalComboPrice,
           priceAtOrderAtCreation: originalComboPrice,

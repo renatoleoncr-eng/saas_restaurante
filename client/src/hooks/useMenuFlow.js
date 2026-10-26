@@ -119,6 +119,7 @@ export function useMenuFlow({ addToCart, setCart, setSearchTerm, dailyMenu, fetc
             promoId: promo.id,
             _uid: instanceId,
             _promoPrice: parseFloat(promo.price),
+            _promoName: promo.name,
             _originalPrice: parseFloat(item.individualPrice || 0)
         }]);
     };
@@ -146,6 +147,13 @@ export function useMenuFlow({ addToCart, setCart, setSearchTerm, dailyMenu, fetc
         }));
         
         const isActualCombo = comboSelection.length === 2;
+        let promoVariantName = null;
+        if (isActualCombo) {
+            // Variante de la promoción gobernante (según el precio mayor aplicado o categoría seleccionada)
+            const governingItem = comboSelection.find(s => Math.abs((s._promoPrice || 0) - displayPrice) < 0.05);
+            promoVariantName = governingItem?._promoName || pendingComboPromo?.name || 'Promo 2x1';
+        }
+
         setCart(prev => [...prev, {
             productId: null,
             name: isActualCombo ? `2x1: ${name}` : comboSelection[0].name,
@@ -153,6 +161,8 @@ export function useMenuFlow({ addToCart, setCart, setSearchTerm, dailyMenu, fetc
             quantity: 1,
             notes: isActualCombo ? name : '',
             isCombo: isActualCombo,
+            presentation: promoVariantName,
+            comboName: promoVariantName,
             subItems
         }]);
         setComboSelection([]);
