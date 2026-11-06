@@ -374,7 +374,7 @@ export default function PerformanceDashboard() {
                 {/* Comparativo Diario de Ingresos */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 border-l-8 border-blue-400 pl-4 uppercase tracking-tight">
-                        Comparativo Diario{rangeText}
+                        Comparativo Diario
                     </h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
@@ -389,11 +389,11 @@ export default function PerformanceDashboard() {
                                 <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `S/ ${val}`} />
                                 <Tooltip
                                     formatter={(val, name) => [
-                                        formatCurrency(val),
+                                        val !== null && val !== undefined ? formatCurrency(val) : '-',
                                         name === 'current' || name === 'Mes Seleccionado' ? 'Mes Seleccionado' : 'Mes Anterior'
                                     ]}
                                     labelFormatter={(label, payload) => {
-                                        if (payload && payload[0]) {
+                                        if (payload && payload[0]?.payload?.label) {
                                             return `Día ${label} (${payload[0].payload.label})`;
                                         }
                                         return `Día ${label}`;
@@ -409,6 +409,7 @@ export default function PerformanceDashboard() {
                                     strokeWidth={3}
                                     dot={{ r: 4 }}
                                     activeDot={{ r: 6 }}
+                                    connectNulls={false}
                                 />
                                 <Line
                                     type="monotone"
@@ -418,6 +419,7 @@ export default function PerformanceDashboard() {
                                     strokeWidth={2}
                                     strokeDasharray="5 5"
                                     dot={false}
+                                    connectNulls={false}
                                 />
                             </LineChart>
                         </ResponsiveContainer>

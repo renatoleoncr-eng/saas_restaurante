@@ -359,17 +359,29 @@ router.get('/performance/stats', requireRole('admin'), async (req, res) => {
             })
         ]);
 
+        // Comparativo Diario: mostrar todos los días del mes actual y del mes anterior (el máximo de ambos, ej. 31 días si octubre tuvo 31 y noviembre 30)
+        const maxComparisonDays = Math.max(daysInSelectedMonth, daysInPrevMonth);
         const dailyComparison = [];
-        for (let d = 1; d <= daysInSelectedMonth; d++) {
-            const dateObj = new Date(selectedYear, selectedMonth - 1, d);
-            const curr = currentDailyRaw.find(r => parseInt(r.stat_day, 10) === d);
-            const prev = prevDailyRaw.find(r => parseInt(r.stat_day, 10) === d);
+        for (let d = 1; d <= maxComparisonDays; d++) {
+            const hasCurrentDay = d <= daysInSelectedMonth;
+            const hasPrevDay = d <= daysInPrevMonth;
+
+            const dateObj = hasCurrentDay
+                ? new Date(selectedYear, selectedMonth - 1, d)
+                : new Date(prevMonthYear, prevMonthNum - 1, d);
+
+            const curr = hasCurrentDay
+                ? currentDailyRaw.find(r => parseInt(r.stat_day, 10) === d)
+                : null;
+            const prev = hasPrevDay
+                ? prevDailyRaw.find(r => parseInt(r.stat_day, 10) === d)
+                : null;
 
             dailyComparison.push({
                 day: d,
                 label: getDayLabel(dateObj),
-                current: parseFloat(curr?.total || 0),
-                previous: parseFloat(prev?.total || 0)
+                current: hasCurrentDay ? parseFloat(curr?.total || 0) : null,
+                previous: hasPrevDay ? parseFloat(prev?.total || 0) : null
             });
         }
 
